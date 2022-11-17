@@ -1,0 +1,2 @@
+otlmow_converter >= 0.5
+otlmow_modelbuilder >= 0.2
