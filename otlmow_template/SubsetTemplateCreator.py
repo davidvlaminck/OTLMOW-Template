@@ -12,7 +12,7 @@ from otlmow_modelbuilder.SQLDataClasses.OSLOCollector import OSLOCollector
 from otlmow_modelbuilder.SQLDbReader import SQLDbReader
 
 
-class SubsetTool:
+class SubsetTemplateCreator:
     def __init__(self, settings_path: Path = None):
         if settings_path is None:
             settings_path = self._try_getting_settings_of_converter()
@@ -42,7 +42,7 @@ class SubsetTool:
         sql_reader = SQLDbReader(path_to_subset)
         oslo_creator = OSLOInMemoryCreator(sql_reader)
         collector = OSLOCollector(oslo_creator)
-        collector.collect()
+        collector.collect(include_abstract=True)
         return collector
 
     def generate_template_from_subset(self, path_to_subset: Path, path_to_template_file_and_extension: Path,
@@ -64,8 +64,6 @@ class SubsetTool:
             for attribute_object in attributen:
                 attr = getattr(instance, '_' + attribute_object.name)
                 attr.fill_with_dummy_data()
-
-        # TODO relaties
 
         exporter = FileExporter(settings=self.settings)
         exporter.create_file_from_assets(filepath=path_to_template_file_and_extension,
