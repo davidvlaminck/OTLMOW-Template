@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "otlmow_template"
-version = "0.1"
+version = "0.2"
 authors = [{name = "David Vlaminck", email = "david.vlaminck@mow.vlaanderen.be"}]
 readme = "README.md"
 license = {file = "LICENSE"}
@@ -14,8 +14,8 @@ classifiers = [
 ]
 requires-python = ">=3.8"
 dependencies = [
-  'otlmow_converter >= 0.5',
-  'otlmow_modelbuilder >= 0.2',
+  'otlmow-converter >= 0.12',
+  'otlmow-modelbuilder >= 0.11',
 ]
 
 [tool.setuptools.packages.find]
