@@ -7,6 +7,7 @@ from typing import List
 
 from otlmow_converter.AssetFactory import AssetFactory
 from otlmow_converter.FileExporter import FileExporter
+from otlmow_converter.OtlmowConverter import OtlmowConverter
 from otlmow_modelbuilder.OSLOInMemoryCreator import OSLOInMemoryCreator
 from otlmow_modelbuilder.SQLDataClasses.OSLOCollector import OSLOCollector
 from otlmow_modelbuilder.SQLDbReader import SQLDbReader
@@ -65,9 +66,9 @@ class SubsetTemplateCreator:
                 attr = getattr(instance, '_' + attribute_object.name)
                 attr.fill_with_dummy_data()
 
-        exporter = FileExporter(settings=self.settings)
-        exporter.create_file_from_assets(filepath=path_to_template_file_and_extension,
-                                         list_of_objects=otl_objects, **kwargs)
+        converter = OtlmowConverter()
+        converter.create_file_from_assets(filepath=path_to_template_file_and_extension,
+                                          list_of_objects=otl_objects, **kwargs)
 
     @classmethod
     def filters_assets_by_subset(cls, path_to_subset: Path, list_of_otl_objects: List):
