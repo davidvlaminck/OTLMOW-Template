@@ -1,9 +1,10 @@
 # coding=utf-8
 from UnitTests.TestClasses.Classes.ImplementatieElement.AIMObject import AIMObject
+from otlmow_model.GeometrieTypes.VlakGeometrie import VlakGeometrie
 
 
 # Generated with OTLClassCreator. To modify: extend, do not edit
-class DeprecatedTestClass(AIMObject):
+class DeprecatedTestClass(AIMObject, VlakGeometrie):
     """Deprecated TestClass"""
 
     typeURI = 'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#DeprecatedTestClass'

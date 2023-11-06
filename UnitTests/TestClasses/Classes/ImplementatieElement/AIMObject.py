@@ -1,7 +1,7 @@
 # coding=utf-8
 from datetime import date
 from typing import List
-from otlmow_model.BaseClasses.OTLAttribuut import OTLAttribuut
+from otlmow_model.BaseClasses.OTLObject import OTLAttribuut
 from abc import abstractmethod
 from UnitTests.TestClasses.Classes.ImplementatieElement.AIMDBStatus import AIMDBStatus
 from UnitTests.TestClasses.Classes.ImplementatieElement.AIMToestand import AIMToestand
@@ -22,10 +22,7 @@ class AIMObject(AIMDBStatus, AIMToestand, OTLAsset, RelationInteractor):
 
     @abstractmethod
     def __init__(self):
-        AIMDBStatus.__init__(self)
-        AIMToestand.__init__(self)
-        OTLAsset.__init__(self)
-        RelationInteractor.__init__(self)
+        super().__init__()
 
         self._assetId = OTLAttribuut(field=DtcIdentificator,
                                      naam='assetId',

@@ -1,7 +1,7 @@
 # coding=utf-8
 from datetime import date, datetime, time
 from typing import List
-from otlmow_model.BaseClasses.OTLAttribuut import OTLAttribuut
+from otlmow_model.BaseClasses.OTLObject import OTLAttribuut
 from UnitTests.TestClasses.Classes.ImplementatieElement.AIMObject import AIMObject
 from otlmow_model.BaseClasses.BooleanField import BooleanField
 from otlmow_model.BaseClasses.DateField import DateField
@@ -15,10 +15,11 @@ from UnitTests.TestClasses.Datatypes.KlTestKeuzelijst import KlTestKeuzelijst
 from UnitTests.TestClasses.Datatypes.KwantWrdTest import KwantWrdTest, KwantWrdTestWaarden
 from otlmow_model.BaseClasses.StringField import StringField
 from otlmow_model.BaseClasses.TimeField import TimeField
+from otlmow_model.GeometrieTypes.PuntGeometrie import PuntGeometrie
 
 
 # Generated with OTLClassCreator. To modify: extend, do not edit
-class AllCasesTestClass(AIMObject):
+class AllCasesTestClass(AIMObject, PuntGeometrie):
     """Testclass containing all possible datatypes and combinations"""
 
     typeURI = 'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#AllCasesTestClass'

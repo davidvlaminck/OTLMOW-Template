@@ -1,5 +1,5 @@
 # coding=utf-8
-from otlmow_model.BaseClasses.OTLAttribuut import OTLAttribuut
+from otlmow_model.BaseClasses.OTLObject import OTLAttribuut
 from abc import abstractmethod
 from UnitTests.TestClasses.Classes.ImplementatieElement.AIMDBStatus import AIMDBStatus
 from otlmow_model.BaseClasses.DavieRelatieAttributes import DavieRelatieAttributes
@@ -16,9 +16,7 @@ class RelatieObject(AIMDBStatus, DavieRelatieAttributes, OTLObject):
 
     @abstractmethod
     def __init__(self):
-        AIMDBStatus.__init__(self)
-        DavieRelatieAttributes.__init__(self)
-        OTLObject.__init__(self)
+        super().__init__()
 
         self._assetId = OTLAttribuut(field=DtcIdentificator,
                                      naam='assetId',

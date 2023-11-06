@@ -1,5 +1,5 @@
 # coding=utf-8
-from otlmow_model.BaseClasses.OTLAttribuut import OTLAttribuut
+from otlmow_model.BaseClasses.OTLObject import OTLAttribuut
 from abc import abstractmethod, ABC
 from UnitTests.TestClasses.Datatypes.KlAIMToestand import KlAIMToestand
 
@@ -13,6 +13,8 @@ class AIMToestand(ABC):
 
     @abstractmethod
     def __init__(self):
+        super().__init__()
+
         self._toestand = OTLAttribuut(field=KlAIMToestand,
                                       naam='toestand',
                                       label='toestand',
