@@ -1,7 +1,5 @@
-import json
-import os
+import logging
 import site
-from os.path import abspath
 from pathlib import Path
 from typing import List
 
@@ -39,7 +37,6 @@ class SubsetTemplateCreator:
             for attribute_object in attributen:
                 attr = getattr(instance, '_' + attribute_object.name)
                 attr.fill_with_dummy_data()
-
         converter = OtlmowConverter()
         converter.create_file_from_assets(filepath=path_to_template_file_and_extension,
                                           list_of_objects=otl_objects, **kwargs)

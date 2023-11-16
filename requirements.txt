@@ -1,2 +1,3 @@
 otlmow-converter >= 0.12
 otlmow-modelbuilder >= 0.11
+numpy>=1.18
