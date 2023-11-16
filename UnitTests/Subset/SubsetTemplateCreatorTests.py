@@ -41,13 +41,21 @@ class SubsetTemplateCreatorTests(TestCase):
         shutil.rmtree(Path(ROOT_DIR) / 'testFileStorage')
         os.makedirs(Path(ROOT_DIR) / 'testFileStorage')
 
+
     def test_subset_actual_subset(self):
         subset_tool = SubsetTemplateCreator()
-        csv_location = ROOT_DIR / 'camera_steun.csv'
+        csv_location = ROOT_DIR / 'testFileStorage' / 'camera_steun.csv'
         subset_tool.generate_template_from_subset(path_to_subset=ROOT_DIR / 'camera_steun.db',
                                                   path_to_template_file_and_extension=csv_location,
                                                   split_per_type=True)
-        assert csv_location.exists()
+        csv1 = ROOT_DIR / 'testFileStorage' / 'camera_steun_onderdeel_Bevestiging.csv'
+        csv2 = ROOT_DIR / 'testFileStorage' / 'camera_steun_onderdeel_Camera.csv'
+        csv3 = ROOT_DIR / 'testFileStorage' / 'camera_steun_onderdeel_RechteSteun.csv'
+        assert csv1.exists()
+        assert csv2.exists()
+        assert csv3.exists()
+        shutil.rmtree(Path(ROOT_DIR) / 'testFileStorage')
+        os.makedirs(Path(ROOT_DIR) / 'testFileStorage')
 
     @unittest.skip
     def test_func2(self):
