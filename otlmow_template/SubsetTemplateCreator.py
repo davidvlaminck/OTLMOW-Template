@@ -42,8 +42,10 @@ class SubsetTemplateCreator:
                                           list_of_objects=otl_objects, **kwargs)
 
     @classmethod
-    def filters_assets_by_subset(cls, path_to_subset: Path, list_of_otl_objects: List):
-        raise NotImplementedError
+    def filters_assets_by_subset(cls, path_to_subset: Path, list_of_otl_objectUri: List):
+        collector = cls._load_collector_from_subset_path(path_to_subset=path_to_subset)
+        filtered_list = [x for x in collector.classes if x.objectUri in list_of_otl_objectUri]
+        return filtered_list
 
     @staticmethod
     def _try_getting_settings_of_converter() -> Path:

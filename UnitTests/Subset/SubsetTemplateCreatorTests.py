@@ -6,8 +6,6 @@ from unittest import TestCase
 
 from otlmow_template.SubsetTemplateCreator import SubsetTemplateCreator
 
-# ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
-
 ROOT_DIR = Path(__file__).parent
 
 
@@ -41,7 +39,6 @@ class SubsetTemplateCreatorTests(TestCase):
         shutil.rmtree(Path(ROOT_DIR) / 'testFileStorage')
         os.makedirs(Path(ROOT_DIR) / 'testFileStorage')
 
-
     def test_subset_actual_subset(self):
         subset_tool = SubsetTemplateCreator()
         csv_location = ROOT_DIR / 'testFileStorage' / 'camera_steun.csv'
@@ -61,3 +58,10 @@ class SubsetTemplateCreatorTests(TestCase):
     def test_func2(self):
         list_of_otl_objects = []
         SubsetTemplateCreator.filters_assets_by_subset(Path('OTL_AllCasesTestClass.db'), list_of_otl_objects)
+
+    def test_filter(self):
+        dir = ROOT_DIR / 'flitspaal_noAgent3.0.db'
+        list_of_filter_uri = ['https://wegenenverkeer.data.vlaanderen.be/ns/installatie#Flitspaal']
+        filtered = SubsetTemplateCreator.filters_assets_by_subset(dir, list_of_filter_uri)
+        assert len(filtered) == 1
+        assert filtered[0].name == 'Flitspaal'
