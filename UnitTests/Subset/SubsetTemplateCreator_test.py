@@ -37,6 +37,8 @@ def test_func1(subtests):
 
     shutil.rmtree(Path(ROOT_DIR) / 'testFileStorage')
     os.makedirs(Path(ROOT_DIR) / 'testFileStorage')
+    # Add an __init__.py file to the testFileStorage folder to make it a package
+    open(Path(ROOT_DIR) / 'testFileStorage' / '__init__.py', 'a').close()
 
 
 def test_subset_actual_subset():
@@ -53,6 +55,7 @@ def test_subset_actual_subset():
     assert csv3.exists()
     shutil.rmtree(Path(ROOT_DIR) / 'testFileStorage')
     os.makedirs(Path(ROOT_DIR) / 'testFileStorage')
+    open(Path(ROOT_DIR) / 'testFileStorage' / '__init__.py', 'a').close()
 
 
 def test_filter():
