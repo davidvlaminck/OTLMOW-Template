@@ -37,7 +37,7 @@ def test_func1(subtests):
     os.makedirs(Path(ROOT_DIR) / 'testFileStorage')
 
 
-def test_subset_actual_subset(self):
+def test_subset_actual_subset():
     subset_tool = SubsetTemplateCreator()
     csv_location = ROOT_DIR / 'testFileStorage' / 'camera_steun.csv'
     subset_tool.generate_template_from_subset(path_to_subset=ROOT_DIR / 'camera_steun.db',
