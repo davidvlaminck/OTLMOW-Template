@@ -1,10 +1,17 @@
+import os
 import site
 from pathlib import Path
 from typing import List
+from openpyxl.reader.excel import load_workbook
+from openpyxl.styles import PatternFill
+from openpyxl.utils import get_column_letter
+from openpyxl.worksheet.dimensions import DimensionHolder, ColumnDimension
 
 from otlmow_converter.OtlmowConverter import OtlmowConverter
 from otlmow_model.Helpers.AssetCreator import dynamic_create_instance_from_uri
 from otlmow_modelbuilder.OSLOCollector import OSLOCollector
+
+ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 
 
 class SubsetTemplateCreator:
@@ -39,6 +46,7 @@ class SubsetTemplateCreator:
         converter = OtlmowConverter()
         converter.create_file_from_assets(filepath=path_to_template_file_and_extension,
                                           list_of_objects=otl_objects, **kwargs)
+        self.design_workbook_excel(path_to_workbook=path_to_template_file_and_extension)
 
     @classmethod
     def filters_assets_by_subset(cls, path_to_subset: Path, list_of_otl_objectUri: List):
@@ -50,3 +58,32 @@ class SubsetTemplateCreator:
     def _try_getting_settings_of_converter() -> Path:
         converter_path = Path(site.getsitepackages()[0]) / 'otlmow_converter'
         return converter_path / 'settings_otlmow_converter.json'
+
+    @staticmethod
+    def design_workbook_excel(path_to_workbook: Path):
+        wb = load_workbook(path_to_workbook)
+        for sheet in wb:
+            print(sheet.title)
+            for rows in sheet.iter_rows(min_row=1, max_row=1):
+                for cell in rows:
+                    cell.fill = PatternFill(start_color="808080", end_color="808080", fill_type="solid")
+            dim_holder = DimensionHolder(worksheet=sheet)
+            for col in range(sheet.min_column, sheet.max_column + 1):
+                dim_holder[get_column_letter(col)] = ColumnDimension(sheet, min=col, max=col, width=20)
+            sheet.column_dimensions = dim_holder
+        wb.save(path_to_workbook)
+
+    @staticmethod
+    def as_text(value):
+        if value is None:
+            return ""
+        return str(value)
+
+
+if __name__ == '__main__':
+    subset_tool = SubsetTemplateCreator()
+    subset_location = Path(ROOT_DIR) / 'UnitTests' / 'Subset' / 'Flitspaal_noAgent3.0.db'
+    print(subset_location)
+    xls_location = Path(ROOT_DIR) / 'UnitTests' / 'Subset' / 'testFileStorage' / 'template_file.xlsx'
+    subset_tool.generate_template_from_subset(path_to_subset=subset_location,
+                                              path_to_template_file_and_extension=xls_location)

@@ -2,8 +2,6 @@ import os
 import shutil
 from pathlib import Path
 
-
-
 from otlmow_template.SubsetTemplateCreator import SubsetTemplateCreator
 
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -44,7 +42,7 @@ def test_func1(subtests):
 def test_subset_actual_subset():
     subset_tool = SubsetTemplateCreator()
     csv_location = Path(ROOT_DIR) / 'testFileStorage' / 'camera_steun.csv'
-    subset_tool.generate_template_from_subset(path_to_subset= Path(ROOT_DIR) / 'camera_steun.db',
+    subset_tool.generate_template_from_subset(path_to_subset=Path(ROOT_DIR) / 'camera_steun.db',
                                               path_to_template_file_and_extension=csv_location,
                                               split_per_type=True)
     csv1 = Path(ROOT_DIR) / 'testFileStorage' / 'camera_steun_onderdeel_Bevestiging.csv'
