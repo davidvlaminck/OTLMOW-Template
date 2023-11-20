@@ -1,3 +1,4 @@
+import logging
 import os
 import site
 from pathlib import Path
@@ -47,8 +48,15 @@ class SubsetTemplateCreator:
         converter = OtlmowConverter()
         converter.create_file_from_assets(filepath=path_to_template_file_and_extension,
                                           list_of_objects=otl_objects, **kwargs)
+
+        instantiated_attributes = converter.create_assets_from_file(filepath=path_to_template_file_and_extension,
+                                                                    path_to_subset=path_to_subset)
         self.design_workbook_excel(path_to_workbook=path_to_template_file_and_extension)
-        self.add_attribute_info_excel(path_to_workbook=path_to_template_file_and_extension, path_to_subset=path_to_subset)
+        self.check_for_deprecated_attributes(path_to_workbook=path_to_template_file_and_extension,
+                                             instantiated_attributes=instantiated_attributes)
+        # Important to do in the end because it changes the header names
+        self.add_attribute_info_excel(path_to_workbook=path_to_template_file_and_extension,
+                                      instantiated_attributes=instantiated_attributes)
 
     @classmethod
     def filters_assets_by_subset(cls, path_to_subset: Path, list_of_otl_objectUri: List):
@@ -75,25 +83,45 @@ class SubsetTemplateCreator:
         wb.save(path_to_workbook)
 
     @staticmethod
-    def add_attribute_info_excel(path_to_workbook: Path, path_to_subset: Path):
-        converter = OtlmowConverter()
+    def add_attribute_info_excel(path_to_workbook: Path, instantiated_attributes: List):
         dotnotation_module = DotnotationHelper()
-        instantiated_attributes = converter.create_assets_from_file(filepath=path_to_workbook, path_to_subset=path_to_subset)
         workbook = load_workbook(path_to_workbook)
         for sheet in workbook:
-            for row in sheet.iter_rows(min_row=1, max_row=1):
-                for cell in row:
-                    if cell.value == 'typeURI':
-                        row_index = cell.row
-                        column_index = cell.column
-                        filter_uri = sheet.cell(row=row_index + 1, column=column_index).value
+            filter_uri = SubsetTemplateCreator.find_uri_in_sheet(sheet)
             single_attribute = [x for x in instantiated_attributes if x.typeURI == filter_uri]
             for rows in sheet.iter_rows(min_row=1, max_row=1, min_col=2):
                 for cell in rows:
-                    dotnotation_attribute = dotnotation_module.get_attribute_by_dotnotation(single_attribute[0], cell.value)
-                    print(dotnotation_attribute)
-                    cell.value = dotnotation_attribute.definition + "\n\n " + cell.value
+                    dotnotation_attribute = dotnotation_module.get_attribute_by_dotnotation(single_attribute[0],
+                                                                                            cell.value)
+                    cell.value = dotnotation_attribute.definition + "\n\n" + " " + cell.value
         workbook.save(path_to_workbook)
+
+    @staticmethod
+    def check_for_deprecated_attributes(path_to_workbook: Path, instantiated_attributes: List):
+        dotnotation_module = DotnotationHelper()
+        workbook = load_workbook(path_to_workbook)
+        for sheet in workbook:
+            filter_uri = SubsetTemplateCreator.find_uri_in_sheet(sheet)
+            single_attribute = [x for x in instantiated_attributes if x.typeURI == filter_uri]
+            for rows in sheet.iter_rows(min_row=1, max_row=1, min_col=2):
+                for cell in rows:
+                    dotnotation_attribute = dotnotation_module.get_attribute_by_dotnotation(single_attribute[0],
+                                                                                            cell.value)
+                    if len(dotnotation_attribute.deprecated_version) > 0:
+                        cell.fill = PatternFill(start_color="FF0000", end_color="FF0000", fill_type="solid")
+
+        workbook.save(path_to_workbook)
+
+    @staticmethod
+    def find_uri_in_sheet(sheet):
+        filter_uri = None
+        for row in sheet.iter_rows(min_row=1, max_row=1):
+            for cell in row:
+                if cell.value == 'typeURI':
+                    row_index = cell.row
+                    column_index = cell.column
+                    filter_uri = sheet.cell(row=row_index + 1, column=column_index).value
+        return filter_uri
 
 
 if __name__ == '__main__':
