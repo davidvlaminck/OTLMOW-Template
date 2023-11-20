@@ -6,6 +6,7 @@ from openpyxl.reader.excel import load_workbook
 from openpyxl.styles import PatternFill
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.dimensions import DimensionHolder, ColumnDimension
+from otlmow_converter.DotnotationHelper import DotnotationHelper
 
 from otlmow_converter.OtlmowConverter import OtlmowConverter
 from otlmow_model.Helpers.AssetCreator import dynamic_create_instance_from_uri
@@ -47,6 +48,7 @@ class SubsetTemplateCreator:
         converter.create_file_from_assets(filepath=path_to_template_file_and_extension,
                                           list_of_objects=otl_objects, **kwargs)
         self.design_workbook_excel(path_to_workbook=path_to_template_file_and_extension)
+        self.add_attribute_info_excel(path_to_workbook=path_to_template_file_and_extension, path_to_subset=path_to_subset)
 
     @classmethod
     def filters_assets_by_subset(cls, path_to_subset: Path, list_of_otl_objectUri: List):
@@ -63,7 +65,6 @@ class SubsetTemplateCreator:
     def design_workbook_excel(path_to_workbook: Path):
         wb = load_workbook(path_to_workbook)
         for sheet in wb:
-            print(sheet.title)
             for rows in sheet.iter_rows(min_row=1, max_row=1):
                 for cell in rows:
                     cell.fill = PatternFill(start_color="808080", end_color="808080", fill_type="solid")
@@ -74,10 +75,25 @@ class SubsetTemplateCreator:
         wb.save(path_to_workbook)
 
     @staticmethod
-    def as_text(value):
-        if value is None:
-            return ""
-        return str(value)
+    def add_attribute_info_excel(path_to_workbook: Path, path_to_subset: Path):
+        converter = OtlmowConverter()
+        dotnotation_module = DotnotationHelper()
+        instantiated_attributes = converter.create_assets_from_file(filepath=path_to_workbook, path_to_subset=path_to_subset)
+        workbook = load_workbook(path_to_workbook)
+        for sheet in workbook:
+            for row in sheet.iter_rows(min_row=1, max_row=1):
+                for cell in row:
+                    if cell.value == 'typeURI':
+                        row_index = cell.row
+                        column_index = cell.column
+                        filter_uri = sheet.cell(row=row_index + 1, column=column_index).value
+            single_attribute = [x for x in instantiated_attributes if x.typeURI == filter_uri]
+            for rows in sheet.iter_rows(min_row=1, max_row=1, min_col=2):
+                for cell in rows:
+                    dotnotation_attribute = dotnotation_module.get_attribute_by_dotnotation(single_attribute[0], cell.value)
+                    print(dotnotation_attribute)
+                    cell.value = dotnotation_attribute.definition + "\n\n " + cell.value
+        workbook.save(path_to_workbook)
 
 
 if __name__ == '__main__':
