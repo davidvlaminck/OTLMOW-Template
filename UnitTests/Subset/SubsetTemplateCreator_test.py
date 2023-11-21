@@ -33,8 +33,9 @@ def test_func1(subtests):
         template_path = Path(ROOT_DIR) / 'testFileStorage' / 'template_file_text.csv'
         assert template_path.exists()
 
-    shutil.rmtree(Path(ROOT_DIR) / 'testFileStorage')
-    os.makedirs(Path(ROOT_DIR) / 'testFileStorage')
+    path = Path(ROOT_DIR) / 'testFileStorage'
+    [f.unlink() for f in Path(path).glob("*") if f.is_file()]
+    # os.makedirs(Path(ROOT_DIR) / 'testFileStorage')
     # Add an __init__.py file to the testFileStorage folder to make it a package
     open(Path(ROOT_DIR) / 'testFileStorage' / '__init__.py', 'a').close()
 
@@ -51,8 +52,8 @@ def test_subset_actual_subset():
     assert csv1.exists()
     assert csv2.exists()
     assert csv3.exists()
-    shutil.rmtree(Path(ROOT_DIR) / 'testFileStorage')
-    os.makedirs(Path(ROOT_DIR) / 'testFileStorage')
+    path = Path(ROOT_DIR) / 'testFileStorage'
+    [f.unlink() for f in Path(path).glob("*") if f.is_file()]
     open(Path(ROOT_DIR) / 'testFileStorage' / '__init__.py', 'a').close()
 
 

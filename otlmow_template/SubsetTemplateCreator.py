@@ -48,20 +48,36 @@ class SubsetTemplateCreator:
         converter = OtlmowConverter()
         converter.create_file_from_assets(filepath=path_to_template_file_and_extension,
                                           list_of_objects=otl_objects, **kwargs)
-
-        instantiated_attributes = converter.create_assets_from_file(filepath=path_to_template_file_and_extension,
-                                                                    path_to_subset=path_to_subset)
-        self.design_workbook_excel(path_to_workbook=path_to_template_file_and_extension)
-        self.check_for_deprecated_attributes(path_to_workbook=path_to_template_file_and_extension,
-                                             instantiated_attributes=instantiated_attributes,
-                                             path_to_subset=path_to_subset)
-        # Important to do in the end because it changes the header names
-        self.add_attribute_info_excel(path_to_workbook=path_to_template_file_and_extension,
-                                      instantiated_attributes=instantiated_attributes)
+        path_is_split = kwargs.get('split_per_type', False)
+        instantiated_attributes = []
+        if not path_is_split:
+            instantiated_attributes = converter.create_assets_from_file(filepath=path_to_template_file_and_extension,
+                                                                        path_to_subset=path_to_subset)
+        self.alter_template(changes=kwargs, path_to_template_file_and_extension=path_to_template_file_and_extension,
+                            path_to_subset=path_to_subset, instantiated_attributes=instantiated_attributes)
 
     @classmethod
-    def add_options(cls, **kwargs):
-        pass
+    def alter_template(cls, changes, path_to_template_file_and_extension: Path, path_to_subset: Path,
+                       instantiated_attributes: List):
+        # use **kwargs to pass changes
+        generate_choice_list = changes.get('generate_choice_list', False)
+        add_geo_artefact = changes.get('add_geo_artefact', False)
+        add_attribute_info = changes.get('add_attribute_info', False)
+        highlight_deprecated_attributes = changes.get('highlight_deprecated_attributes', False)
+        amount_of_examples = changes.get('amount_of_examples', 0)
+        if generate_choice_list:
+            raise NotImplementedError("generate_choice_list is not implemented yet")
+        if add_geo_artefact:
+            raise NotImplementedError("add_geo_artefact is not implemented yet")
+        if amount_of_examples > 0:
+            raise NotImplementedError("amount_of_examples is not implemented yet")
+        if highlight_deprecated_attributes:
+            cls.check_for_deprecated_attributes(path_to_workbook=path_to_template_file_and_extension,
+                                                instantiated_attributes=instantiated_attributes,
+                                                path_to_subset=path_to_subset)
+        if add_attribute_info:
+            cls.add_attribute_info_excel(path_to_workbook=path_to_template_file_and_extension,
+                                         instantiated_attributes=instantiated_attributes)
 
     @classmethod
     def filters_assets_by_subset(cls, path_to_subset: Path, list_of_otl_objectUri: List):
@@ -147,4 +163,5 @@ if __name__ == '__main__':
     print(subset_location)
     xls_location = Path(ROOT_DIR) / 'UnitTests' / 'Subset' / 'testFileStorage' / 'template_file.xlsx'
     subset_tool.generate_template_from_subset(path_to_subset=subset_location,
-                                              path_to_template_file_and_extension=xls_location)
+                                              path_to_template_file_and_extension=xls_location, add_attribute_info=True,
+                                              highlight_deprecated_attributes=True)
