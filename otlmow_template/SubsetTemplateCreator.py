@@ -32,10 +32,10 @@ class SubsetTemplateCreator:
         otl_objects = []
 
         for class_object in list(filter(lambda cl: cl.abstract == 0, collector.classes)):
-            class_directory = None
-            if kwargs is not None and 'class_directory' in kwargs:
-                class_directory = kwargs['class_directory']
-            instance = dynamic_create_instance_from_uri(class_object.objectUri, directory=class_directory)
+            model_directory = None
+            if kwargs is not None and 'model_directory' in kwargs:
+                model_directory = kwargs['model_directory']
+            instance = dynamic_create_instance_from_uri(class_object.objectUri, model_directory=model_directory)
             if instance is None:
                 continue
             instance._assetId.fill_with_dummy_data()
