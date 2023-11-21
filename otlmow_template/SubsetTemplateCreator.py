@@ -53,10 +53,15 @@ class SubsetTemplateCreator:
                                                                     path_to_subset=path_to_subset)
         self.design_workbook_excel(path_to_workbook=path_to_template_file_and_extension)
         self.check_for_deprecated_attributes(path_to_workbook=path_to_template_file_and_extension,
-                                             instantiated_attributes=instantiated_attributes)
+                                             instantiated_attributes=instantiated_attributes,
+                                             path_to_subset=path_to_subset)
         # Important to do in the end because it changes the header names
         self.add_attribute_info_excel(path_to_workbook=path_to_template_file_and_extension,
                                       instantiated_attributes=instantiated_attributes)
+
+    @classmethod
+    def add_options(cls, **kwargs):
+        pass
 
     @classmethod
     def filters_assets_by_subset(cls, path_to_subset: Path, list_of_otl_objectUri: List):
@@ -69,8 +74,8 @@ class SubsetTemplateCreator:
         converter_path = Path(site.getsitepackages()[0]) / 'otlmow_converter'
         return converter_path / 'settings_otlmow_converter.json'
 
-    @staticmethod
-    def design_workbook_excel(path_to_workbook: Path):
+    @classmethod
+    def design_workbook_excel(cls, path_to_workbook: Path):
         wb = load_workbook(path_to_workbook)
         for sheet in wb:
             for rows in sheet.iter_rows(min_row=1, max_row=1):
@@ -82,8 +87,8 @@ class SubsetTemplateCreator:
             sheet.column_dimensions = dim_holder
         wb.save(path_to_workbook)
 
-    @staticmethod
-    def add_attribute_info_excel(path_to_workbook: Path, instantiated_attributes: List):
+    @classmethod
+    def add_attribute_info_excel(cls, path_to_workbook: Path, instantiated_attributes: List):
         dotnotation_module = DotnotationHelper()
         workbook = load_workbook(path_to_workbook)
         for sheet in workbook:
@@ -96,8 +101,9 @@ class SubsetTemplateCreator:
                     cell.value = dotnotation_attribute.definition + "\n\n" + " " + cell.value
         workbook.save(path_to_workbook)
 
-    @staticmethod
-    def check_for_deprecated_attributes(path_to_workbook: Path, instantiated_attributes: List):
+    @classmethod
+    def check_for_deprecated_attributes(cls, path_to_workbook: Path, instantiated_attributes: List,
+                                        path_to_subset: Path):
         dotnotation_module = DotnotationHelper()
         workbook = load_workbook(path_to_workbook)
         for sheet in workbook:
@@ -105,15 +111,26 @@ class SubsetTemplateCreator:
             single_attribute = [x for x in instantiated_attributes if x.typeURI == filter_uri]
             for rows in sheet.iter_rows(min_row=1, max_row=1, min_col=2):
                 for cell in rows:
+                    is_deprecated = False
+                    if cell.value.count('.') == 1:
+                        dot_split = cell.value.split('.')
+                        attribute = dotnotation_module.get_attribute_by_dotnotation(single_attribute[0],
+                                                                                    dot_split[0])
+
+                        if len(attribute.deprecated_version) > 0:
+                            is_deprecated = True
                     dotnotation_attribute = dotnotation_module.get_attribute_by_dotnotation(single_attribute[0],
                                                                                             cell.value)
                     if len(dotnotation_attribute.deprecated_version) > 0:
+                        is_deprecated = True
+
+                    if is_deprecated:
                         cell.fill = PatternFill(start_color="FF0000", end_color="FF0000", fill_type="solid")
 
         workbook.save(path_to_workbook)
 
-    @staticmethod
-    def find_uri_in_sheet(sheet):
+    @classmethod
+    def find_uri_in_sheet(cls, sheet):
         filter_uri = None
         for row in sheet.iter_rows(min_row=1, max_row=1):
             for cell in row:
