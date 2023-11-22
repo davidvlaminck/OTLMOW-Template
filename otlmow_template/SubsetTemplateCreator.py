@@ -1,4 +1,3 @@
-import logging
 import os
 import site
 from pathlib import Path
@@ -121,6 +120,11 @@ class SubsetTemplateCreator:
                 for cell in rows:
                     if cell.value == 'typeURI':
                         value = 'De URI van het object volgens https://www.w3.org/2001/XMLSchema#anyURI .'
+                    elif cell.value.find('[DEPRECATED]') != -1:
+                        strip = cell.value.split(' ')
+                        dotnotation_attribute = dotnotation_module.get_attribute_by_dotnotation(single_attribute[0],
+                                                                                                strip[1])
+                        value = dotnotation_attribute.definition
                     else:
                         dotnotation_attribute = dotnotation_module.get_attribute_by_dotnotation(single_attribute[0],
                                                                                                 cell.value)
@@ -151,7 +155,7 @@ class SubsetTemplateCreator:
                         is_deprecated = True
 
                     if is_deprecated:
-                        cell.fill = PatternFill(start_color="FF0000", end_color="FF0000", fill_type="solid")
+                        cell.value = '[DEPRECATED] ' + cell.value
 
     @classmethod
     def find_uri_in_sheet(cls, sheet):
@@ -177,7 +181,6 @@ class SubsetTemplateCreator:
             if rows_of_examples == 0:
                 for rows in sheets.iter_rows(min_row=2, max_row=2):
                     for cell in rows:
-                        print("boop")
                         cell.value = ''
             else:
                 for rows in sheets.iter_rows(min_row=2, max_row=rows_of_examples + 1):
