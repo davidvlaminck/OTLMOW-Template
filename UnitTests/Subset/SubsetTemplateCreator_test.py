@@ -59,7 +59,7 @@ def test_subset_actual_subset():
 def test_filter():
     db_location = Path(ROOT_DIR) / 'Flitspaal_noAgent3.0.db'
     list_of_filter_uri = ['https://wegenenverkeer.data.vlaanderen.be/ns/installatie#Flitspaal']
-    filtered = SubsetTemplateCreator.filters_assets_by_subset(db_location, list_of_filter_uri)
+    filtered = SubsetTemplateCreator.filters_assets_by_subset(db_location, list_of_otl_objectUri=list_of_filter_uri)
     assert len(filtered) == 1
     assert filtered[0].name == 'Flitspaal'
 
@@ -67,5 +67,5 @@ def test_filter():
 def test_empty_filter_list_removes_all_entries():
     db_location = Path(ROOT_DIR) / 'Flitspaal_noAgent3.0.db'
     list_of_filter_uri = []
-    filtered = SubsetTemplateCreator.filters_assets_by_subset(db_location, list_of_filter_uri)
+    filtered = SubsetTemplateCreator.filters_assets_by_subset(db_location, list_of_otl_objectUri=list_of_filter_uri)
     assert len(filtered) == 0

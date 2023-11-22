@@ -77,17 +77,18 @@ class SubsetTemplateCreator:
         add_attribute_info = kwargs.get('add_attribute_info', False)
         highlight_deprecated_attributes = kwargs.get('highlight_deprecated_attributes', False)
         amount_of_examples = kwargs.get('amount_of_examples', 0)
+        print(amount_of_examples)
         wb = load_workbook(path_to_template_file_and_extension)
         if generate_choice_list:
             raise NotImplementedError("generate_choice_list is not implemented yet")
         if add_geo_artefact:
             raise NotImplementedError("add_geo_artefact is not implemented yet")
-        if amount_of_examples > 0:
-            raise NotImplementedError("amount_of_examples is not implemented yet")
+        # cls.add_mock_data_excel(workbook=wb, rows_of_examples=amount_of_examples)
         if highlight_deprecated_attributes:
             cls.check_for_deprecated_attributes(workbook=wb, instantiated_attributes=instantiated_attributes)
         if add_attribute_info:
             cls.add_attribute_info_excel(workbook=wb, instantiated_attributes=instantiated_attributes)
+        cls.add_mock_data_excel(workbook=wb, rows_of_examples=amount_of_examples)
         wb.save(path_to_template_file_and_extension)
 
     @classmethod
@@ -165,15 +166,32 @@ class SubsetTemplateCreator:
     def add_geo_artefact_excel(self, workbook):
         pass
 
+    @classmethod
+    def add_mock_data_excel(cls, workbook, rows_of_examples: int):
+        for sheets in workbook:
+            mock_values = []
+            for rows in sheets.iter_rows(min_row=2, max_row=2):
+                for cell in rows:
+                    mock_values.append(cell.value)
+            if rows_of_examples == 0:
+                for rows in sheets.iter_rows(min_row=2, max_row=2):
+                    for cell in rows:
+                        print("boop")
+                        cell.value = ''
+            else:
+                for rows in sheets.iter_rows(min_row=2, max_row=rows_of_examples + 1):
+                    for cell in rows:
+                        cell.value = mock_values[cell.column - 1]
+
 
 if __name__ == '__main__':
     subset_tool = SubsetTemplateCreator()
-    subset_location = Path(ROOT_DIR) / 'UnitTests' / 'Subset' / 'OTL_AllCasesTestClass.db'
-    directory = Path(ROOT_DIR) / 'UnitTests' / 'TestClasses'
+    subset_location = Path(ROOT_DIR) / 'UnitTests' / 'Subset' / 'Flitspaal_noAgent3.0.db'
+    # directory = Path(ROOT_DIR) / 'UnitTests' / 'TestClasses'
     # Slash op het einde toevoegen verandert weinig of niks aan het resultaat
-    directory = os.path.join(directory, '')
+    # directory = os.path.join(directory, '')
     xls_location = Path(ROOT_DIR) / 'UnitTests' / 'Subset' / 'testFileStorage' / 'template_file.xlsx'
     subset_tool.generate_template_from_subset(path_to_subset=subset_location,
                                               path_to_template_file_and_extension=xls_location, add_attribute_info=True,
                                               highlight_deprecated_attributes=True,
-                                              model_directory=directory)
+                                              amount_of_examples=5)
