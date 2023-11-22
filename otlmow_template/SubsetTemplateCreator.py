@@ -70,25 +70,24 @@ class SubsetTemplateCreator:
 
     # TODO: Verschillende methodes voor verschillende documenten excel, csv
     @classmethod
-    def alter_template(cls, path_to_template_file_and_extension: Path, path_to_subset: Path,
+    def alter_template(cls, path_to_template_file_and_extension: Path,
                        instantiated_attributes: List, **kwargs):
         generate_choice_list = kwargs.get('generate_choice_list', False)
         add_geo_artefact = kwargs.get('add_geo_artefact', False)
         add_attribute_info = kwargs.get('add_attribute_info', False)
         highlight_deprecated_attributes = kwargs.get('highlight_deprecated_attributes', False)
         amount_of_examples = kwargs.get('amount_of_examples', 0)
-        print(amount_of_examples)
         wb = load_workbook(path_to_template_file_and_extension)
+        cls.add_mock_data_excel(workbook=wb, rows_of_examples=amount_of_examples)
         if generate_choice_list:
             raise NotImplementedError("generate_choice_list is not implemented yet")
         if add_geo_artefact:
             raise NotImplementedError("add_geo_artefact is not implemented yet")
-        # cls.add_mock_data_excel(workbook=wb, rows_of_examples=amount_of_examples)
         if highlight_deprecated_attributes:
             cls.check_for_deprecated_attributes(workbook=wb, instantiated_attributes=instantiated_attributes)
         if add_attribute_info:
             cls.add_attribute_info_excel(workbook=wb, instantiated_attributes=instantiated_attributes)
-        cls.add_mock_data_excel(workbook=wb, rows_of_examples=amount_of_examples)
+        cls.design_workbook_excel(workbook=wb)
         wb.save(path_to_template_file_and_extension)
 
     @classmethod
@@ -104,17 +103,12 @@ class SubsetTemplateCreator:
         return converter_path / 'settings_otlmow_converter.json'
 
     @classmethod
-    def design_workbook_excel(cls, path_to_workbook: Path):
-        wb = load_workbook(path_to_workbook)
-        for sheet in wb:
-            for rows in sheet.iter_rows(min_row=1, max_row=1):
-                for cell in rows:
-                    cell.fill = PatternFill(start_color="808080", end_color="808080", fill_type="solid")
+    def design_workbook_excel(cls, workbook):
+        for sheet in workbook:
             dim_holder = DimensionHolder(worksheet=sheet)
             for col in range(sheet.min_column, sheet.max_column + 1):
                 dim_holder[get_column_letter(col)] = ColumnDimension(sheet, min=col, max=col, width=20)
             sheet.column_dimensions = dim_holder
-        wb.save(path_to_workbook)
 
     @classmethod
     def add_attribute_info_excel(cls, workbook, instantiated_attributes: List):
@@ -122,11 +116,18 @@ class SubsetTemplateCreator:
         for sheet in workbook:
             filter_uri = SubsetTemplateCreator.find_uri_in_sheet(sheet)
             single_attribute = [x for x in instantiated_attributes if x.typeURI == filter_uri]
-            for rows in sheet.iter_rows(min_row=1, max_row=1, min_col=2):
+            sheet.insert_rows(1)
+            for rows in sheet.iter_rows(min_row=2, max_row=2, min_col=1):
                 for cell in rows:
-                    dotnotation_attribute = dotnotation_module.get_attribute_by_dotnotation(single_attribute[0],
-                                                                                            cell.value)
-                    cell.value = dotnotation_attribute.definition + "\n\n" + " " + cell.value
+                    if cell.value == 'typeURI':
+                        value = 'De URI van het object volgens https://www.w3.org/2001/XMLSchema#anyURI .'
+                    else:
+                        dotnotation_attribute = dotnotation_module.get_attribute_by_dotnotation(single_attribute[0],
+                                                                                                cell.value)
+                        value = dotnotation_attribute.definition
+                    sheet.cell(row=1, column=cell.column, value=value)
+                    sheet.cell(row=1, column=cell.column).fill = PatternFill(start_color="808080", end_color="808080",
+                                                                             fill_type="solid")
 
     @classmethod
     def check_for_deprecated_attributes(cls, workbook, instantiated_attributes: List):
