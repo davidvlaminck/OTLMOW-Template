@@ -13,8 +13,15 @@ from otlmow_converter.OtlmowConverter import OtlmowConverter
 from otlmow_model.Helpers.AssetCreator import dynamic_create_instance_from_uri
 from otlmow_modelbuilder.DatatypeBuilderFunctions import get_type_link_from_attribuut, get_single_field_from_type_uri
 from otlmow_modelbuilder.OSLOCollector import OSLOCollector
+from otlmow_modelbuilder.OTLEnumerationCreator import OTLEnumerationCreator
 
 ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+
+enumeration_validation_rules = {
+    "valid_uri_and_types": {},
+    "valid_regexes": [
+        "^https://wegenenverkeer.data.vlaanderen.be/ns/.+"]
+}
 
 
 class SubsetTemplateCreator:
@@ -175,6 +182,7 @@ class SubsetTemplateCreator:
     @classmethod
     def add_choice_list_excel(cls, workbook, instantiated_attributes: List, path_to_subset: Path):
         collector = cls._load_collector_from_subset_path(path_to_subset=path_to_subset)
+        creator = OTLEnumerationCreator(collector)
         dotnotation_module = DotnotationHelper()
         for sheet in workbook:
             filter_uri = SubsetTemplateCreator.find_uri_in_sheet(sheet)
@@ -189,6 +197,25 @@ class SubsetTemplateCreator:
                         dotnotation_attribute = dotnotation_module.get_attribute_by_dotnotation(single_attribute[0],
                                                                                                 cell.value)
                     attributes = collector.attributes
+                    single = next((x for x in attributes if x.objectUri == dotnotation_attribute.objectUri), None)
+                    enums = collector.enumerations
+                    enum_check = None
+                    if single is not None:
+                        enum_check = next((x for x in enums if x.objectUri == single.type), None)
+                    if enum_check is not None:
+                        print("woopdiedoo")
+                        choice_list = collector.find_enumeration_by_uri(enum_check.objectUri)
+                        data = creator.create_block_to_write_from_enumerations(
+                            choice_list, enumeration_validation_rules=enumeration_validation_rules)
+                        choicelist_values = creator.get_keuzelijstwaardes_by_name(choice_list.name)
+                        list = []
+                        for options in choicelist_values:
+                            list.append(options.invulwaarde)
+                        values = ','.join(list)
+                        print(values)
+                        data_val = DataValidation(type="list", formula1=f'"{values}"', allowBlank=False)
+                        sheet.add_data_validation(data_val)
+                        data_val.add(f'{get_column_letter(cell.column)}2:{get_column_letter(cell.column)}1000')
                     attribute = [x for x in attributes if x.label == dotnotation_attribute.label]
                     if len(attribute) == 0:
                         continue
@@ -199,6 +226,7 @@ class SubsetTemplateCreator:
                             column = cell.column
                             sheet.add_data_validation(data_validation)
                             data_validation.add(f'{get_column_letter(column)}2:{get_column_letter(column)}1000')
+                            sheet.add_data_validation(data_validation)
 
     @classmethod
     def add_mock_data_excel(cls, workbook, rows_of_examples: int):
