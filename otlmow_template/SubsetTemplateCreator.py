@@ -43,8 +43,11 @@ class SubsetTemplateCreator:
 
         for class_object in list(filter(lambda cl: cl.abstract == 0, collector.classes)):
             model_directory = None
-            if kwargs is not None and 'model_directory' in kwargs:
-                model_directory = kwargs['model_directory']
+            print('test ' + str(kwargs.get('model_directory')))
+            if kwargs is not None:
+                print("model_directory is set")
+                model_directory = kwargs.get('model_directory', None)
+                print(model_directory)
             instance = dynamic_create_instance_from_uri(class_object.objectUri, model_directory=model_directory)
             if instance is None:
                 continue
@@ -88,7 +91,8 @@ class SubsetTemplateCreator:
         wb.save(path_to_template_file_and_extension)
 
     @classmethod
-    def filters_assets_by_subset(cls, path_to_subset: Path, list_of_otl_objectUri: List):
+    def filters_assets_by_subset(cls, path_to_subset: Path, **kwargs):
+        list_of_otl_objectUri = kwargs.get('list_of_otl_objectUri', [])
         collector = cls._load_collector_from_subset_path(path_to_subset=path_to_subset)
         filtered_list = [x for x in collector.classes if x.objectUri in list_of_otl_objectUri]
         return filtered_list
@@ -158,12 +162,18 @@ class SubsetTemplateCreator:
                     filter_uri = sheet.cell(row=row_index + 1, column=column_index).value
         return filter_uri
 
+    def add_geo_artefact_excel(self, workbook):
+        pass
+
 
 if __name__ == '__main__':
     subset_tool = SubsetTemplateCreator()
-    subset_location = Path(ROOT_DIR) / 'UnitTests' / 'Subset' / 'Flitspaal_noAgent3.0.db'
-    print(subset_location)
+    subset_location = Path(ROOT_DIR) / 'UnitTests' / 'Subset' / 'OTL_AllCasesTestClass.db'
+    directory = Path(ROOT_DIR) / 'UnitTests' / 'TestClasses'
+    # Slash op het einde toevoegen verandert weinig of niks aan het resultaat
+    directory = os.path.join(directory, '')
     xls_location = Path(ROOT_DIR) / 'UnitTests' / 'Subset' / 'testFileStorage' / 'template_file.xlsx'
     subset_tool.generate_template_from_subset(path_to_subset=subset_location,
                                               path_to_template_file_and_extension=xls_location, add_attribute_info=True,
-                                              highlight_deprecated_attributes=True)
+                                              highlight_deprecated_attributes=True,
+                                              model_directory=directory)
