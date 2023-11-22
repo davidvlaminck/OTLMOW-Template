@@ -28,6 +28,16 @@ class SubsetTemplateCreator:
 
     def generate_template_from_subset(self, path_to_subset: Path, path_to_template_file_and_extension: Path,
                                       **kwargs):
+        instantiated_attributes = self.generate_basic_template(path_to_subset=path_to_subset,
+                                                               path_to_template_file_and_extension=path_to_template_file_and_extension,
+                                                               **kwargs)
+        test = os.path.splitext(path_to_template_file_and_extension)[-1].lower()
+        if test == '.xlsx':
+            self.alter_template(path_to_template_file_and_extension=path_to_template_file_and_extension,
+                                path_to_subset=path_to_subset, instantiated_attributes=instantiated_attributes,
+                                **kwargs)
+
+    def generate_basic_template(self, path_to_subset, path_to_template_file_and_extension, **kwargs):
         collector = self._load_collector_from_subset_path(path_to_subset=path_to_subset)
         otl_objects = []
 
@@ -53,18 +63,18 @@ class SubsetTemplateCreator:
         if not path_is_split:
             instantiated_attributes = converter.create_assets_from_file(filepath=path_to_template_file_and_extension,
                                                                         path_to_subset=path_to_subset)
-        self.alter_template(changes=kwargs, path_to_template_file_and_extension=path_to_template_file_and_extension,
-                            path_to_subset=path_to_subset, instantiated_attributes=instantiated_attributes)
+        return instantiated_attributes
 
+    # TODO: Verschillende methodes voor verschillende documenten excel, csv
     @classmethod
-    def alter_template(cls, changes, path_to_template_file_and_extension: Path, path_to_subset: Path,
-                       instantiated_attributes: List):
-        # use **kwargs to pass changes
-        generate_choice_list = changes.get('generate_choice_list', False)
-        add_geo_artefact = changes.get('add_geo_artefact', False)
-        add_attribute_info = changes.get('add_attribute_info', False)
-        highlight_deprecated_attributes = changes.get('highlight_deprecated_attributes', False)
-        amount_of_examples = changes.get('amount_of_examples', 0)
+    def alter_template(cls, path_to_template_file_and_extension: Path, path_to_subset: Path,
+                       instantiated_attributes: List, **kwargs):
+        generate_choice_list = kwargs.get('generate_choice_list', False)
+        add_geo_artefact = kwargs.get('add_geo_artefact', False)
+        add_attribute_info = kwargs.get('add_attribute_info', False)
+        highlight_deprecated_attributes = kwargs.get('highlight_deprecated_attributes', False)
+        amount_of_examples = kwargs.get('amount_of_examples', 0)
+        wb = load_workbook(path_to_template_file_and_extension)
         if generate_choice_list:
             raise NotImplementedError("generate_choice_list is not implemented yet")
         if add_geo_artefact:
@@ -72,12 +82,10 @@ class SubsetTemplateCreator:
         if amount_of_examples > 0:
             raise NotImplementedError("amount_of_examples is not implemented yet")
         if highlight_deprecated_attributes:
-            cls.check_for_deprecated_attributes(path_to_workbook=path_to_template_file_and_extension,
-                                                instantiated_attributes=instantiated_attributes,
-                                                path_to_subset=path_to_subset)
+            cls.check_for_deprecated_attributes(workbook=wb, instantiated_attributes=instantiated_attributes)
         if add_attribute_info:
-            cls.add_attribute_info_excel(path_to_workbook=path_to_template_file_and_extension,
-                                         instantiated_attributes=instantiated_attributes)
+            cls.add_attribute_info_excel(workbook=wb, instantiated_attributes=instantiated_attributes)
+        wb.save(path_to_template_file_and_extension)
 
     @classmethod
     def filters_assets_by_subset(cls, path_to_subset: Path, list_of_otl_objectUri: List):
@@ -104,9 +112,8 @@ class SubsetTemplateCreator:
         wb.save(path_to_workbook)
 
     @classmethod
-    def add_attribute_info_excel(cls, path_to_workbook: Path, instantiated_attributes: List):
+    def add_attribute_info_excel(cls, workbook, instantiated_attributes: List):
         dotnotation_module = DotnotationHelper()
-        workbook = load_workbook(path_to_workbook)
         for sheet in workbook:
             filter_uri = SubsetTemplateCreator.find_uri_in_sheet(sheet)
             single_attribute = [x for x in instantiated_attributes if x.typeURI == filter_uri]
@@ -115,13 +122,10 @@ class SubsetTemplateCreator:
                     dotnotation_attribute = dotnotation_module.get_attribute_by_dotnotation(single_attribute[0],
                                                                                             cell.value)
                     cell.value = dotnotation_attribute.definition + "\n\n" + " " + cell.value
-        workbook.save(path_to_workbook)
 
     @classmethod
-    def check_for_deprecated_attributes(cls, path_to_workbook: Path, instantiated_attributes: List,
-                                        path_to_subset: Path):
+    def check_for_deprecated_attributes(cls, workbook, instantiated_attributes: List):
         dotnotation_module = DotnotationHelper()
-        workbook = load_workbook(path_to_workbook)
         for sheet in workbook:
             filter_uri = SubsetTemplateCreator.find_uri_in_sheet(sheet)
             single_attribute = [x for x in instantiated_attributes if x.typeURI == filter_uri]
@@ -142,8 +146,6 @@ class SubsetTemplateCreator:
 
                     if is_deprecated:
                         cell.fill = PatternFill(start_color="FF0000", end_color="FF0000", fill_type="solid")
-
-        workbook.save(path_to_workbook)
 
     @classmethod
     def find_uri_in_sheet(cls, sheet):

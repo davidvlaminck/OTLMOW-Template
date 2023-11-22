@@ -35,7 +35,6 @@ def test_func1(subtests):
 
     path = Path(ROOT_DIR) / 'testFileStorage'
     [f.unlink() for f in Path(path).glob("*") if f.is_file()]
-    # os.makedirs(Path(ROOT_DIR) / 'testFileStorage')
     # Add an __init__.py file to the testFileStorage folder to make it a package
     open(Path(ROOT_DIR) / 'testFileStorage' / '__init__.py', 'a').close()
 
