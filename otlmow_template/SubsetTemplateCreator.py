@@ -5,11 +5,13 @@ from typing import List
 from openpyxl.reader.excel import load_workbook
 from openpyxl.styles import PatternFill
 from openpyxl.utils import get_column_letter
+from openpyxl.worksheet.datavalidation import DataValidation
 from openpyxl.worksheet.dimensions import DimensionHolder, ColumnDimension
 from otlmow_converter.DotnotationHelper import DotnotationHelper
 
 from otlmow_converter.OtlmowConverter import OtlmowConverter
 from otlmow_model.Helpers.AssetCreator import dynamic_create_instance_from_uri
+from otlmow_modelbuilder.DatatypeBuilderFunctions import get_type_link_from_attribuut, get_single_field_from_type_uri
 from otlmow_modelbuilder.OSLOCollector import OSLOCollector
 
 ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
@@ -42,11 +44,8 @@ class SubsetTemplateCreator:
 
         for class_object in list(filter(lambda cl: cl.abstract == 0, collector.classes)):
             model_directory = None
-            print('test ' + str(kwargs.get('model_directory')))
             if kwargs is not None:
-                print("model_directory is set")
                 model_directory = kwargs.get('model_directory', None)
-                print(model_directory)
             instance = dynamic_create_instance_from_uri(class_object.objectUri, model_directory=model_directory)
             if instance is None:
                 continue
@@ -69,7 +68,7 @@ class SubsetTemplateCreator:
 
     # TODO: Verschillende methodes voor verschillende documenten excel, csv
     @classmethod
-    def alter_template(cls, path_to_template_file_and_extension: Path,
+    def alter_template(cls, path_to_template_file_and_extension: Path, path_to_subset: Path,
                        instantiated_attributes: List, **kwargs):
         generate_choice_list = kwargs.get('generate_choice_list', False)
         add_geo_artefact = kwargs.get('add_geo_artefact', False)
@@ -77,9 +76,10 @@ class SubsetTemplateCreator:
         highlight_deprecated_attributes = kwargs.get('highlight_deprecated_attributes', False)
         amount_of_examples = kwargs.get('amount_of_examples', 0)
         wb = load_workbook(path_to_template_file_and_extension)
-        cls.add_mock_data_excel(workbook=wb, rows_of_examples=amount_of_examples)
         if generate_choice_list:
-            raise NotImplementedError("generate_choice_list is not implemented yet")
+            cls.add_choice_list_excel(workbook=wb, instantiated_attributes=instantiated_attributes,
+                                      path_to_subset=path_to_subset)
+        cls.add_mock_data_excel(workbook=wb, rows_of_examples=amount_of_examples)
         if add_geo_artefact:
             raise NotImplementedError("add_geo_artefact is not implemented yet")
         if highlight_deprecated_attributes:
@@ -129,6 +129,7 @@ class SubsetTemplateCreator:
                         dotnotation_attribute = dotnotation_module.get_attribute_by_dotnotation(single_attribute[0],
                                                                                                 cell.value)
                         value = dotnotation_attribute.definition
+
                     sheet.cell(row=1, column=cell.column, value=value)
                     sheet.cell(row=1, column=cell.column).fill = PatternFill(start_color="808080", end_color="808080",
                                                                              fill_type="solid")
@@ -168,8 +169,36 @@ class SubsetTemplateCreator:
                     filter_uri = sheet.cell(row=row_index + 1, column=column_index).value
         return filter_uri
 
-    def add_geo_artefact_excel(self, workbook):
+    def remove_geo_artefact_excel(self, workbook):
         pass
+
+    @classmethod
+    def add_choice_list_excel(cls, workbook, instantiated_attributes: List, path_to_subset: Path):
+        collector = cls._load_collector_from_subset_path(path_to_subset=path_to_subset)
+        dotnotation_module = DotnotationHelper()
+        for sheet in workbook:
+            filter_uri = SubsetTemplateCreator.find_uri_in_sheet(sheet)
+            single_attribute = [x for x in instantiated_attributes if x.typeURI == filter_uri]
+            for rows in sheet.iter_rows(min_row=1, max_row=1, min_col=2):
+                for cell in rows:
+                    if cell.value.find('[DEPRECATED]') != -1:
+                        strip = cell.value.split(' ')
+                        dotnotation_attribute = dotnotation_module.get_attribute_by_dotnotation(single_attribute[0],
+                                                                                                strip[1])
+                    else:
+                        dotnotation_attribute = dotnotation_module.get_attribute_by_dotnotation(single_attribute[0],
+                                                                                                cell.value)
+                    attributes = collector.attributes
+                    attribute = [x for x in attributes if x.label == dotnotation_attribute.label]
+                    if len(attribute) == 0:
+                        continue
+                    else:
+                        field_type = get_single_field_from_type_uri(attribute[0].type)
+                        if field_type == 'BooleanField':
+                            data_validation = DataValidation(type="list", formula1='"TRUE,FALSE,-"', allow_blank=True)
+                            column = cell.column
+                            sheet.add_data_validation(data_validation)
+                            data_validation.add(f'{get_column_letter(column)}2:{get_column_letter(column)}1000')
 
     @classmethod
     def add_mock_data_excel(cls, workbook, rows_of_examples: int):
@@ -198,4 +227,5 @@ if __name__ == '__main__':
     subset_tool.generate_template_from_subset(path_to_subset=subset_location,
                                               path_to_template_file_and_extension=xls_location, add_attribute_info=True,
                                               highlight_deprecated_attributes=True,
-                                              amount_of_examples=5)
+                                              amount_of_examples=5,
+                                              generate_choice_list=True)
