@@ -86,9 +86,9 @@ class SubsetTemplateCreator:
         if generate_choice_list:
             cls.add_choice_list_excel(workbook=wb, instantiated_attributes=instantiated_attributes,
                                       path_to_subset=path_to_subset)
+        if add_geo_artefact is False:
+            cls.remove_geo_artefact_excel(workbook=wb)
         cls.add_mock_data_excel(workbook=wb, rows_of_examples=amount_of_examples)
-        if add_geo_artefact:
-            raise NotImplementedError("add_geo_artefact is not implemented yet")
         if highlight_deprecated_attributes:
             cls.check_for_deprecated_attributes(workbook=wb, instantiated_attributes=instantiated_attributes)
         if add_attribute_info:
@@ -121,7 +121,7 @@ class SubsetTemplateCreator:
         dotnotation_module = DotnotationHelper()
         for sheet in workbook:
             filter_uri = SubsetTemplateCreator.find_uri_in_sheet(sheet)
-            single_attribute = [x for x in instantiated_attributes if x.typeURI == filter_uri]
+            single_attribute = next(x for x in instantiated_attributes if x.typeURI == filter_uri)
             sheet.insert_rows(1)
             for rows in sheet.iter_rows(min_row=2, max_row=2, min_col=1):
                 for cell in rows:
@@ -129,11 +129,11 @@ class SubsetTemplateCreator:
                         value = 'De URI van het object volgens https://www.w3.org/2001/XMLSchema#anyURI .'
                     elif cell.value.find('[DEPRECATED]') != -1:
                         strip = cell.value.split(' ')
-                        dotnotation_attribute = dotnotation_module.get_attribute_by_dotnotation(single_attribute[0],
+                        dotnotation_attribute = dotnotation_module.get_attribute_by_dotnotation(single_attribute,
                                                                                                 strip[1])
                         value = dotnotation_attribute.definition
                     else:
-                        dotnotation_attribute = dotnotation_module.get_attribute_by_dotnotation(single_attribute[0],
+                        dotnotation_attribute = dotnotation_module.get_attribute_by_dotnotation(single_attribute,
                                                                                                 cell.value)
                         value = dotnotation_attribute.definition
 
@@ -146,18 +146,18 @@ class SubsetTemplateCreator:
         dotnotation_module = DotnotationHelper()
         for sheet in workbook:
             filter_uri = SubsetTemplateCreator.find_uri_in_sheet(sheet)
-            single_attribute = [x for x in instantiated_attributes if x.typeURI == filter_uri]
+            single_attribute = next(x for x in instantiated_attributes if x.typeURI == filter_uri)
             for rows in sheet.iter_rows(min_row=1, max_row=1, min_col=2):
                 for cell in rows:
                     is_deprecated = False
                     if cell.value.count('.') == 1:
                         dot_split = cell.value.split('.')
-                        attribute = dotnotation_module.get_attribute_by_dotnotation(single_attribute[0],
+                        attribute = dotnotation_module.get_attribute_by_dotnotation(single_attribute,
                                                                                     dot_split[0])
 
                         if len(attribute.deprecated_version) > 0:
                             is_deprecated = True
-                    dotnotation_attribute = dotnotation_module.get_attribute_by_dotnotation(single_attribute[0],
+                    dotnotation_attribute = dotnotation_module.get_attribute_by_dotnotation(single_attribute,
                                                                                             cell.value)
                     if len(dotnotation_attribute.deprecated_version) > 0:
                         is_deprecated = True
@@ -176,8 +176,14 @@ class SubsetTemplateCreator:
                     filter_uri = sheet.cell(row=row_index + 1, column=column_index).value
         return filter_uri
 
-    def remove_geo_artefact_excel(self, workbook):
-        pass
+    @classmethod
+    # TODO: remove geometry row from excel
+    def remove_geo_artefact_excel(cls, workbook):
+        for sheet in workbook:
+            for row in sheet.iter_rows(min_row=1, max_row=1):
+                for cell in row:
+                    if cell.value == 'geometry':
+                        sheet.delete_cols(cell.column)
 
     @classmethod
     def add_choice_list_excel(cls, workbook, instantiated_attributes: List, path_to_subset: Path):
@@ -186,15 +192,15 @@ class SubsetTemplateCreator:
         dotnotation_module = DotnotationHelper()
         for sheet in workbook:
             filter_uri = SubsetTemplateCreator.find_uri_in_sheet(sheet)
-            single_attribute = [x for x in instantiated_attributes if x.typeURI == filter_uri]
+            single_attribute = next(x for x in instantiated_attributes if x.typeURI == filter_uri)
             for rows in sheet.iter_rows(min_row=1, max_row=1, min_col=2):
                 for cell in rows:
                     if cell.value.find('[DEPRECATED]') != -1:
                         strip = cell.value.split(' ')
-                        dotnotation_attribute = dotnotation_module.get_attribute_by_dotnotation(single_attribute[0],
+                        dotnotation_attribute = dotnotation_module.get_attribute_by_dotnotation(single_attribute,
                                                                                                 strip[1])
                     else:
-                        dotnotation_attribute = dotnotation_module.get_attribute_by_dotnotation(single_attribute[0],
+                        dotnotation_attribute = dotnotation_module.get_attribute_by_dotnotation(single_attribute,
                                                                                                 cell.value)
                     attributes = collector.attributes
                     single = next((x for x in attributes if x.objectUri == dotnotation_attribute.objectUri), None)
@@ -203,7 +209,6 @@ class SubsetTemplateCreator:
                     if single is not None:
                         enum_check = next((x for x in enums if x.objectUri == single.type), None)
                     if enum_check is not None:
-                        print("woopdiedoo")
                         choice_list = collector.find_enumeration_by_uri(enum_check.objectUri)
 
                         choicelist_values = creator.get_keuzelijstwaardes_by_name(choice_list.name)
@@ -211,10 +216,10 @@ class SubsetTemplateCreator:
                         for options in choicelist_values:
                             list.append(options.invulwaarde)
                         values = ','.join(list)
-                        print(values)
                         data_val = DataValidation(type="list", formula1=f'"{values}"', allowBlank=True)
                         sheet.add_data_validation(data_val)
                         data_val.add(f'{get_column_letter(cell.column)}2:{get_column_letter(cell.column)}1000')
+                    # TODO: change how this works because it doesn't work for all cases
                     attribute = [x for x in attributes if x.label == dotnotation_attribute.label]
                     if len(attribute) == 0:
                         continue
