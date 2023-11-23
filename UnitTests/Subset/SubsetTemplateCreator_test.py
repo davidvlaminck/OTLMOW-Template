@@ -7,7 +7,6 @@ from otlmow_template.SubsetTemplateCreator import SubsetTemplateCreator
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
-# Toegangsprocedure en Agent zijn niet meer in de subset aanwezig
 def test_func1(subtests):
     subset_tool = SubsetTemplateCreator()
     subset_location = Path(ROOT_DIR) / 'Flitspaal_noAgent3.0.db'

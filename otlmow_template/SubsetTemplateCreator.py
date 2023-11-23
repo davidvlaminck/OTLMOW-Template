@@ -1,5 +1,7 @@
+import ntpath
 import os
 import site
+import tempfile
 from pathlib import Path
 from typing import List
 from openpyxl.reader.excel import load_workbook
@@ -36,16 +38,23 @@ class SubsetTemplateCreator:
 
     def generate_template_from_subset(self, path_to_subset: Path, path_to_template_file_and_extension: Path,
                                       **kwargs):
-        instantiated_attributes = self.generate_basic_template(path_to_subset=path_to_subset,
+        tempdir = tempfile.gettempdir()
+        test = ntpath.basename(path_to_template_file_and_extension)
+        temporary_path = Path(tempdir) / test
+        instantiated_attributes = self.generate_basic_template(path_to_subset=path_to_subset, temp_path = temporary_path,
                                                                path_to_template_file_and_extension=path_to_template_file_and_extension,
                                                                **kwargs)
-        test = os.path.splitext(path_to_template_file_and_extension)[-1].lower()
-        if test == '.xlsx':
-            self.alter_template(path_to_template_file_and_extension=path_to_template_file_and_extension,
-                                path_to_subset=path_to_subset, instantiated_attributes=instantiated_attributes,
-                                **kwargs)
+        extension = os.path.splitext(path_to_template_file_and_extension)[-1].lower()
+        tempdir = tempfile.gettempdir()
+        test = ntpath.basename(path_to_template_file_and_extension)
+        temporary_path = Path(tempdir) / test
+        print(test)
+        if extension == '.xlsx':
+            self.alter_excel_template(path_to_template_file_and_extension=path_to_template_file_and_extension, temp_path= temporary_path,
+                                      path_to_subset=path_to_subset, instantiated_attributes=instantiated_attributes,
+                                      **kwargs)
 
-    def generate_basic_template(self, path_to_subset, path_to_template_file_and_extension, **kwargs):
+    def generate_basic_template(self, path_to_subset, path_to_template_file_and_extension, temp_path: Path, **kwargs):
         collector = self._load_collector_from_subset_path(path_to_subset=path_to_subset)
         otl_objects = []
 
@@ -64,30 +73,33 @@ class SubsetTemplateCreator:
                 attr = getattr(instance, '_' + attribute_object.name)
                 attr.fill_with_dummy_data()
         converter = OtlmowConverter()
-        converter.create_file_from_assets(filepath=path_to_template_file_and_extension,
+        converter.create_file_from_assets(filepath=temp_path,
                                           list_of_objects=otl_objects, **kwargs)
-        path_is_split = kwargs.get('split_per_type', False)
+        path_is_split = kwargs.get('split_per_type', True)
+        extension = os.path.splitext(path_to_template_file_and_extension)[-1].lower()
         instantiated_attributes = []
-        if not path_is_split:
-            instantiated_attributes = converter.create_assets_from_file(filepath=path_to_template_file_and_extension,
+        if path_is_split is False or extension == '.xlsx':
+            instantiated_attributes = converter.create_assets_from_file(filepath=temp_path,
                                                                         path_to_subset=path_to_subset)
         return instantiated_attributes
 
     # TODO: Verschillende methodes voor verschillende documenten excel, csv
     @classmethod
-    def alter_template(cls, path_to_template_file_and_extension: Path, path_to_subset: Path,
-                       instantiated_attributes: List, **kwargs):
+    def alter_excel_template(cls, path_to_template_file_and_extension: Path, path_to_subset: Path,
+                             instantiated_attributes: List, temp_path: Path, **kwargs):
         generate_choice_list = kwargs.get('generate_choice_list', False)
         add_geo_artefact = kwargs.get('add_geo_artefact', False)
         add_attribute_info = kwargs.get('add_attribute_info', False)
         highlight_deprecated_attributes = kwargs.get('highlight_deprecated_attributes', False)
         amount_of_examples = kwargs.get('amount_of_examples', 0)
-        wb = load_workbook(path_to_template_file_and_extension)
+        wb = load_workbook(temp_path)
+        # Volgorde is belangrijk! Eerst rijen verwijderen indien nodig dan choice list toevoegen,
+        # staat namelijk vast op de kolom en niet het attribuut in die kolom
+        if add_geo_artefact is False:
+            cls.remove_geo_artefact_excel(workbook=wb)
         if generate_choice_list:
             cls.add_choice_list_excel(workbook=wb, instantiated_attributes=instantiated_attributes,
                                       path_to_subset=path_to_subset)
-        if add_geo_artefact is False:
-            cls.remove_geo_artefact_excel(workbook=wb)
         cls.add_mock_data_excel(workbook=wb, rows_of_examples=amount_of_examples)
         if highlight_deprecated_attributes:
             cls.check_for_deprecated_attributes(workbook=wb, instantiated_attributes=instantiated_attributes)
@@ -95,6 +107,17 @@ class SubsetTemplateCreator:
             cls.add_attribute_info_excel(workbook=wb, instantiated_attributes=instantiated_attributes)
         cls.design_workbook_excel(workbook=wb)
         wb.save(path_to_template_file_and_extension)
+        [f.unlink() for f in Path(temp_path).glob("*") if f.is_file()]
+
+    def alter_single_csv_template(self, path_to_template_file_and_extension: Path, path_to_subset: Path,
+                                  instantiated_attributes: List, **kwargs):
+        add_geo_artefact = kwargs.get('add_geo_artefact', False)
+        add_attribute_info = kwargs.get('add_attribute_info', False)
+        highlight_deprecated_attributes = kwargs.get('highlight_deprecated_attributes', False)
+        amount_of_examples = kwargs.get('amount_of_examples', 0)
+        if add_geo_artefact is False:
+            self.remove_geo_artefact_csv(path_to_template_file_and_extension=path_to_template_file_and_extension)
+        pass
 
     @classmethod
     def filters_assets_by_subset(cls, path_to_subset: Path, **kwargs):
@@ -248,6 +271,11 @@ class SubsetTemplateCreator:
                     for cell in rows:
                         cell.value = mock_values[cell.column - 1]
 
+    def remove_geo_artefact_csv(self, path_to_template_file_and_extension):
+        with open(path_to_template_file_and_extension, 'w') as file:
+            print(file)
+        pass
+
 
 if __name__ == '__main__':
     subset_tool = SubsetTemplateCreator()
@@ -260,4 +288,5 @@ if __name__ == '__main__':
                                               path_to_template_file_and_extension=xls_location, add_attribute_info=True,
                                               highlight_deprecated_attributes=True,
                                               amount_of_examples=5,
-                                              generate_choice_list=True)
+                                              generate_choice_list=True,
+                                              )
