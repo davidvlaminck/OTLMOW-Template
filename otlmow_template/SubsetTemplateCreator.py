@@ -56,7 +56,7 @@ class SubsetTemplateCreator:
             instance = dynamic_create_instance_from_uri(class_object.objectUri, model_directory=model_directory)
             if instance is None:
                 continue
-            instance._assetId.fill_with_dummy_data()
+            instance.fill_with_dummy_data()
             otl_objects.append(instance)
 
             attributen = collector.find_attributes_by_class(class_object)
@@ -205,15 +205,14 @@ class SubsetTemplateCreator:
                     if enum_check is not None:
                         print("woopdiedoo")
                         choice_list = collector.find_enumeration_by_uri(enum_check.objectUri)
-                        data = creator.create_block_to_write_from_enumerations(
-                            choice_list, enumeration_validation_rules=enumeration_validation_rules)
+
                         choicelist_values = creator.get_keuzelijstwaardes_by_name(choice_list.name)
                         list = []
                         for options in choicelist_values:
                             list.append(options.invulwaarde)
                         values = ','.join(list)
                         print(values)
-                        data_val = DataValidation(type="list", formula1=f'"{values}"', allowBlank=False)
+                        data_val = DataValidation(type="list", formula1=f'"{values}"', allowBlank=True)
                         sheet.add_data_validation(data_val)
                         data_val.add(f'{get_column_letter(cell.column)}2:{get_column_letter(cell.column)}1000')
                     attribute = [x for x in attributes if x.label == dotnotation_attribute.label]
