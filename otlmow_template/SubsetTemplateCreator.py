@@ -1,5 +1,6 @@
 import ntpath
 import os
+import shutil
 import site
 import tempfile
 from pathlib import Path
@@ -41,7 +42,7 @@ class SubsetTemplateCreator:
         tempdir = tempfile.gettempdir()
         test = ntpath.basename(path_to_template_file_and_extension)
         temporary_path = Path(tempdir) / test
-        instantiated_attributes = self.generate_basic_template(path_to_subset=path_to_subset, temp_path = temporary_path,
+        instantiated_attributes = self.generate_basic_template(path_to_subset=path_to_subset, temp_path=temporary_path,
                                                                path_to_template_file_and_extension=path_to_template_file_and_extension,
                                                                **kwargs)
         extension = os.path.splitext(path_to_template_file_and_extension)[-1].lower()
@@ -50,9 +51,16 @@ class SubsetTemplateCreator:
         temporary_path = Path(tempdir) / test
         print(test)
         if extension == '.xlsx':
-            self.alter_excel_template(path_to_template_file_and_extension=path_to_template_file_and_extension, temp_path= temporary_path,
+            self.alter_excel_template(path_to_template_file_and_extension=path_to_template_file_and_extension,
+                                      temp_path=temporary_path,
                                       path_to_subset=path_to_subset, instantiated_attributes=instantiated_attributes,
                                       **kwargs)
+        elif extension == '.csv':
+            self.alter_single_csv_template(path_to_template_file_and_extension=path_to_template_file_and_extension,
+                                           temp_path=temporary_path,
+                                           path_to_subset=path_to_subset,
+                                           instantiated_attributes=instantiated_attributes,
+                                           **kwargs)
 
     def generate_basic_template(self, path_to_subset, path_to_template_file_and_extension, temp_path: Path, **kwargs):
         collector = self._load_collector_from_subset_path(path_to_subset=path_to_subset)
@@ -107,17 +115,21 @@ class SubsetTemplateCreator:
             cls.add_attribute_info_excel(workbook=wb, instantiated_attributes=instantiated_attributes)
         cls.design_workbook_excel(workbook=wb)
         wb.save(path_to_template_file_and_extension)
-        [f.unlink() for f in Path(temp_path).glob("*") if f.is_file()]
+        os.remove(temp_path)
 
     def alter_single_csv_template(self, path_to_template_file_and_extension: Path, path_to_subset: Path,
-                                  instantiated_attributes: List, **kwargs):
-        add_geo_artefact = kwargs.get('add_geo_artefact', False)
-        add_attribute_info = kwargs.get('add_attribute_info', False)
-        highlight_deprecated_attributes = kwargs.get('highlight_deprecated_attributes', False)
-        amount_of_examples = kwargs.get('amount_of_examples', 0)
-        if add_geo_artefact is False:
-            self.remove_geo_artefact_csv(path_to_template_file_and_extension=path_to_template_file_and_extension)
-        pass
+                                  instantiated_attributes: List, temp_path, **kwargs):
+        path_is_split = kwargs.get('split_per_type', True)
+        if path_is_split is False:
+            self.alter_csv_template(path_to_template_file_and_extension=path_to_template_file_and_extension,
+                                    temp_path=temp_path,
+                                    path_to_subset=path_to_subset, instantiated_attributes=instantiated_attributes,
+                                    **kwargs)
+        else:
+            self.multiple_csv_template(path_to_template_file_and_extension=path_to_template_file_and_extension,
+                                       temp_path=temp_path,
+                                       path_to_subset=path_to_subset, instantiated_attributes=instantiated_attributes,
+                                       **kwargs)
 
     @classmethod
     def filters_assets_by_subset(cls, path_to_subset: Path, **kwargs):
@@ -200,7 +212,6 @@ class SubsetTemplateCreator:
         return filter_uri
 
     @classmethod
-    # TODO: remove geometry row from excel
     def remove_geo_artefact_excel(cls, workbook):
         for sheet in workbook:
             for row in sheet.iter_rows(min_row=1, max_row=1):
@@ -271,10 +282,35 @@ class SubsetTemplateCreator:
                     for cell in rows:
                         cell.value = mock_values[cell.column - 1]
 
-    def remove_geo_artefact_csv(self, path_to_template_file_and_extension):
+    @classmethod
+    def remove_geo_artefact_csv(cls, path_to_template_file_and_extension):
         with open(path_to_template_file_and_extension, 'w') as file:
             print(file)
         pass
+
+    @classmethod
+    def multiple_csv_template(cls, path_to_template_file_and_extension, temp_path, path_to_subset,
+                              instantiated_attributes, **kwargs):
+        tempdir = tempfile.gettempdir()
+        print(tempdir)
+        things_in_there = os.listdir(tempdir)
+        test = [x for x in things_in_there if x.startswith('template_file_')]
+        for file in test:
+            test_template_loc = Path(os.path.dirname(path_to_template_file_and_extension)) / file
+            new_temp_path = Path(tempdir) / file
+            cls.alter_csv_template(path_to_template_file_and_extension=test_template_loc, temp_path=new_temp_path,
+                                   path_to_subset=path_to_subset, instantiated_attributes=instantiated_attributes,
+                                   **kwargs)
+
+    @classmethod
+    def alter_csv_template(cls, path_to_template_file_and_extension, temp_path, path_to_subset,
+                           instantiated_attributes, **kwargs):
+        print("test")
+        file = open(temp_path, 'w')
+        file.close()
+        shutil.move(temp_path, path_to_template_file_and_extension)
+        # os.rename(temp_path, path_to_template_file_and_extension)
+        # os.remove(temp_path)
 
 
 if __name__ == '__main__':
@@ -283,7 +319,7 @@ if __name__ == '__main__':
     # directory = Path(ROOT_DIR) / 'UnitTests' / 'TestClasses'
     # Slash op het einde toevoegen verandert weinig of niks aan het resultaat
     # directory = os.path.join(directory, '')
-    xls_location = Path(ROOT_DIR) / 'UnitTests' / 'Subset' / 'testFileStorage' / 'template_file.xlsx'
+    xls_location = Path(ROOT_DIR) / 'UnitTests' / 'Subset' / 'testFileStorage' / 'template_file.csv'
     subset_tool.generate_template_from_subset(path_to_subset=subset_location,
                                               path_to_template_file_and_extension=xls_location, add_attribute_info=True,
                                               highlight_deprecated_attributes=True,
