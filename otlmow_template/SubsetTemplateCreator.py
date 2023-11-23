@@ -1,6 +1,6 @@
 import ntpath
 import os
-import shutil
+import csv
 import site
 import tempfile
 from pathlib import Path
@@ -14,7 +14,7 @@ from otlmow_converter.DotnotationHelper import DotnotationHelper
 
 from otlmow_converter.OtlmowConverter import OtlmowConverter
 from otlmow_model.Helpers.AssetCreator import dynamic_create_instance_from_uri
-from otlmow_modelbuilder.DatatypeBuilderFunctions import get_type_link_from_attribuut, get_single_field_from_type_uri
+from otlmow_modelbuilder.DatatypeBuilderFunctions import get_single_field_from_type_uri
 from otlmow_modelbuilder.OSLOCollector import OSLOCollector
 from otlmow_modelbuilder.OTLEnumerationCreator import OTLEnumerationCreator
 
@@ -39,30 +39,30 @@ class SubsetTemplateCreator:
 
     def generate_template_from_subset(self, path_to_subset: Path, path_to_template_file_and_extension: Path,
                                       **kwargs):
-        tempdir = tempfile.gettempdir()
+        tempdir = Path(tempfile.gettempdir()) / 'temp-otlmow'
+        if not tempdir.exists():
+            os.makedirs(tempdir)
         test = ntpath.basename(path_to_template_file_and_extension)
         temporary_path = Path(tempdir) / test
-        instantiated_attributes = self.generate_basic_template(path_to_subset=path_to_subset, temp_path=temporary_path,
+        instantiated_attributes = self.generate_basic_template(path_to_subset=path_to_subset,
+                                                               temporary_path=temporary_path,
                                                                path_to_template_file_and_extension=path_to_template_file_and_extension,
                                                                **kwargs)
         extension = os.path.splitext(path_to_template_file_and_extension)[-1].lower()
-        tempdir = tempfile.gettempdir()
-        test = ntpath.basename(path_to_template_file_and_extension)
-        temporary_path = Path(tempdir) / test
-        print(test)
         if extension == '.xlsx':
             self.alter_excel_template(path_to_template_file_and_extension=path_to_template_file_and_extension,
-                                      temp_path=temporary_path,
+                                      temporary_path=temporary_path,
                                       path_to_subset=path_to_subset, instantiated_attributes=instantiated_attributes,
                                       **kwargs)
         elif extension == '.csv':
-            self.alter_single_csv_template(path_to_template_file_and_extension=path_to_template_file_and_extension,
-                                           temp_path=temporary_path,
-                                           path_to_subset=path_to_subset,
-                                           instantiated_attributes=instantiated_attributes,
-                                           **kwargs)
+            self.determine_multiplicity_csv(path_to_template_file_and_extension=path_to_template_file_and_extension,
+                                            path_to_subset=path_to_subset,
+                                            instantiated_attributes=instantiated_attributes,
+                                            temporary_path=temporary_path,
+                                            **kwargs)
 
-    def generate_basic_template(self, path_to_subset, path_to_template_file_and_extension, temp_path: Path, **kwargs):
+    def generate_basic_template(self, path_to_subset: Path, path_to_template_file_and_extension: Path,
+                                temporary_path: Path, **kwargs):
         collector = self._load_collector_from_subset_path(path_to_subset=path_to_subset)
         otl_objects = []
 
@@ -81,26 +81,26 @@ class SubsetTemplateCreator:
                 attr = getattr(instance, '_' + attribute_object.name)
                 attr.fill_with_dummy_data()
         converter = OtlmowConverter()
-        converter.create_file_from_assets(filepath=temp_path,
+        converter.create_file_from_assets(filepath=temporary_path,
                                           list_of_objects=otl_objects, **kwargs)
         path_is_split = kwargs.get('split_per_type', True)
         extension = os.path.splitext(path_to_template_file_and_extension)[-1].lower()
         instantiated_attributes = []
         if path_is_split is False or extension == '.xlsx':
-            instantiated_attributes = converter.create_assets_from_file(filepath=temp_path,
+            instantiated_attributes = converter.create_assets_from_file(filepath=temporary_path,
                                                                         path_to_subset=path_to_subset)
         return instantiated_attributes
 
     # TODO: Verschillende methodes voor verschillende documenten excel, csv
     @classmethod
     def alter_excel_template(cls, path_to_template_file_and_extension: Path, path_to_subset: Path,
-                             instantiated_attributes: List, temp_path: Path, **kwargs):
+                             instantiated_attributes: List, temporary_path, **kwargs):
         generate_choice_list = kwargs.get('generate_choice_list', False)
         add_geo_artefact = kwargs.get('add_geo_artefact', False)
         add_attribute_info = kwargs.get('add_attribute_info', False)
         highlight_deprecated_attributes = kwargs.get('highlight_deprecated_attributes', False)
         amount_of_examples = kwargs.get('amount_of_examples', 0)
-        wb = load_workbook(temp_path)
+        wb = load_workbook(temporary_path)
         # Volgorde is belangrijk! Eerst rijen verwijderen indien nodig dan choice list toevoegen,
         # staat namelijk vast op de kolom en niet het attribuut in die kolom
         if add_geo_artefact is False:
@@ -115,21 +115,24 @@ class SubsetTemplateCreator:
             cls.add_attribute_info_excel(workbook=wb, instantiated_attributes=instantiated_attributes)
         cls.design_workbook_excel(workbook=wb)
         wb.save(path_to_template_file_and_extension)
-        os.remove(temp_path)
+        file_location = os.path.dirname(temporary_path)
+        [f.unlink() for f in Path(file_location).glob("*") if f.is_file()]
 
-    def alter_single_csv_template(self, path_to_template_file_and_extension: Path, path_to_subset: Path,
-                                  instantiated_attributes: List, temp_path, **kwargs):
+    def determine_multiplicity_csv(self, path_to_template_file_and_extension: Path, path_to_subset: Path,
+                                   instantiated_attributes: List, temporary_path: Path, **kwargs):
         path_is_split = kwargs.get('split_per_type', True)
         if path_is_split is False:
             self.alter_csv_template(path_to_template_file_and_extension=path_to_template_file_and_extension,
-                                    temp_path=temp_path,
+                                    temporary_path=temporary_path,
                                     path_to_subset=path_to_subset, instantiated_attributes=instantiated_attributes,
                                     **kwargs)
         else:
             self.multiple_csv_template(path_to_template_file_and_extension=path_to_template_file_and_extension,
-                                       temp_path=temp_path,
+                                       temporary_path=temporary_path,
                                        path_to_subset=path_to_subset, instantiated_attributes=instantiated_attributes,
                                        **kwargs)
+        file_location = os.path.dirname(temporary_path)
+        [f.unlink() for f in Path(file_location).glob("*") if f.is_file()]
 
     @classmethod
     def filters_assets_by_subset(cls, path_to_subset: Path, **kwargs):
@@ -283,34 +286,53 @@ class SubsetTemplateCreator:
                         cell.value = mock_values[cell.column - 1]
 
     @classmethod
-    def remove_geo_artefact_csv(cls, path_to_template_file_and_extension):
-        with open(path_to_template_file_and_extension, 'w') as file:
-            print(file)
-        pass
+    def remove_geo_artefact_csv(cls, reader, new_file):
+        delimiter = ';'
+        header = []
+        data = []
+        for row_nr, row in enumerate(reader):
+            if row_nr == 0:
+                header = row
+            else:
+                data = row
+
+        if 'geometry' in header:
+            deletion_index = header.index('geometry')
+            header.remove('geometry')
+            data.pop(deletion_index)
+        new_file.write(delimiter.join(header) + '\n')
+        new_file.write(delimiter.join(data) + '\n')
 
     @classmethod
-    def multiple_csv_template(cls, path_to_template_file_and_extension, temp_path, path_to_subset,
+    def multiple_csv_template(cls, path_to_template_file_and_extension, path_to_subset, temporary_path,
                               instantiated_attributes, **kwargs):
-        tempdir = tempfile.gettempdir()
-        print(tempdir)
+        file_location = os.path.dirname(path_to_template_file_and_extension)
+        tempdir = Path(tempfile.gettempdir()) / 'temp-otlmow'
+        print(file_location)
+        file_name = ntpath.basename(path_to_template_file_and_extension)
+        split_file_name = file_name.split('.')
         things_in_there = os.listdir(tempdir)
-        test = [x for x in things_in_there if x.startswith('template_file_')]
-        for file in test:
+        csv_templates = [x for x in things_in_there if x.startswith(split_file_name[0] + '_')]
+        print(csv_templates)
+        for file in csv_templates:
             test_template_loc = Path(os.path.dirname(path_to_template_file_and_extension)) / file
-            new_temp_path = Path(tempdir) / file
-            cls.alter_csv_template(path_to_template_file_and_extension=test_template_loc, temp_path=new_temp_path,
+            temp_loc = Path(tempdir) / file
+            cls.alter_csv_template(path_to_template_file_and_extension=test_template_loc, temporary_path=temp_loc,
                                    path_to_subset=path_to_subset, instantiated_attributes=instantiated_attributes,
                                    **kwargs)
 
     @classmethod
-    def alter_csv_template(cls, path_to_template_file_and_extension, temp_path, path_to_subset,
+    def alter_csv_template(cls, path_to_template_file_and_extension, path_to_subset, temporary_path,
                            instantiated_attributes, **kwargs):
-        print("test")
-        file = open(temp_path, 'w')
-        file.close()
-        shutil.move(temp_path, path_to_template_file_and_extension)
-        # os.rename(temp_path, path_to_template_file_and_extension)
-        # os.remove(temp_path)
+        delimiter = ';'
+        add_geo_artefact = kwargs.get('add_geo_artefact', False)
+        quote_char = '"'
+        with open(temporary_path, 'r+', encoding='utf-8') as csvfile:
+            new_file = open(path_to_template_file_and_extension, 'w', encoding='utf-8')
+            reader = csv.reader(csvfile, delimiter=delimiter, quotechar=quote_char)
+            if add_geo_artefact is False:
+                cls.remove_geo_artefact_csv(reader=reader, new_file=new_file)
+            new_file.close()
 
 
 if __name__ == '__main__':
