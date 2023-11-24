@@ -13,6 +13,7 @@ from openpyxl.worksheet.dimensions import DimensionHolder, ColumnDimension
 from otlmow_converter.DotnotationHelper import DotnotationHelper
 
 from otlmow_converter.OtlmowConverter import OtlmowConverter
+from otlmow_model.BaseClasses.BooleanField import BooleanField
 from otlmow_model.BaseClasses.KeuzelijstField import KeuzelijstField
 from otlmow_model.Helpers.AssetCreator import dynamic_create_instance_from_uri
 from otlmow_modelbuilder.DatatypeBuilderFunctions import get_single_field_from_type_uri
@@ -159,6 +160,8 @@ class SubsetTemplateCreator:
     def add_attribute_info_excel(cls, workbook, instantiated_attributes: List):
         dotnotation_module = DotnotationHelper()
         for sheet in workbook:
+            if sheet == workbook['Keuzelijsten']:
+                break
             filter_uri = SubsetTemplateCreator.find_uri_in_sheet(sheet)
             single_attribute = next(x for x in instantiated_attributes if x.typeURI == filter_uri)
             sheet.insert_rows(1)
@@ -184,6 +187,8 @@ class SubsetTemplateCreator:
     def check_for_deprecated_attributes(cls, workbook, instantiated_attributes: List):
         dotnotation_module = DotnotationHelper()
         for sheet in workbook:
+            if sheet == workbook['Keuzelijsten']:
+                break
             filter_uri = SubsetTemplateCreator.find_uri_in_sheet(sheet)
             single_attribute = next(x for x in instantiated_attributes if x.typeURI == filter_uri)
             for rows in sheet.iter_rows(min_row=1, max_row=1, min_col=2):
@@ -225,10 +230,14 @@ class SubsetTemplateCreator:
 
     @classmethod
     def add_choice_list_excel(cls, workbook, instantiated_attributes: List, path_to_subset: Path):
+        workbook.create_sheet('Keuzelijsten')
         collector = cls._load_collector_from_subset_path(path_to_subset=path_to_subset)
         creator = OTLEnumerationCreator(collector)
         dotnotation_module = DotnotationHelper()
         for sheet in workbook:
+            print(sheet.title)
+            if sheet == workbook['Keuzelijsten']:
+                break
             filter_uri = SubsetTemplateCreator.find_uri_in_sheet(sheet)
             single_attribute = next(x for x in instantiated_attributes if x.typeURI == filter_uri)
             for rows in sheet.iter_rows(min_row=1, max_row=1, min_col=2):
@@ -241,44 +250,31 @@ class SubsetTemplateCreator:
                         dotnotation_attribute = dotnotation_module.get_attribute_by_dotnotation(single_attribute,
                                                                                                 cell.value)
 
-                    if dotnotation_attribute.objectUri == 'https://wegenenverkeer.data.vlaanderen.be/ns/implementatieelement#AIMToestand.toestand':
-                        if issubclass(dotnotation_attribute.field, KeuzelijstField):
-                            name = dotnotation_attribute.field.naam
-                            options = dotnotation_attribute.field.options
-                            valid_options = [v.invulwaarde for k, v in dotnotation_attribute.field.options.items()
-                                             if v.status != 'verwijderd']
-
-
                     attributes = collector.attributes
-                    single = next((x for x in attributes if x.objectUri == dotnotation_attribute.objectUri), None)
-                    enums = collector.enumerations
-                    enum_check = None
-                    if single is not None:
-                        enum_check = next((x for x in enums if x.objectUri == single.type), None)
-                    if enum_check is not None:
-                        choice_list = collector.find_enumeration_by_uri(enum_check.objectUri)
 
-                        choicelist_values = creator.get_keuzelijstwaardes_by_name(choice_list.name)
-                        list = []
-                        for options in choicelist_values:
-                            list.append(options.invulwaarde)
-                        values = ','.join(list)
+                    if issubclass(dotnotation_attribute.field, KeuzelijstField):
+                        print(str(sheet) + ' ' + dotnotation_attribute.field.naam)
+                        name = dotnotation_attribute.field.naam
+                        options = dotnotation_attribute.field.options
+                        valid_options = [v.invulwaarde for k, v in dotnotation_attribute.field.options.items()
+                                         if v.status != 'verwijderd']
+
+                        option_list = []
+                        for option in valid_options:
+                            option_list.append(option)
+                        values = ','.join(option_list)
+                        print(len(values))
                         # TODO: check if values is longer than 255 characters if so split it up and add to other sheet
                         data_val = DataValidation(type="list", formula1=f'"{values}"', allowBlank=True)
                         sheet.add_data_validation(data_val)
                         data_val.add(f'{get_column_letter(cell.column)}2:{get_column_letter(cell.column)}1000')
                     # TODO: change how this works because it doesn't work for all cases
-                    attribute = [x for x in attributes if x.label == dotnotation_attribute.label]
-                    if len(attribute) == 0:
-                        continue
-                    else:
-                        field_type = get_single_field_from_type_uri(attribute[0].type)
-                        if field_type == 'BooleanField':
-                            data_validation = DataValidation(type="list", formula1='"TRUE,FALSE,-"', allow_blank=True)
-                            column = cell.column
-                            sheet.add_data_validation(data_validation)
-                            data_validation.add(f'{get_column_letter(column)}2:{get_column_letter(column)}1000')
-                            sheet.add_data_validation(data_validation)
+                    if issubclass(dotnotation_attribute.field, BooleanField):
+                        data_validation = DataValidation(type="list", formula1='"TRUE,FALSE,-"', allow_blank=True)
+                        column = cell.column
+                        sheet.add_data_validation(data_validation)
+                        data_validation.add(f'{get_column_letter(column)}2:{get_column_letter(column)}1000')
+                        sheet.add_data_validation(data_validation)
 
     @classmethod
     def add_mock_data_excel(cls, workbook, rows_of_examples: int):
