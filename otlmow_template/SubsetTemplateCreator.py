@@ -326,6 +326,7 @@ class SubsetTemplateCreator:
         delimiter = ';'
         add_geo_artefact = kwargs.get('add_geo_artefact', False)
         add_attribute_info = kwargs.get('add_attribute_info', False)
+        highlight_deprecated_attributes = kwargs.get('highlight_deprecated_attributes', False)
         quote_char = '"'
         with open(temporary_path, 'r+', encoding='utf-8') as csvfile:
             new_file = open(path_to_template_file_and_extension, 'w', encoding='utf-8')
@@ -337,12 +338,12 @@ class SubsetTemplateCreator:
                     data.append(row)
             if add_geo_artefact is False:
                 [header, data] = cls.remove_geo_artefact_csv(header=header, data=data)
-                print(header)
             if add_attribute_info:
                 [info, header] = cls.add_attribute_info_csv(header=header, data=data,
                                                             instantiated_attributes=instantiated_attributes)
-                print(header)
                 new_file.write(delimiter.join(info) + '\n')
+            if highlight_deprecated_attributes:
+                header = cls.highlight_deprecated_attributes_csv(header=header, data=data, instantiated_attributes=instantiated_attributes)
             new_file.write(delimiter.join(header) + '\n')
             for d in data:
                 new_file.write(delimiter.join(d) + '\n')
@@ -373,6 +374,54 @@ class SubsetTemplateCreator:
                         continue
                     info_data[index] = dotnotation_attribute.definition
         return [info_data, header]
+
+    @classmethod
+    def add_mock_data_csv(cls, header, data, rows_of_examples):
+        mock_values = []
+        for d in data:
+            mock_values.append(d)
+        if rows_of_examples == 0:
+            data = []
+        else:
+            for d in data:
+                for cell in d:
+                    cell = mock_values[cell.column - 1]
+        return data
+
+    @classmethod
+    def highlight_deprecated_attributes_csv(cls, header, data, instantiated_attributes):
+        found_uri = []
+        dotnotation_module = DotnotationHelper()
+        uri_index = cls.find_uri_in_csv(header)
+        for d in data:
+            if d[uri_index] not in found_uri:
+                found_uri.append(d[uri_index])
+        for uri in found_uri:
+            single_object = next(x for x in instantiated_attributes if x.typeURI == uri)
+            for dotnototation_title in header:
+                if dotnototation_title == 'typeURI':
+                    continue
+                else:
+                    index = header.index(dotnototation_title)
+                    value = header[index]
+                    try:
+                        is_deprecated = False
+                        if dotnototation_title.count('.') == 1:
+                            dot_split = dotnototation_title.split('.')
+                            attribute = dotnotation_module.get_attribute_by_dotnotation(single_object,
+                                                                                        dot_split[0])
+
+                            if len(attribute.deprecated_version) > 0:
+                                is_deprecated = True
+                        dotnotation_attribute = dotnotation_module.get_attribute_by_dotnotation(single_object,
+                                                                                                dotnototation_title)
+                        if len(dotnotation_attribute.deprecated_version) > 0:
+                            is_deprecated = True
+                    except AttributeError:
+                        continue
+                    if is_deprecated:
+                        header[index] = "[DEPRECATED] " + value
+        return header
 
     @classmethod
     def find_uri_in_csv(cls, header):
@@ -413,4 +462,4 @@ if __name__ == '__main__':
                                               highlight_deprecated_attributes=True,
                                               amount_of_examples=5,
                                               generate_choice_list=True,
-                                              )
+                                              split_per_type=False)
