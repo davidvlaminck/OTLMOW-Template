@@ -253,6 +253,7 @@ class SubsetTemplateCreator:
                         for options in choicelist_values:
                             list.append(options.invulwaarde)
                         values = ','.join(list)
+                        # TODO: check if values is longer than 255 characters if so split it up and add to other sheet
                         data_val = DataValidation(type="list", formula1=f'"{values}"', allowBlank=True)
                         sheet.add_data_validation(data_val)
                         data_val.add(f'{get_column_letter(cell.column)}2:{get_column_letter(cell.column)}1000')
@@ -326,13 +327,67 @@ class SubsetTemplateCreator:
                            instantiated_attributes, **kwargs):
         delimiter = ';'
         add_geo_artefact = kwargs.get('add_geo_artefact', False)
+        add_attribute_info = kwargs.get('add_attribute_info', False)
         quote_char = '"'
         with open(temporary_path, 'r+', encoding='utf-8') as csvfile:
             new_file = open(path_to_template_file_and_extension, 'w', encoding='utf-8')
             reader = csv.reader(csvfile, delimiter=delimiter, quotechar=quote_char)
             if add_geo_artefact is False:
                 cls.remove_geo_artefact_csv(reader=reader, new_file=new_file)
+            if add_attribute_info:
+                cls.add_attribute_info_csv(reader=reader, new_file=new_file,
+                                           temporary_path=temporary_path, path_to_subset=path_to_subset)
             new_file.close()
+
+    @classmethod
+    def add_attribute_info_csv(cls, reader, new_file, temporary_path, path_to_subset):
+        converter = OtlmowConverter()
+        print('test')
+        dotnotation_module = DotnotationHelper()
+        instantiated_attributes = converter.create_assets_from_file(filepath=temporary_path,
+                                                                    path_to_subset=path_to_subset)
+        filter_uri = cls.find_uri_in_csv(reader=reader)
+        # single_attribute = next(x for x in instantiated_attributes if x.typeURI == filter_uri)
+        delimiter = ';'
+        header = []
+        header_info = []
+        data = []
+        for row_nr, row in enumerate(reader):
+            print(row)
+            print("nr " + str(row_nr))
+            if row_nr == 0:
+                header = row
+            else:
+                data = row
+        for value in header:
+            if value == 'typeURI':
+                # TODO: TypeURI in de settings file zetten en dan hier ophalen
+                header_info.append('De URI van het object volgens https://www.w3.org/2001/XMLSchema#anyURI .')
+            else:
+                pass
+                # dotnotation_attribute = dotnotation_module.get_attribute_by_dotnotation(single_attribute, value)
+                # header_info.append(dotnotation_attribute.definition)
+        new_file.write(delimiter.join(header_info) + '\n')
+        new_file.write(delimiter.join(header) + '\n')
+        new_file.write(delimiter.join(data) + '\n')
+
+    @classmethod
+    def find_uri_in_csv(cls, reader):
+        header = []
+        data = []
+        filter_uri = None
+        for row_nr, row in enumerate(reader):
+            if row_nr == 0:
+                print('test')
+                header = row
+            else:
+                print('test2')
+                data = row
+        for value in header:
+            if value == 'typeURI':
+                index = header.index(value)
+                filter_uri = data[index]
+        return filter_uri
 
 
 if __name__ == '__main__':
