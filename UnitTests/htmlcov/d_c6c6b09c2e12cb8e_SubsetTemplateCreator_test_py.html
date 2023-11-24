@@ -54,8 +54,8 @@
             </div>
         </aside>
         <h2>
-            <span class="text">47 statements &nbsp;</span>
-            <button type="button" class="run button_toggle_run" value="run" data-shortcut="r" title="Toggle lines run">47<span class="text"> run</span></button>
+            <span class="text">63 statements &nbsp;</span>
+            <button type="button" class="run button_toggle_run" value="run" data-shortcut="r" title="Toggle lines run">63<span class="text"> run</span></button>
             <button type="button" class="mis show_mis button_toggle_mis" value="mis" data-shortcut="m" title="Toggle lines missing">0<span class="text"> missing</span></button>
             <button type="button" class="exc show_exc button_toggle_exc" value="exc" data-shortcut="x" title="Toggle lines excluded">0<span class="text"> excluded</span></button>
         </h2>
@@ -65,7 +65,7 @@
             <a id="nextFileLink" class="nav" href="d_c6c6b09c2e12cb8e___init___py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.3.2">coverage.py v7.3.2</a>,
-            created at 2023-11-23 15:36 +0000
+            created at 2023-11-24 16:04 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"/>
@@ -81,15 +81,15 @@
 </header>
 <main id="source">
     <p class="run"><span class="n"><a id="t1" href="#t1">1</a></span><span class="t"><span class="key">import</span> <span class="nam">os</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t2" href="#t2">2</a></span><span class="t"><span class="key">import</span> <span class="nam">shutil</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t3" href="#t3">3</a></span><span class="t"><span class="key">from</span> <span class="nam">pathlib</span> <span class="key">import</span> <span class="nam">Path</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t4" href="#t4">4</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t2" href="#t2">2</a></span><span class="t"><span class="key">from</span> <span class="nam">pathlib</span> <span class="key">import</span> <span class="nam">Path</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t3" href="#t3">3</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t4" href="#t4">4</a></span><span class="t"><span class="key">from</span> <span class="nam">otlmow_template</span><span class="op">.</span><span class="nam">CsvTemplateCreator</span> <span class="key">import</span> <span class="nam">CsvTemplateCreator</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t5" href="#t5">5</a></span><span class="t"><span class="key">from</span> <span class="nam">otlmow_template</span><span class="op">.</span><span class="nam">SubsetTemplateCreator</span> <span class="key">import</span> <span class="nam">SubsetTemplateCreator</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t6" href="#t6">6</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t7" href="#t7">7</a></span><span class="t"><span class="nam">ROOT_DIR</span> <span class="op">=</span> <span class="nam">os</span><span class="op">.</span><span class="nam">path</span><span class="op">.</span><span class="nam">dirname</span><span class="op">(</span><span class="nam">os</span><span class="op">.</span><span class="nam">path</span><span class="op">.</span><span class="nam">abspath</span><span class="op">(</span><span class="nam">__file__</span><span class="op">)</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t8" href="#t8">8</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t9" href="#t9">9</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t10" href="#t10">10</a></span><span class="t"><span class="key">def</span> <span class="nam">test_func1</span><span class="op">(</span><span class="nam">subtests</span><span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t10" href="#t10">10</a></span><span class="t"><span class="key">def</span> <span class="nam">test_files_get_generated</span><span class="op">(</span><span class="nam">subtests</span><span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t11" href="#t11">11</a></span><span class="t">    <span class="nam">subset_tool</span> <span class="op">=</span> <span class="nam">SubsetTemplateCreator</span><span class="op">(</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t12" href="#t12">12</a></span><span class="t">    <span class="nam">subset_location</span> <span class="op">=</span> <span class="nam">Path</span><span class="op">(</span><span class="nam">ROOT_DIR</span><span class="op">)</span> <span class="op">/</span> <span class="str">'Flitspaal_noAgent3.0.db'</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t13" href="#t13">13</a></span><span class="t">    <span class="nam">xls_location</span> <span class="op">=</span> <span class="nam">Path</span><span class="op">(</span><span class="nam">ROOT_DIR</span><span class="op">)</span> <span class="op">/</span> <span class="str">'testFileStorage'</span> <span class="op">/</span> <span class="str">'template_file_text.xlsx'</span>&nbsp;</span><span class="r"></span></p>
@@ -150,6 +150,30 @@
     <p class="run"><span class="n"><a id="t68" href="#t68">68</a></span><span class="t">    <span class="nam">list_of_filter_uri</span> <span class="op">=</span> <span class="op">[</span><span class="op">]</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t69" href="#t69">69</a></span><span class="t">    <span class="nam">filtered</span> <span class="op">=</span> <span class="nam">SubsetTemplateCreator</span><span class="op">.</span><span class="nam">filters_assets_by_subset</span><span class="op">(</span><span class="nam">db_location</span><span class="op">,</span> <span class="nam">list_of_otl_objectUri</span><span class="op">=</span><span class="nam">list_of_filter_uri</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t70" href="#t70">70</a></span><span class="t">    <span class="key">assert</span> <span class="nam">len</span><span class="op">(</span><span class="nam">filtered</span><span class="op">)</span> <span class="op">==</span> <span class="num">0</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t71" href="#t71">71</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t72" href="#t72">72</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t73" href="#t73">73</a></span><span class="t"><span class="key">def</span> <span class="nam">test_remove_mockdata_csv_clears_data_if_no_examples_wanted</span><span class="op">(</span><span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t74" href="#t74">74</a></span><span class="t">    <span class="nam">data</span> <span class="op">=</span> <span class="op">[</span><span class="str">'test1'</span><span class="op">,</span> <span class="str">'test2'</span><span class="op">,</span> <span class="str">'test3'</span><span class="op">]</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t75" href="#t75">75</a></span><span class="t">    <span class="nam">new_data</span> <span class="op">=</span> <span class="nam">CsvTemplateCreator</span><span class="op">(</span><span class="op">)</span><span class="op">.</span><span class="nam">remove_mock_data_csv</span><span class="op">(</span><span class="nam">data</span><span class="op">=</span><span class="nam">data</span><span class="op">,</span> <span class="nam">rows_of_examples</span><span class="op">=</span><span class="num">0</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t76" href="#t76">76</a></span><span class="t">    <span class="key">assert</span> <span class="nam">new_data</span> <span class="op">==</span> <span class="op">[</span><span class="op">]</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t77" href="#t77">77</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t78" href="#t78">78</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t79" href="#t79">79</a></span><span class="t"><span class="key">def</span> <span class="nam">test_remove_mockdata_csv_leaves_data_intact_if_examples_wanted</span><span class="op">(</span><span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t80" href="#t80">80</a></span><span class="t">    <span class="nam">data</span> <span class="op">=</span> <span class="op">[</span><span class="str">'test1'</span><span class="op">,</span> <span class="str">'test2'</span><span class="op">,</span> <span class="str">'test3'</span><span class="op">]</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t81" href="#t81">81</a></span><span class="t">    <span class="nam">new_data</span> <span class="op">=</span> <span class="nam">CsvTemplateCreator</span><span class="op">(</span><span class="op">)</span><span class="op">.</span><span class="nam">remove_mock_data_csv</span><span class="op">(</span><span class="nam">data</span><span class="op">=</span><span class="nam">data</span><span class="op">,</span> <span class="nam">rows_of_examples</span><span class="op">=</span><span class="num">1</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t82" href="#t82">82</a></span><span class="t">    <span class="key">assert</span> <span class="nam">new_data</span> <span class="op">==</span> <span class="nam">data</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t83" href="#t83">83</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t84" href="#t84">84</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t85" href="#t85">85</a></span><span class="t"><span class="key">def</span> <span class="nam">test_find_uri_in_csv_returns_index_of_uri</span><span class="op">(</span><span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t86" href="#t86">86</a></span><span class="t">    <span class="nam">data</span> <span class="op">=</span> <span class="op">[</span><span class="str">'test1'</span><span class="op">,</span> <span class="str">'typeURI'</span><span class="op">,</span> <span class="str">'test3'</span><span class="op">]</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t87" href="#t87">87</a></span><span class="t">    <span class="nam">index</span> <span class="op">=</span> <span class="nam">CsvTemplateCreator</span><span class="op">(</span><span class="op">)</span><span class="op">.</span><span class="nam">find_uri_in_csv</span><span class="op">(</span><span class="nam">header</span><span class="op">=</span><span class="nam">data</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t88" href="#t88">88</a></span><span class="t">    <span class="key">assert</span> <span class="nam">index</span> <span class="op">==</span> <span class="num">1</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t89" href="#t89">89</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t90" href="#t90">90</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t91" href="#t91">91</a></span><span class="t"><span class="key">def</span> <span class="nam">test_find_uri_in_csv_returns_none_if_uri_not_found</span><span class="op">(</span><span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t92" href="#t92">92</a></span><span class="t">    <span class="nam">data</span> <span class="op">=</span> <span class="op">[</span><span class="str">'test1'</span><span class="op">,</span> <span class="str">'test2'</span><span class="op">,</span> <span class="str">'test3'</span><span class="op">]</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t93" href="#t93">93</a></span><span class="t">    <span class="nam">index</span> <span class="op">=</span> <span class="nam">CsvTemplateCreator</span><span class="op">(</span><span class="op">)</span><span class="op">.</span><span class="nam">find_uri_in_csv</span><span class="op">(</span><span class="nam">header</span><span class="op">=</span><span class="nam">data</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t94" href="#t94">94</a></span><span class="t">    <span class="key">assert</span> <span class="nam">index</span> <span class="key">is</span> <span class="key">None</span>&nbsp;</span><span class="r"></span></p>
 </main>
 <footer>
     <div class="content">
@@ -159,7 +183,7 @@
             <a id="nextFileLink" class="nav" href="d_c6c6b09c2e12cb8e___init___py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.3.2">coverage.py v7.3.2</a>,
-            created at 2023-11-23 15:36 +0000
+            created at 2023-11-24 16:04 +0000
         </p>
     </div>
 </footer>

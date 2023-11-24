@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-    <title>Coverage for /home/runner/work/OTLMOW-Template/OTLMOW-Template/otlmow_template/CsvTemplateCreator.py: 57%</title>
+    <title>Coverage for /home/runner/work/OTLMOW-Template/OTLMOW-Template/otlmow_template/CsvTemplateCreator.py: 60%</title>
     <link rel="icon" sizes="32x32" href="favicon_32.png">
     <link rel="stylesheet" href="style.css" type="text/css">
     <script type="text/javascript" src="coverage_html.js" defer></script>
@@ -12,7 +12,7 @@
     <div class="content">
         <h1>
             <span class="text">Coverage for </span><b>/home/runner/work/OTLMOW-Template/OTLMOW-Template/otlmow_template/CsvTemplateCreator.py</b>:
-            <span class="pc_cov">57%</span>
+            <span class="pc_cov">60%</span>
         </h1>
         <aside id="help_panel_wrapper">
             <input id="help_panel_state" type="checkbox">
@@ -55,8 +55,8 @@
         </aside>
         <h2>
             <span class="text">133 statements &nbsp;</span>
-            <button type="button" class="run button_toggle_run" value="run" data-shortcut="r" title="Toggle lines run">76<span class="text"> run</span></button>
-            <button type="button" class="mis show_mis button_toggle_mis" value="mis" data-shortcut="m" title="Toggle lines missing">57<span class="text"> missing</span></button>
+            <button type="button" class="run button_toggle_run" value="run" data-shortcut="r" title="Toggle lines run">80<span class="text"> run</span></button>
+            <button type="button" class="mis show_mis button_toggle_mis" value="mis" data-shortcut="m" title="Toggle lines missing">53<span class="text"> missing</span></button>
             <button type="button" class="exc show_exc button_toggle_exc" value="exc" data-shortcut="x" title="Toggle lines excluded">0<span class="text"> excluded</span></button>
         </h2>
         <p class="text">
@@ -65,7 +65,7 @@
             <a id="nextFileLink" class="nav" href="d_d86b88057a1f1ff9_ExcelTemplateCreator_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.3.2">coverage.py v7.3.2</a>,
-            created at 2023-11-24 15:42 +0000
+            created at 2023-11-24 16:04 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"/>
@@ -149,7 +149,7 @@
     <p class="mis show_mis"><span class="n"><a id="t67" href="#t67">67</a></span><span class="t">                <span class="op">[</span><span class="nam">info</span><span class="op">,</span> <span class="nam">header</span><span class="op">]</span> <span class="op">=</span> <span class="nam">cls</span><span class="op">.</span><span class="nam">add_attribute_info_csv</span><span class="op">(</span><span class="nam">header</span><span class="op">=</span><span class="nam">header</span><span class="op">,</span> <span class="nam">data</span><span class="op">=</span><span class="nam">data</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t68" href="#t68">68</a></span><span class="t">                                                            <span class="nam">instantiated_attributes</span><span class="op">=</span><span class="nam">instantiated_attributes</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="mis show_mis"><span class="n"><a id="t69" href="#t69">69</a></span><span class="t">                <span class="nam">new_file</span><span class="op">.</span><span class="nam">write</span><span class="op">(</span><span class="nam">delimiter</span><span class="op">.</span><span class="nam">join</span><span class="op">(</span><span class="nam">info</span><span class="op">)</span> <span class="op">+</span> <span class="str">'\n'</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t70" href="#t70">70</a></span><span class="t">            <span class="nam">data</span> <span class="op">=</span> <span class="nam">cls</span><span class="op">.</span><span class="nam">add_mock_data_csv</span><span class="op">(</span><span class="nam">data</span><span class="op">=</span><span class="nam">data</span><span class="op">,</span> <span class="nam">rows_of_examples</span><span class="op">=</span><span class="nam">amount_of_examples</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t70" href="#t70">70</a></span><span class="t">            <span class="nam">data</span> <span class="op">=</span> <span class="nam">cls</span><span class="op">.</span><span class="nam">remove_mock_data_csv</span><span class="op">(</span><span class="nam">data</span><span class="op">=</span><span class="nam">data</span><span class="op">,</span> <span class="nam">rows_of_examples</span><span class="op">=</span><span class="nam">amount_of_examples</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t71" href="#t71">71</a></span><span class="t">            <span class="key">if</span> <span class="nam">highlight_deprecated_attributes</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="mis show_mis"><span class="n"><a id="t72" href="#t72">72</a></span><span class="t">                <span class="nam">header</span> <span class="op">=</span> <span class="nam">cls</span><span class="op">.</span><span class="nam">highlight_deprecated_attributes_csv</span><span class="op">(</span><span class="nam">header</span><span class="op">=</span><span class="nam">header</span><span class="op">,</span> <span class="nam">data</span><span class="op">=</span><span class="nam">data</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t73" href="#t73">73</a></span><span class="t">                                                                 <span class="nam">instantiated_attributes</span><span class="op">=</span><span class="nam">instantiated_attributes</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
@@ -185,7 +185,7 @@
     <p class="mis show_mis"><span class="n"><a id="t103" href="#t103">103</a></span><span class="t">        <span class="key">return</span> <span class="op">[</span><span class="nam">info_data</span><span class="op">,</span> <span class="nam">header</span><span class="op">]</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t104" href="#t104">104</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t105" href="#t105">105</a></span><span class="t">    <span class="op">@</span><span class="nam">classmethod</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t106" href="#t106">106</a></span><span class="t">    <span class="key">def</span> <span class="nam">add_mock_data_csv</span><span class="op">(</span><span class="nam">cls</span><span class="op">,</span> <span class="nam">data</span><span class="op">,</span> <span class="nam">rows_of_examples</span><span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t106" href="#t106">106</a></span><span class="t">    <span class="key">def</span> <span class="nam">remove_mock_data_csv</span><span class="op">(</span><span class="nam">cls</span><span class="op">,</span> <span class="nam">data</span><span class="op">,</span> <span class="nam">rows_of_examples</span><span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t107" href="#t107">107</a></span><span class="t">        <span class="key">if</span> <span class="nam">rows_of_examples</span> <span class="op">==</span> <span class="num">0</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t108" href="#t108">108</a></span><span class="t">            <span class="nam">data</span> <span class="op">=</span> <span class="op">[</span><span class="op">]</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t109" href="#t109">109</a></span><span class="t">        <span class="key">return</span> <span class="nam">data</span>&nbsp;</span><span class="r"></span></p>
@@ -227,10 +227,10 @@
     <p class="pln"><span class="n"><a id="t145" href="#t145">145</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t146" href="#t146">146</a></span><span class="t">    <span class="op">@</span><span class="nam">classmethod</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t147" href="#t147">147</a></span><span class="t">    <span class="key">def</span> <span class="nam">find_uri_in_csv</span><span class="op">(</span><span class="nam">cls</span><span class="op">,</span> <span class="nam">header</span><span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis show_mis"><span class="n"><a id="t148" href="#t148">148</a></span><span class="t">        <span class="nam">filter_uri</span> <span class="op">=</span> <span class="key">None</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis show_mis"><span class="n"><a id="t149" href="#t149">149</a></span><span class="t">        <span class="key">if</span> <span class="str">'typeURI'</span> <span class="key">in</span> <span class="nam">header</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis show_mis"><span class="n"><a id="t150" href="#t150">150</a></span><span class="t">            <span class="nam">filter_uri</span> <span class="op">=</span> <span class="nam">header</span><span class="op">.</span><span class="nam">index</span><span class="op">(</span><span class="str">'typeURI'</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis show_mis"><span class="n"><a id="t151" href="#t151">151</a></span><span class="t">        <span class="key">return</span> <span class="nam">filter_uri</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t148" href="#t148">148</a></span><span class="t">        <span class="nam">filter_uri</span> <span class="op">=</span> <span class="key">None</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t149" href="#t149">149</a></span><span class="t">        <span class="key">if</span> <span class="str">'typeURI'</span> <span class="key">in</span> <span class="nam">header</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t150" href="#t150">150</a></span><span class="t">            <span class="nam">filter_uri</span> <span class="op">=</span> <span class="nam">header</span><span class="op">.</span><span class="nam">index</span><span class="op">(</span><span class="str">'typeURI'</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t151" href="#t151">151</a></span><span class="t">        <span class="key">return</span> <span class="nam">filter_uri</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t152" href="#t152">152</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t153" href="#t153">153</a></span><span class="t">    <span class="op">@</span><span class="nam">classmethod</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t154" href="#t154">154</a></span><span class="t">    <span class="key">def</span> <span class="nam">remove_geo_artefact_csv</span><span class="op">(</span><span class="nam">cls</span><span class="op">,</span> <span class="nam">header</span><span class="op">,</span> <span class="nam">data</span><span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
@@ -250,7 +250,7 @@
             <a id="nextFileLink" class="nav" href="d_d86b88057a1f1ff9_ExcelTemplateCreator_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.3.2">coverage.py v7.3.2</a>,
-            created at 2023-11-24 15:42 +0000
+            created at 2023-11-24 16:04 +0000
         </p>
     </div>
 </footer>
