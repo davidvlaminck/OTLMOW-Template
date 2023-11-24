@@ -100,6 +100,7 @@ class SubsetTemplateCreator:
         highlight_deprecated_attributes = kwargs.get('highlight_deprecated_attributes', False)
         amount_of_examples = kwargs.get('amount_of_examples', 0)
         wb = load_workbook(temporary_path)
+        wb.create_sheet('Keuzelijsten')
         # Volgorde is belangrijk! Eerst rijen verwijderen indien nodig dan choice list toevoegen,
         # staat namelijk vast op de kolom en niet het attribuut in die kolom
         if add_geo_artefact is False:
@@ -227,7 +228,6 @@ class SubsetTemplateCreator:
 
     @classmethod
     def add_choice_list_excel(cls, workbook, instantiated_attributes: List, path_to_subset: Path):
-        workbook.create_sheet('Keuzelijsten')
         choice_list_dict = {}
         dotnotation_module = DotnotationHelper()
         for sheet in workbook:
@@ -294,22 +294,13 @@ class SubsetTemplateCreator:
                         cell.value = mock_values[cell.column - 1]
 
     @classmethod
-    def remove_geo_artefact_csv(cls, reader, new_file):
-        delimiter = ';'
-        header = []
-        data = []
-        for row_nr, row in enumerate(reader):
-            if row_nr == 0:
-                header = row
-            else:
-                data = row
-
+    def remove_geo_artefact_csv(cls, header, data):
         if 'geometry' in header:
             deletion_index = header.index('geometry')
             header.remove('geometry')
-            data.pop(deletion_index)
-        new_file.write(delimiter.join(header) + '\n')
-        new_file.write(delimiter.join(data) + '\n')
+            for d in data:
+                d.pop(deletion_index)
+        return [header, data]
 
     @classmethod
     def multiple_csv_template(cls, path_to_template_file_and_extension, path_to_subset, temporary_path,
@@ -332,6 +323,8 @@ class SubsetTemplateCreator:
     @classmethod
     def alter_csv_template(cls, path_to_template_file_and_extension, path_to_subset, temporary_path,
                            instantiated_attributes, **kwargs):
+        header = []
+        data = []
         delimiter = ';'
         add_geo_artefact = kwargs.get('add_geo_artefact', False)
         add_attribute_info = kwargs.get('add_attribute_info', False)
@@ -339,17 +332,24 @@ class SubsetTemplateCreator:
         with open(temporary_path, 'r+', encoding='utf-8') as csvfile:
             new_file = open(path_to_template_file_and_extension, 'w', encoding='utf-8')
             reader = csv.reader(csvfile, delimiter=delimiter, quotechar=quote_char)
+            for row_nr, row in enumerate(reader):
+                if row_nr == 0:
+                    header = row
+                else:
+                    data.append(row)
             if add_geo_artefact is False:
-                cls.remove_geo_artefact_csv(reader=reader, new_file=new_file)
-            if add_attribute_info:
-                cls.add_attribute_info_csv(reader=reader, new_file=new_file,
-                                           temporary_path=temporary_path, path_to_subset=path_to_subset)
+                [header, data] = cls.remove_geo_artefact_csv(header=header, data=data)
+            #if add_attribute_info:
+            #    cls.add_attribute_info_csv(reader=reader, new_file=new_file,
+            #                               temporary_path=temporary_path, path_to_subset=path_to_subset)
+            new_file.write(delimiter.join(header) + '\n')
+            for d in data:
+                new_file.write(delimiter.join(d) + '\n')
             new_file.close()
 
     @classmethod
     def add_attribute_info_csv(cls, reader, new_file, temporary_path, path_to_subset):
         converter = OtlmowConverter()
-        print('test')
         dotnotation_module = DotnotationHelper()
         instantiated_attributes = converter.create_assets_from_file(filepath=temporary_path,
                                                                     path_to_subset=path_to_subset)
