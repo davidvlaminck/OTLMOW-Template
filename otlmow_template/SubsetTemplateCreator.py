@@ -16,9 +16,7 @@ from otlmow_converter.OtlmowConverter import OtlmowConverter
 from otlmow_model.BaseClasses.BooleanField import BooleanField
 from otlmow_model.BaseClasses.KeuzelijstField import KeuzelijstField
 from otlmow_model.Helpers.AssetCreator import dynamic_create_instance_from_uri
-from otlmow_modelbuilder.DatatypeBuilderFunctions import get_single_field_from_type_uri
 from otlmow_modelbuilder.OSLOCollector import OSLOCollector
-from otlmow_modelbuilder.OTLEnumerationCreator import OTLEnumerationCreator
 
 ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 
@@ -231,11 +229,9 @@ class SubsetTemplateCreator:
     @classmethod
     def add_choice_list_excel(cls, workbook, instantiated_attributes: List, path_to_subset: Path):
         workbook.create_sheet('Keuzelijsten')
-        collector = cls._load_collector_from_subset_path(path_to_subset=path_to_subset)
-        creator = OTLEnumerationCreator(collector)
+        choice_list_dict = {}
         dotnotation_module = DotnotationHelper()
         for sheet in workbook:
-            print(sheet.title)
             if sheet == workbook['Keuzelijsten']:
                 break
             filter_uri = SubsetTemplateCreator.find_uri_in_sheet(sheet)
@@ -250,20 +246,22 @@ class SubsetTemplateCreator:
                         dotnotation_attribute = dotnotation_module.get_attribute_by_dotnotation(single_attribute,
                                                                                                 cell.value)
 
-                    attributes = collector.attributes
-
                     if issubclass(dotnotation_attribute.field, KeuzelijstField):
-                        print(str(sheet) + ' ' + dotnotation_attribute.field.naam)
                         name = dotnotation_attribute.field.naam
-                        options = dotnotation_attribute.field.options
                         valid_options = [v.invulwaarde for k, v in dotnotation_attribute.field.options.items()
                                          if v.status != 'verwijderd']
-
+                        if dotnotation_attribute.field.naam in choice_list_dict:
+                            column = choice_list_dict[dotnotation_attribute.field.naam]
+                        else:
+                            choice_list_dict = cls.add_choice_list_to_sheet(workbook=workbook, name=name,
+                                                                            options=valid_options,
+                                                                            choice_list_dict=choice_list_dict)
+                            column = choice_list_dict[dotnotation_attribute.field.naam]
+                        print(column)
                         option_list = []
                         for option in valid_options:
                             option_list.append(option)
                         values = ','.join(option_list)
-                        print(len(values))
                         # TODO: check if values is longer than 255 characters if so split it up and add to other sheet
                         data_val = DataValidation(type="list", formula1=f'"{values}"', allowBlank=True)
                         sheet.add_data_validation(data_val)
@@ -278,17 +276,19 @@ class SubsetTemplateCreator:
 
     @classmethod
     def add_mock_data_excel(cls, workbook, rows_of_examples: int):
-        for sheets in workbook:
+        for sheet in workbook:
+            if sheet == workbook["Keuzelijsten"]:
+                break
             mock_values = []
-            for rows in sheets.iter_rows(min_row=2, max_row=2):
+            for rows in sheet.iter_rows(min_row=2, max_row=2):
                 for cell in rows:
                     mock_values.append(cell.value)
             if rows_of_examples == 0:
-                for rows in sheets.iter_rows(min_row=2, max_row=2):
+                for rows in sheet.iter_rows(min_row=2, max_row=2):
                     for cell in rows:
                         cell.value = ''
             else:
-                for rows in sheets.iter_rows(min_row=2, max_row=rows_of_examples + 1):
+                for rows in sheet.iter_rows(min_row=2, max_row=rows_of_examples + 1):
                     for cell in rows:
                         cell.value = mock_values[cell.column - 1]
 
@@ -394,6 +394,25 @@ class SubsetTemplateCreator:
                 index = header.index(value)
                 filter_uri = data[index]
         return filter_uri
+
+    @classmethod
+    def add_choice_list_to_sheet(cls, workbook, name, options, choice_list_dict):
+        active_sheet = workbook['Keuzelijsten']
+        print(options)
+        row_nr = 2
+        for rows in active_sheet.iter_rows(min_row=1, max_row=1, min_col=1, max_col=30):
+            for cell in rows:
+                if cell.value is None:
+                    cell.value = name
+                    column_nr = cell.column
+                    for option in options:
+                        print(option)
+                        active_sheet.cell(row=row_nr, column=column_nr, value=option)
+                        row_nr += 1
+                        print(row_nr)
+                    choice_list_dict[name] = get_column_letter(column_nr)
+                    break
+        return choice_list_dict
 
 
 if __name__ == '__main__':
