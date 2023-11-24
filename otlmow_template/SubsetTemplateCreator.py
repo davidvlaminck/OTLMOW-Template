@@ -64,16 +64,26 @@ class SubsetTemplateCreator:
                                 temporary_path: Path, **kwargs):
         collector = self._load_collector_from_subset_path(path_to_subset=path_to_subset)
         otl_objects = []
+        amount_of_examples = kwargs.get('amount_of_examples', 0)
 
         for class_object in list(filter(lambda cl: cl.abstract == 0, collector.classes)):
             model_directory = None
             if kwargs is not None:
                 model_directory = kwargs.get('model_directory', None)
-            instance = dynamic_create_instance_from_uri(class_object.objectUri, model_directory=model_directory)
-            if instance is None:
-                continue
-            instance.fill_with_dummy_data()
-            otl_objects.append(instance)
+            # TODO: loopdieloop over aantal keer mockdata en zo erbij yeeeten
+            if amount_of_examples != 0:
+                for i in range(amount_of_examples):
+                    instance = dynamic_create_instance_from_uri(class_object.objectUri, model_directory=model_directory)
+                    if instance is None:
+                        continue
+                    instance.fill_with_dummy_data()
+                    otl_objects.append(instance)
+            else:
+                instance = dynamic_create_instance_from_uri(class_object.objectUri, model_directory=model_directory)
+                if instance is None:
+                    continue
+                instance.fill_with_dummy_data()
+                otl_objects.append(instance)
 
             attributen = collector.find_attributes_by_class(class_object)
             for attribute_object in attributen:
@@ -276,18 +286,10 @@ class SubsetTemplateCreator:
         for sheet in workbook:
             if sheet == workbook["Keuzelijsten"]:
                 break
-            mock_values = []
-            for rows in sheet.iter_rows(min_row=2, max_row=2):
-                for cell in rows:
-                    mock_values.append(cell.value)
             if rows_of_examples == 0:
                 for rows in sheet.iter_rows(min_row=2, max_row=2):
                     for cell in rows:
                         cell.value = ''
-            else:
-                for rows in sheet.iter_rows(min_row=2, max_row=rows_of_examples + 1):
-                    for cell in rows:
-                        cell.value = mock_values[cell.column - 1]
 
     @classmethod
     def remove_geo_artefact_csv(cls, header, data):
@@ -327,6 +329,7 @@ class SubsetTemplateCreator:
         add_geo_artefact = kwargs.get('add_geo_artefact', False)
         add_attribute_info = kwargs.get('add_attribute_info', False)
         highlight_deprecated_attributes = kwargs.get('highlight_deprecated_attributes', False)
+        amount_of_examples = kwargs.get('amount_of_examples', 0)
         quote_char = '"'
         with open(temporary_path, 'r+', encoding='utf-8') as csvfile:
             new_file = open(path_to_template_file_and_extension, 'w', encoding='utf-8')
@@ -342,8 +345,10 @@ class SubsetTemplateCreator:
                 [info, header] = cls.add_attribute_info_csv(header=header, data=data,
                                                             instantiated_attributes=instantiated_attributes)
                 new_file.write(delimiter.join(info) + '\n')
+            data = cls.add_mock_data_csv(header=header, data=data, rows_of_examples=amount_of_examples)
             if highlight_deprecated_attributes:
-                header = cls.highlight_deprecated_attributes_csv(header=header, data=data, instantiated_attributes=instantiated_attributes)
+                header = cls.highlight_deprecated_attributes_csv(header=header, data=data,
+                                                                 instantiated_attributes=instantiated_attributes)
             new_file.write(delimiter.join(header) + '\n')
             for d in data:
                 new_file.write(delimiter.join(d) + '\n')
@@ -377,15 +382,8 @@ class SubsetTemplateCreator:
 
     @classmethod
     def add_mock_data_csv(cls, header, data, rows_of_examples):
-        mock_values = []
-        for d in data:
-            mock_values.append(d)
         if rows_of_examples == 0:
             data = []
-        else:
-            for d in data:
-                for cell in d:
-                    cell = mock_values[cell.column - 1]
         return data
 
     @classmethod
@@ -435,7 +433,7 @@ class SubsetTemplateCreator:
         active_sheet = workbook['Keuzelijsten']
         print(options)
         row_nr = 2
-        for rows in active_sheet.iter_rows(min_row=1, max_row=1, min_col=1, max_col=30):
+        for rows in active_sheet.iter_rows(min_row=1, max_row=1, min_col=1, max_col=700):
             for cell in rows:
                 if cell.value is None:
                     cell.value = name
