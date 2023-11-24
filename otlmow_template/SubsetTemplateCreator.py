@@ -70,7 +70,6 @@ class SubsetTemplateCreator:
             model_directory = None
             if kwargs is not None:
                 model_directory = kwargs.get('model_directory', None)
-            # TODO: loopdieloop over aantal keer mockdata en zo erbij yeeeten
             if amount_of_examples != 0:
                 for i in range(amount_of_examples):
                     instance = dynamic_create_instance_from_uri(class_object.objectUri, model_directory=model_directory)
@@ -100,7 +99,6 @@ class SubsetTemplateCreator:
                                                                         path_to_subset=path_to_subset)
         return instantiated_attributes
 
-    # TODO: Verschillende methodes voor verschillende documenten excel, csv
     @classmethod
     def alter_excel_template(cls, path_to_template_file_and_extension: Path, path_to_subset: Path,
                              instantiated_attributes: List, temporary_path, **kwargs):
