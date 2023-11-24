@@ -13,6 +13,7 @@ from openpyxl.worksheet.dimensions import DimensionHolder, ColumnDimension
 from otlmow_converter.DotnotationHelper import DotnotationHelper
 
 from otlmow_converter.OtlmowConverter import OtlmowConverter
+from otlmow_model.BaseClasses.KeuzelijstField import KeuzelijstField
 from otlmow_model.Helpers.AssetCreator import dynamic_create_instance_from_uri
 from otlmow_modelbuilder.DatatypeBuilderFunctions import get_single_field_from_type_uri
 from otlmow_modelbuilder.OSLOCollector import OSLOCollector
@@ -239,6 +240,15 @@ class SubsetTemplateCreator:
                     else:
                         dotnotation_attribute = dotnotation_module.get_attribute_by_dotnotation(single_attribute,
                                                                                                 cell.value)
+
+                    if dotnotation_attribute.objectUri == 'https://wegenenverkeer.data.vlaanderen.be/ns/implementatieelement#AIMToestand.toestand':
+                        if issubclass(dotnotation_attribute.field, KeuzelijstField):
+                            name = dotnotation_attribute.field.naam
+                            options = dotnotation_attribute.field.options
+                            valid_options = [v.invulwaarde for k, v in dotnotation_attribute.field.options.items()
+                                             if v.status != 'verwijderd']
+
+
                     attributes = collector.attributes
                     single = next((x for x in attributes if x.objectUri == dotnotation_attribute.objectUri), None)
                     enums = collector.enumerations
@@ -396,7 +406,7 @@ if __name__ == '__main__':
     # directory = Path(ROOT_DIR) / 'UnitTests' / 'TestClasses'
     # Slash op het einde toevoegen verandert weinig of niks aan het resultaat
     # directory = os.path.join(directory, '')
-    xls_location = Path(ROOT_DIR) / 'UnitTests' / 'Subset' / 'testFileStorage' / 'template_file.csv'
+    xls_location = Path(ROOT_DIR) / 'UnitTests' / 'Subset' / 'testFileStorage' / 'template_file.xlsx'
     subset_tool.generate_template_from_subset(path_to_subset=subset_location,
                                               path_to_template_file_and_extension=xls_location, add_attribute_info=True,
                                               highlight_deprecated_attributes=True,
