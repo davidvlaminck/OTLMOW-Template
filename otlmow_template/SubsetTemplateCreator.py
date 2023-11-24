@@ -11,7 +11,6 @@ from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 from openpyxl.worksheet.dimensions import DimensionHolder, ColumnDimension
 from otlmow_converter.DotnotationHelper import DotnotationHelper
-
 from otlmow_converter.OtlmowConverter import OtlmowConverter
 from otlmow_model.BaseClasses.BooleanField import BooleanField
 from otlmow_model.BaseClasses.KeuzelijstField import KeuzelijstField
@@ -262,8 +261,10 @@ class SubsetTemplateCreator:
                         for option in valid_options:
                             option_list.append(option)
                         values = ','.join(option_list)
+                        start_range = f"${column}$2"
+                        end_range = f"${column}${len(valid_options) + 1}"
                         # TODO: check if values is longer than 255 characters if so split it up and add to other sheet
-                        data_val = DataValidation(type="list", formula1=f'"{values}"', allowBlank=True)
+                        data_val = DataValidation(type="list", formula1=f"Keuzelijsten!{start_range}:{end_range}", allowBlank=True)
                         sheet.add_data_validation(data_val)
                         data_val.add(f'{get_column_letter(cell.column)}2:{get_column_letter(cell.column)}1000')
                     # TODO: change how this works because it doesn't work for all cases
