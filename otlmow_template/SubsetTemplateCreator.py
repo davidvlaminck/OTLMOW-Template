@@ -123,9 +123,7 @@ class SubsetTemplateCreator:
         path_is_split = kwargs.get('split_per_type', True)
         if path_is_split is False:
             self.alter_csv_template(path_to_template_file_and_extension=path_to_template_file_and_extension,
-                                    temporary_path=temporary_path,
-                                    path_to_subset=path_to_subset, instantiated_attributes=instantiated_attributes,
-                                    **kwargs)
+                                    temporary_path=temporary_path, path_to_subset=path_to_subset, **kwargs)
         else:
             self.multiple_csv_template(path_to_template_file_and_extension=path_to_template_file_and_extension,
                                        temporary_path=temporary_path,
@@ -260,14 +258,12 @@ class SubsetTemplateCreator:
                         option_list = []
                         for option in valid_options:
                             option_list.append(option)
-                        values = ','.join(option_list)
                         start_range = f"${column}$2"
                         end_range = f"${column}${len(valid_options) + 1}"
-                        # TODO: check if values is longer than 255 characters if so split it up and add to other sheet
-                        data_val = DataValidation(type="list", formula1=f"Keuzelijsten!{start_range}:{end_range}", allowBlank=True)
+                        data_val = DataValidation(type="list", formula1=f"Keuzelijsten!{start_range}:{end_range}",
+                                                  allowBlank=True)
                         sheet.add_data_validation(data_val)
                         data_val.add(f'{get_column_letter(cell.column)}2:{get_column_letter(cell.column)}1000')
-                    # TODO: change how this works because it doesn't work for all cases
                     if issubclass(dotnotation_attribute.field, BooleanField):
                         data_validation = DataValidation(type="list", formula1='"TRUE,FALSE,-"', allow_blank=True)
                         column = cell.column
@@ -317,12 +313,14 @@ class SubsetTemplateCreator:
             test_template_loc = Path(os.path.dirname(path_to_template_file_and_extension)) / file
             temp_loc = Path(tempdir) / file
             cls.alter_csv_template(path_to_template_file_and_extension=test_template_loc, temporary_path=temp_loc,
-                                   path_to_subset=path_to_subset, instantiated_attributes=instantiated_attributes,
-                                   **kwargs)
+                                   path_to_subset=path_to_subset, **kwargs)
 
     @classmethod
     def alter_csv_template(cls, path_to_template_file_and_extension, path_to_subset, temporary_path,
-                           instantiated_attributes, **kwargs):
+                           **kwargs):
+        converter = OtlmowConverter()
+        instantiated_attributes = converter.create_assets_from_file(filepath=temporary_path,
+                                                                    path_to_subset=path_to_subset)
         header = []
         data = []
         delimiter = ';'
@@ -339,61 +337,48 @@ class SubsetTemplateCreator:
                     data.append(row)
             if add_geo_artefact is False:
                 [header, data] = cls.remove_geo_artefact_csv(header=header, data=data)
-            #if add_attribute_info:
-            #    cls.add_attribute_info_csv(reader=reader, new_file=new_file,
-            #                               temporary_path=temporary_path, path_to_subset=path_to_subset)
+                print(header)
+            if add_attribute_info:
+                [info, header] = cls.add_attribute_info_csv(header=header, data=data,
+                                                            instantiated_attributes=instantiated_attributes)
+                print(header)
+                new_file.write(delimiter.join(info) + '\n')
             new_file.write(delimiter.join(header) + '\n')
             for d in data:
                 new_file.write(delimiter.join(d) + '\n')
             new_file.close()
 
     @classmethod
-    def add_attribute_info_csv(cls, reader, new_file, temporary_path, path_to_subset):
-        converter = OtlmowConverter()
+    def add_attribute_info_csv(cls, header, data, instantiated_attributes):
+        info_data = []
+        info_data.extend(header)
+        found_uri = []
         dotnotation_module = DotnotationHelper()
-        instantiated_attributes = converter.create_assets_from_file(filepath=temporary_path,
-                                                                    path_to_subset=path_to_subset)
-        filter_uri = cls.find_uri_in_csv(reader=reader)
-        # single_attribute = next(x for x in instantiated_attributes if x.typeURI == filter_uri)
-        delimiter = ';'
-        header = []
-        header_info = []
-        data = []
-        for row_nr, row in enumerate(reader):
-            print(row)
-            print("nr " + str(row_nr))
-            if row_nr == 0:
-                header = row
-            else:
-                data = row
-        for value in header:
-            if value == 'typeURI':
-                # TODO: TypeURI in de settings file zetten en dan hier ophalen
-                header_info.append('De URI van het object volgens https://www.w3.org/2001/XMLSchema#anyURI .')
-            else:
-                pass
-                # dotnotation_attribute = dotnotation_module.get_attribute_by_dotnotation(single_attribute, value)
-                # header_info.append(dotnotation_attribute.definition)
-        new_file.write(delimiter.join(header_info) + '\n')
-        new_file.write(delimiter.join(header) + '\n')
-        new_file.write(delimiter.join(data) + '\n')
+        uri_index = cls.find_uri_in_csv(header)
+        for d in data:
+            if d[uri_index] not in found_uri:
+                found_uri.append(d[uri_index])
+        for uri in found_uri:
+            single_object = next(x for x in instantiated_attributes if x.typeURI == uri)
+            for dotnototation_title in info_data:
+                if dotnototation_title == 'typeURI':
+                    index = info_data.index(dotnototation_title)
+                    info_data[index] = 'De URI van het object volgens https://www.w3.org/2001/XMLSchema#anyURI .'
+                else:
+                    index = info_data.index(dotnototation_title)
+                    try:
+                        dotnotation_attribute = dotnotation_module.get_attribute_by_dotnotation(
+                            single_object, dotnototation_title)
+                    except AttributeError as e:
+                        continue
+                    info_data[index] = dotnotation_attribute.definition
+        return [info_data, header]
 
     @classmethod
-    def find_uri_in_csv(cls, reader):
-        header = []
-        data = []
+    def find_uri_in_csv(cls, header):
         filter_uri = None
-        for row_nr, row in enumerate(reader):
-            if row_nr == 0:
-                print('test')
-                header = row
-            else:
-                print('test2')
-                data = row
-        for value in header:
-            if value == 'typeURI':
-                index = header.index(value)
-                filter_uri = data[index]
+        if 'typeURI' in header:
+            filter_uri = header.index('typeURI')
         return filter_uri
 
     @classmethod
@@ -422,7 +407,7 @@ if __name__ == '__main__':
     # directory = Path(ROOT_DIR) / 'UnitTests' / 'TestClasses'
     # Slash op het einde toevoegen verandert weinig of niks aan het resultaat
     # directory = os.path.join(directory, '')
-    xls_location = Path(ROOT_DIR) / 'UnitTests' / 'Subset' / 'testFileStorage' / 'template_file.xlsx'
+    xls_location = Path(ROOT_DIR) / 'UnitTests' / 'Subset' / 'testFileStorage' / 'template_file.csv'
     subset_tool.generate_template_from_subset(path_to_subset=subset_location,
                                               path_to_template_file_and_extension=xls_location, add_attribute_info=True,
                                               highlight_deprecated_attributes=True,
