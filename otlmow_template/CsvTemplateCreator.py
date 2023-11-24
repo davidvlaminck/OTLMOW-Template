@@ -67,7 +67,7 @@ class CsvTemplateCreator:
                 [info, header] = cls.add_attribute_info_csv(header=header, data=data,
                                                             instantiated_attributes=instantiated_attributes)
                 new_file.write(delimiter.join(info) + '\n')
-            data = cls.add_mock_data_csv(data=data, rows_of_examples=amount_of_examples)
+            data = cls.remove_mock_data_csv(data=data, rows_of_examples=amount_of_examples)
             if highlight_deprecated_attributes:
                 header = cls.highlight_deprecated_attributes_csv(header=header, data=data,
                                                                  instantiated_attributes=instantiated_attributes)
@@ -103,7 +103,7 @@ class CsvTemplateCreator:
         return [info_data, header]
 
     @classmethod
-    def add_mock_data_csv(cls, data, rows_of_examples):
+    def remove_mock_data_csv(cls, data, rows_of_examples):
         if rows_of_examples == 0:
             data = []
         return data

@@ -1,0 +1,2 @@
+class MissingTypeUriException(Exception):
+    pass

@@ -1,13 +1,13 @@
 import os
-import shutil
 from pathlib import Path
 
+from otlmow_template.CsvTemplateCreator import CsvTemplateCreator
 from otlmow_template.SubsetTemplateCreator import SubsetTemplateCreator
 
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
-def test_func1(subtests):
+def test_files_get_generated(subtests):
     subset_tool = SubsetTemplateCreator()
     subset_location = Path(ROOT_DIR) / 'Flitspaal_noAgent3.0.db'
     xls_location = Path(ROOT_DIR) / 'testFileStorage' / 'template_file_text.xlsx'
@@ -68,3 +68,27 @@ def test_empty_filter_list_removes_all_entries():
     list_of_filter_uri = []
     filtered = SubsetTemplateCreator.filters_assets_by_subset(db_location, list_of_otl_objectUri=list_of_filter_uri)
     assert len(filtered) == 0
+
+
+def test_remove_mockdata_csv_clears_data_if_no_examples_wanted():
+    data = ['test1', 'test2', 'test3']
+    new_data = CsvTemplateCreator().remove_mock_data_csv(data=data, rows_of_examples=0)
+    assert new_data == []
+
+
+def test_remove_mockdata_csv_leaves_data_intact_if_examples_wanted():
+    data = ['test1', 'test2', 'test3']
+    new_data = CsvTemplateCreator().remove_mock_data_csv(data=data, rows_of_examples=1)
+    assert new_data == data
+
+
+def test_find_uri_in_csv_returns_index_of_uri():
+    data = ['test1', 'typeURI', 'test3']
+    index = CsvTemplateCreator().find_uri_in_csv(header=data)
+    assert index == 1
+
+
+def test_find_uri_in_csv_returns_none_if_uri_not_found():
+    data = ['test1', 'test2', 'test3']
+    index = CsvTemplateCreator().find_uri_in_csv(header=data)
+    assert index is None

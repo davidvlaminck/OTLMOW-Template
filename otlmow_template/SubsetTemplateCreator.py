@@ -1,19 +1,9 @@
 import ntpath
 import os
-import csv
 import site
 import tempfile
 from pathlib import Path
-from typing import List
-from openpyxl.reader.excel import load_workbook
-from openpyxl.styles import PatternFill
-from openpyxl.utils import get_column_letter
-from openpyxl.worksheet.datavalidation import DataValidation
-from openpyxl.worksheet.dimensions import DimensionHolder, ColumnDimension
-from otlmow_converter.DotnotationHelper import DotnotationHelper
 from otlmow_converter.OtlmowConverter import OtlmowConverter
-from otlmow_model.BaseClasses.BooleanField import BooleanField
-from otlmow_model.BaseClasses.KeuzelijstField import KeuzelijstField
 from otlmow_model.Helpers.AssetCreator import dynamic_create_instance_from_uri
 from otlmow_modelbuilder.OSLOCollector import OSLOCollector
 
