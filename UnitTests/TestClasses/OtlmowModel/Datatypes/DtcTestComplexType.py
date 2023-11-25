@@ -1,12 +1,12 @@
 # coding=utf-8
 from typing import List
-from otlmow_model.BaseClasses.OTLObject import OTLAttribuut
-from otlmow_model.BaseClasses.WaardenObject import WaardenObject
-from otlmow_model.BaseClasses.BooleanField import BooleanField
-from otlmow_model.BaseClasses.ComplexField import ComplexField
-from UnitTests.TestClasses.Datatypes.DtcTestComplexType2 import DtcTestComplexType2, DtcTestComplexType2Waarden
-from UnitTests.TestClasses.Datatypes.KwantWrdTest import KwantWrdTest, KwantWrdTestWaarden
-from otlmow_model.BaseClasses.StringField import StringField
+from otlmow_model.OtlmowModel.BaseClasses.OTLObject import OTLAttribuut
+from otlmow_model.OtlmowModel.BaseClasses.WaardenObject import WaardenObject
+from otlmow_model.OtlmowModel.BaseClasses.BooleanField import BooleanField
+from otlmow_model.OtlmowModel.BaseClasses.ComplexField import ComplexField
+from ..Datatypes.DtcTestComplexType2 import DtcTestComplexType2, DtcTestComplexType2Waarden
+from ..Datatypes.KwantWrdTest import KwantWrdTest, KwantWrdTestWaarden
+from otlmow_model.OtlmowModel.BaseClasses.StringField import StringField
 
 
 # Generated with OTLComplexDatatypeCreator. To modify: extend, do not edit
@@ -27,6 +27,14 @@ class DtcTestComplexTypeWaarden(WaardenObject):
                                               definition='Test attribuut voor complexe waarde in een complex datatype.',
                                               owner=self)
 
+        self._testComplexType2MetKard = OTLAttribuut(field=DtcTestComplexType2,
+                                                     naam='testComplexType2MetKard',
+                                                     label='Test complexe waarde met kardinaliteit',
+                                                     objectUri='https://wegenenverkeer.data.vlaanderen.be/ns/implementatieelement#DtcTestComplexType.testComplexType2MetKard',
+                                                     kardinaliteit_max='*',
+                                                     definition='Test attribuut voor complexe waarde met kardinaliteit > 1 in een complex datatype.',
+                                                     owner=self)
+
         self._testKwantWrd = OTLAttribuut(field=KwantWrdTest,
                                           naam='testKwantWrd',
                                           label='Test kwantitatieve waarde',
@@ -34,12 +42,28 @@ class DtcTestComplexTypeWaarden(WaardenObject):
                                           definition='Test attribuut voor Kwantitatieve waarde in een complex datatype.',
                                           owner=self)
 
+        self._testKwantWrdMetKard = OTLAttribuut(field=KwantWrdTest,
+                                                 naam='testKwantWrdMetKard',
+                                                 label='Test kwantitatieve waarde met kardinaliteit',
+                                                 objectUri='https://wegenenverkeer.data.vlaanderen.be/ns/implementatieelement#DtcTestComplexType.testKwantWrdMetKard',
+                                                 kardinaliteit_max='*',
+                                                 definition='Test attribuut voor Kwantitatieve waarde met kardinaliteit > 0 in een complex datatype.',
+                                                 owner=self)
+
         self._testStringField = OTLAttribuut(field=StringField,
                                              naam='testStringField',
                                              label='Test tekstveld',
                                              objectUri='https://wegenenverkeer.data.vlaanderen.be/ns/implementatieelement#DtcTestComplexType.testStringField',
                                              definition='Test attribuut voor tekst in een complex datatype.',
                                              owner=self)
+
+        self._testStringFieldMetKard = OTLAttribuut(field=StringField,
+                                                    naam='testStringFieldMetKard',
+                                                    label='Test tekstveld met kardinaliteit',
+                                                    objectUri='https://wegenenverkeer.data.vlaanderen.be/ns/implementatieelement#DtcTestComplexType.testStringFieldMetKard',
+                                                    kardinaliteit_max='*',
+                                                    definition='Test attribuut voor tekst met kardinaliteit > 0 in een complex datatype.',
+                                                    owner=self)
 
     @property
     def testBooleanField(self) -> bool:

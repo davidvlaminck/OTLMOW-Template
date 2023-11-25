@@ -12,9 +12,9 @@ from openpyxl.worksheet.datavalidation import DataValidation
 from openpyxl.worksheet.dimensions import DimensionHolder, ColumnDimension
 from otlmow_converter.DotnotationHelper import DotnotationHelper
 from otlmow_converter.OtlmowConverter import OtlmowConverter
-from otlmow_model.BaseClasses.BooleanField import BooleanField
-from otlmow_model.BaseClasses.KeuzelijstField import KeuzelijstField
-from otlmow_model.Helpers.AssetCreator import dynamic_create_instance_from_uri
+from otlmow_model.OtlmowModel.BaseClasses.BooleanField import BooleanField
+from otlmow_model.OtlmowModel.BaseClasses.KeuzelijstField import KeuzelijstField
+from otlmow_model.OtlmowModel.Helpers.AssetCreator import dynamic_create_instance_from_uri
 from otlmow_modelbuilder.OSLOCollector import OSLOCollector
 
 ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
@@ -452,10 +452,9 @@ if __name__ == '__main__':
     # directory = Path(ROOT_DIR) / 'UnitTests' / 'TestClasses'
     # Slash op het einde toevoegen verandert weinig of niks aan het resultaat
     # directory = os.path.join(directory, '')
-    xls_location = Path(ROOT_DIR) / 'UnitTests' / 'Subset' / 'testFileStorage' / 'template_file.csv'
+    xls_location = Path(ROOT_DIR) / 'UnitTests' / 'Subset' / 'testFileStorage' / 'template_file.xlsx'
     subset_tool.generate_template_from_subset(path_to_subset=subset_location,
                                               path_to_template_file_and_extension=xls_location, add_attribute_info=True,
                                               highlight_deprecated_attributes=True,
                                               amount_of_examples=5,
-                                              generate_choice_list=True,
-                                              split_per_type=False)
+                                              generate_choice_list=True)
