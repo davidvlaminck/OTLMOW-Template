@@ -1,7 +1,13 @@
 import os
+import tempfile
 from pathlib import Path
+from unittest.mock import MagicMock
+
+import openpyxl
+from openpyxl.workbook import Workbook
 
 from otlmow_template.CsvTemplateCreator import CsvTemplateCreator
+from otlmow_template.ExcelTemplateCreator import ExcelTemplateCreator
 from otlmow_template.SubsetTemplateCreator import SubsetTemplateCreator
 
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -55,7 +61,7 @@ def test_subset_actual_subset():
     open(Path(ROOT_DIR) / 'testFileStorage' / '__init__.py', 'a').close()
 
 
-def test_filter():
+def test_filter_returns_filtered_list():
     db_location = Path(ROOT_DIR) / 'Flitspaal_noAgent3.0.db'
     list_of_filter_uri = ['https://wegenenverkeer.data.vlaanderen.be/ns/installatie#Flitspaal']
     filtered = SubsetTemplateCreator.filters_assets_by_subset(db_location, list_of_otl_objectUri=list_of_filter_uri)
@@ -68,6 +74,12 @@ def test_empty_filter_list_removes_all_entries():
     list_of_filter_uri = []
     filtered = SubsetTemplateCreator.filters_assets_by_subset(db_location, list_of_otl_objectUri=list_of_filter_uri)
     assert len(filtered) == 0
+
+
+def test_no_filter_list_returns_all_entries():
+    db_location = Path(ROOT_DIR) / 'Flitspaal_noAgent3.0.db'
+    filtered = SubsetTemplateCreator.filters_assets_by_subset(db_location)
+    assert len(filtered) == 11
 
 
 def test_remove_mockdata_csv_clears_data_if_no_examples_wanted():
@@ -92,3 +104,12 @@ def test_find_uri_in_csv_returns_none_if_uri_not_found():
     data = ['test1', 'test2', 'test3']
     index = CsvTemplateCreator().find_uri_in_csv(header=data)
     assert index is None
+
+
+def test_return_temp_path_returns_path_to_temporary_file():
+    path_to_template_file_and_extension = Path(ROOT_DIR) / 'testFileStorage' / 'template_file_text.xlsx'
+    temp_path = SubsetTemplateCreator.return_temp_path(path_to_template_file_and_extension)
+    assert temp_path == Path(tempfile.gettempdir()) / 'temp-otlmow' / 'template_file_text.xlsx'
+
+
+

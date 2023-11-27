@@ -53,8 +53,9 @@ class SubsetTemplateCreator:
         collector = self._load_collector_from_subset_path(path_to_subset=path_to_subset)
         otl_objects = []
         amount_of_examples = kwargs.get('amount_of_examples', 0)
+        class_list = self.filters_assets_by_subset(path_to_subset=path_to_subset, **kwargs)
 
-        for class_object in list(filter(lambda cl: cl.abstract == 0, collector.classes)):
+        for class_object in list(class_list):
             model_directory = None
             if kwargs is not None:
                 model_directory = kwargs.get('model_directory', None)
@@ -85,10 +86,14 @@ class SubsetTemplateCreator:
 
     @classmethod
     def filters_assets_by_subset(cls, path_to_subset: Path, **kwargs):
-        list_of_otl_object_uri = kwargs.get('list_of_otl_objectUri', [])
+        list_of_otl_object_uri = kwargs.get('list_of_otl_objectUri', None)
         collector = cls._load_collector_from_subset_path(path_to_subset=path_to_subset)
-        filtered_list = [x for x in collector.classes if x.objectUri in list_of_otl_object_uri]
-        return filtered_list
+        if list_of_otl_object_uri is None:
+            return [x for x in collector.classes if x.abstract == 0]
+        else:
+            collector = cls._load_collector_from_subset_path(path_to_subset=path_to_subset)
+            filtered_list = [x for x in collector.classes if x.objectUri in list_of_otl_object_uri]
+            return filtered_list
 
     @staticmethod
     def _try_getting_settings_of_converter() -> Path:
@@ -104,14 +109,14 @@ class SubsetTemplateCreator:
         temporary_path = Path(tempdir) / test
         return temporary_path
 
+
 if __name__ == '__main__':
     subset_tool = SubsetTemplateCreator()
     subset_location = Path(ROOT_DIR) / 'UnitTests' / 'Subset' / 'Flitspaal_noAgent3.0.db'
-    xls_location = Path(ROOT_DIR) / 'UnitTests' / 'Subset' / 'testFileStorage' / 'template_file.csv'
+    xls_location = Path(ROOT_DIR) / 'UnitTests' / 'Subset' / 'testFileStorage' / 'template_file.xlsx'
     subset_tool.generate_template_from_subset(path_to_subset=subset_location,
                                               path_to_template_file_and_extension=xls_location, add_attribute_info=True,
                                               highlight_deprecated_attributes=True,
                                               amount_of_examples=5,
                                               generate_choice_list=True,
                                               )
-
