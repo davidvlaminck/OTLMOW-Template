@@ -142,7 +142,6 @@ class ExcelTemplateCreator:
                                                                             options=valid_options,
                                                                             choice_list_dict=choice_list_dict)
                             column = choice_list_dict[dotnotation_attribute.field.naam]
-                        print(column)
                         option_list = []
                         for option in valid_options:
                             option_list.append(option)
@@ -172,7 +171,6 @@ class ExcelTemplateCreator:
     @classmethod
     def add_choice_list_to_sheet(cls, workbook, name, options, choice_list_dict):
         active_sheet = workbook['Keuzelijsten']
-        print(options)
         row_nr = 2
         for rows in active_sheet.iter_rows(min_row=1, max_row=1, min_col=1, max_col=700):
             for cell in rows:
@@ -180,10 +178,8 @@ class ExcelTemplateCreator:
                     cell.value = name
                     column_nr = cell.column
                     for option in options:
-                        print(option)
                         active_sheet.cell(row=row_nr, column=column_nr, value=option)
                         row_nr += 1
-                        print(row_nr)
                     choice_list_dict[name] = get_column_letter(column_nr)
                     break
         return choice_list_dict

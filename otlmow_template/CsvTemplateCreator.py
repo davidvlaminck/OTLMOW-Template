@@ -27,12 +27,10 @@ class CsvTemplateCreator:
     def multiple_csv_template(cls, path_to_template_file_and_extension, path_to_subset, **kwargs):
         file_location = os.path.dirname(path_to_template_file_and_extension)
         tempdir = Path(tempfile.gettempdir()) / 'temp-otlmow'
-        print(file_location)
         file_name = ntpath.basename(path_to_template_file_and_extension)
         split_file_name = file_name.split('.')
         things_in_there = os.listdir(tempdir)
         csv_templates = [x for x in things_in_there if x.startswith(split_file_name[0] + '_')]
-        print(csv_templates)
         for file in csv_templates:
             test_template_loc = Path(os.path.dirname(path_to_template_file_and_extension)) / file
             temp_loc = Path(tempdir) / file
