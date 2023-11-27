@@ -117,12 +117,7 @@ def test_xlsx_geo_artefact_column_is_removed_when_present():
     ws.append(['geometry', 'test', 'test'])
     ws.append(['geotest', 'test', 'test'])
     ExcelTemplateCreator.remove_geo_artefact_excel(workbook=wb)
-    found_geometry = False
-    for row in ws.iter_rows():
-        for cell in row:
-            if cell.value == 'geometry' or cell.value == 'geotest':
-                found_geometry = True
-    assert found_geometry is False
+    assert ws.max_column == 2
 
 
 def test_xlsx_no_column_removed_removed_when_no_geo_artefact_present():
@@ -132,3 +127,21 @@ def test_xlsx_no_column_removed_removed_when_no_geo_artefact_present():
     ws.append(['test', 'test', 'test'])
     ExcelTemplateCreator.remove_geo_artefact_excel(workbook=wb)
     assert ws.max_column == 3
+
+
+def test_xlsx_find_uri_returns_uri():
+    wb = Workbook()
+    ws = wb.active
+    ws.append(['typeURI', 'test', 'test'])
+    ws.append(['eggshells', 'and', 'bombshells'])
+    uri = ExcelTemplateCreator().find_uri_in_sheet(sheet=ws)
+    assert uri == "eggshells"
+
+
+def test_xlsx_find_uri_returns_none_if_no_uri_present():
+    wb = Workbook()
+    ws = wb.active
+    ws.append(['TypUrI', 'uriType', 'testURI'])
+    ws.append(['eggshells', 'and', 'bombshells'])
+    uri = ExcelTemplateCreator().find_uri_in_sheet(sheet=ws)
+    assert uri is None
