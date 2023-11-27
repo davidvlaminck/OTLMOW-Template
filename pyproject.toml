@@ -27,7 +27,7 @@ classifiers = [
 ]
 requires-python = ">=3.8"
 dependencies = [
-  'otlmow-converter >= 0.13',
+  'otlmow-converter >= 0.14',
   'otlmow-modelbuilder >= 0.11',
 ]
 
