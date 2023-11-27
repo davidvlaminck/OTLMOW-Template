@@ -1,13 +1,8 @@
 import os
 import tempfile
 from pathlib import Path
-from unittest.mock import MagicMock
-
-import openpyxl
-from openpyxl.workbook import Workbook
 
 from otlmow_template.CsvTemplateCreator import CsvTemplateCreator
-from otlmow_template.ExcelTemplateCreator import ExcelTemplateCreator
 from otlmow_template.SubsetTemplateCreator import SubsetTemplateCreator
 
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))

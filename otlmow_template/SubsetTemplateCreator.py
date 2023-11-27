@@ -4,7 +4,7 @@ import site
 import tempfile
 from pathlib import Path
 from otlmow_converter.OtlmowConverter import OtlmowConverter
-from otlmow_model.Helpers.AssetCreator import dynamic_create_instance_from_uri
+from otlmow_model.OtlmowModel.Helpers.AssetCreator import dynamic_create_instance_from_uri
 from otlmow_modelbuilder.OSLOCollector import OSLOCollector
 
 from otlmow_template.CsvTemplateCreator import CsvTemplateCreator
