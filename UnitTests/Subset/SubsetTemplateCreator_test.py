@@ -2,7 +2,11 @@ import os
 import tempfile
 from pathlib import Path
 
+from openpyxl.reader.excel import load_workbook
+from openpyxl.workbook import Workbook
+
 from otlmow_template.CsvTemplateCreator import CsvTemplateCreator
+from otlmow_template.ExcelTemplateCreator import ExcelTemplateCreator
 from otlmow_template.SubsetTemplateCreator import SubsetTemplateCreator
 
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -107,4 +111,24 @@ def test_return_temp_path_returns_path_to_temporary_file():
     assert temp_path == Path(tempfile.gettempdir()) / 'temp-otlmow' / 'template_file_text.xlsx'
 
 
+def test_xlsx_geo_artefact_column_is_removed_when_present():
+    wb = Workbook()
+    ws = wb.active
+    ws.append(['geometry', 'test', 'test'])
+    ws.append(['geotest', 'test', 'test'])
+    ExcelTemplateCreator.remove_geo_artefact_excel(workbook=wb)
+    found_geometry = False
+    for row in ws.iter_rows():
+        for cell in row:
+            if cell.value == 'geometry' or cell.value == 'geotest':
+                found_geometry = True
+    assert found_geometry is False
 
+
+def test_xlsx_no_column_removed_removed_when_no_geo_artefact_present():
+    wb = Workbook()
+    ws = wb.active
+    ws.append(['test', 'test', 'test'])
+    ws.append(['test', 'test', 'test'])
+    ExcelTemplateCreator.remove_geo_artefact_excel(workbook=wb)
+    assert ws.max_column == 3
