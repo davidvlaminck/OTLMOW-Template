@@ -31,11 +31,7 @@ class SubsetTemplateCreator:
 
     def generate_template_from_subset(self, path_to_subset: Path, path_to_template_file_and_extension: Path,
                                       **kwargs):
-        tempdir = Path(tempfile.gettempdir()) / 'temp-otlmow'
-        if not tempdir.exists():
-            os.makedirs(tempdir)
-        test = ntpath.basename(path_to_template_file_and_extension)
-        temporary_path = Path(tempdir) / test
+        temporary_path = self.return_temp_path(path_to_template_file_and_extension=path_to_template_file_and_extension)
         instantiated_attributes = self.generate_basic_template(path_to_subset=path_to_subset,
                                                                temporary_path=temporary_path,
                                                                path_to_template_file_and_extension=path_to_template_file_and_extension,
@@ -99,6 +95,14 @@ class SubsetTemplateCreator:
         converter_path = Path(site.getsitepackages()[0]) / 'otlmow_converter'
         return converter_path / 'settings_otlmow_converter.json'
 
+    @classmethod
+    def return_temp_path(cls, path_to_template_file_and_extension: Path):
+        tempdir = Path(tempfile.gettempdir()) / 'temp-otlmow'
+        if not tempdir.exists():
+            os.makedirs(tempdir)
+        test = ntpath.basename(path_to_template_file_and_extension)
+        temporary_path = Path(tempdir) / test
+        return temporary_path
 
 if __name__ == '__main__':
     subset_tool = SubsetTemplateCreator()
@@ -110,3 +114,4 @@ if __name__ == '__main__':
                                               amount_of_examples=5,
                                               generate_choice_list=True,
                                               )
+
