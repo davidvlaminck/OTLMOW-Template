@@ -135,13 +135,8 @@ class ExcelTemplateCreator:
                         name = dotnotation_attribute.field.naam
                         valid_options = [v.invulwaarde for k, v in dotnotation_attribute.field.options.items()
                                          if v.status != 'verwijderd']
-                        if dotnotation_attribute.field.naam in choice_list_dict:
-                            column = choice_list_dict[dotnotation_attribute.field.naam]
-                        else:
-                            choice_list_dict = cls.add_choice_list_to_sheet(workbook=workbook, name=name,
-                                                                            options=valid_options,
-                                                                            choice_list_dict=choice_list_dict)
-                            column = choice_list_dict[dotnotation_attribute.field.naam]
+                        column = cls.return_column_letter_of_choice_list(name=name, choice_list_dict=choice_list_dict,
+                                                                         options=valid_options, workbook=workbook)
                         option_list = []
                         for option in valid_options:
                             option_list.append(option)
@@ -167,6 +162,17 @@ class ExcelTemplateCreator:
                 for rows in sheet.iter_rows(min_row=2, max_row=2):
                     for cell in rows:
                         cell.value = ''
+
+    @classmethod
+    def return_column_letter_of_choice_list(cls, name, choice_list_dict, options, workbook):
+        if name in choice_list_dict:
+            column = choice_list_dict[name]
+        else:
+            choice_list_dict = cls.add_choice_list_to_sheet(workbook=workbook, name=name,
+                                                            options=options,
+                                                            choice_list_dict=choice_list_dict)
+            column = choice_list_dict[name]
+        return column
 
     @classmethod
     def add_choice_list_to_sheet(cls, workbook, name, options, choice_list_dict):

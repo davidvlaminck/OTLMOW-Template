@@ -145,3 +145,41 @@ def test_xlsx_find_uri_returns_none_if_no_uri_present():
     ws.append(['eggshells', 'and', 'bombshells'])
     uri = ExcelTemplateCreator().find_uri_in_sheet(sheet=ws)
     assert uri is None
+
+
+def test_choice_list_options_get_added_to_seperate_sheet():
+    wb = Workbook()
+    wb.create_sheet('Keuzelijsten')
+    options = ['test1', 'test2', 'test3']
+    name = 'options_test'
+    choice_list_dict = {}
+    choice_list_dict = ExcelTemplateCreator().add_choice_list_to_sheet(workbook=wb, choice_list_dict=choice_list_dict,
+                                                                       name=name, options=options)
+    assert choice_list_dict[name] == "A"
+    ws = wb['Keuzelijsten']
+    assert ws['A1'].value == 'options_test'
+    assert ws['A2'].value == 'test1'
+    assert ws['A3'].value == 'test2'
+    assert ws['A4'].value == 'test3'
+
+
+def test_return_column_letter_returns_correct_letter():
+    wb = Workbook()
+    wb.create_sheet('Keuzelijsten')
+    options = ['test1', 'test2', 'test3']
+    name = 'options_test'
+    choice_list_dict = {}
+    column = ExcelTemplateCreator().return_column_letter_of_choice_list(workbook=wb, choice_list_dict=choice_list_dict,
+                                                                        name=name, options=options)
+    assert column == "A"
+
+
+def test_return_column_letter_returns_correct_letter_if_column_already_exists():
+    wb = Workbook()
+    wb.create_sheet('Keuzelijsten')
+    options = ['test1', 'test2', 'test3']
+    name = 'options_test'
+    choice_list_dict = {"options_test": "A", name: "A"}
+    column = ExcelTemplateCreator().return_column_letter_of_choice_list(workbook=wb, choice_list_dict=choice_list_dict,
+                                                                        name=name, options=options)
+    assert column == "A"
