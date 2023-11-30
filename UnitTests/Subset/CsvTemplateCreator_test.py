@@ -1,6 +1,7 @@
 import os
 
 from UnitTests.TestModel.OtlmowModel.Classes.Onderdeel.AllCasesTestClass import AllCasesTestClass
+from UnitTests.TestModel.OtlmowModel.Classes.Onderdeel.AnotherTestClass import AnotherTestClass
 from otlmow_template.CsvTemplateCreator import CsvTemplateCreator
 
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -28,6 +29,18 @@ def test_add_attribute_info_csv():
                          'Een groep van tekens om een AIM object te identificeren of te benoemen.',
                          'Gegevens van de organisatie die de toekenning deed.',
                          'Test attribuut voor BooleanField']
+
+
+def test_highlight_deprecated_attributes_csv():
+    header = ['typeURI', 'assetId.identificator', 'assetId.toegekendDoor', 'deprecatedString']
+    data = [['https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#AnotherTestClass',
+             '0000', 'AWV', 'deprecated']]
+    instantiated_objects = [AnotherTestClass()]
+    info_data = CsvTemplateCreator.highlight_deprecated_attributes_csv(header, data, instantiated_objects)
+    assert info_data == ['typeURI',
+                         'assetId.identificator',
+                         'assetId.toegekendDoor',
+                         '[DEPRECATED] deprecatedString']
 
 
 def test_find_uri_in_csv_returns_index_of_uri():
