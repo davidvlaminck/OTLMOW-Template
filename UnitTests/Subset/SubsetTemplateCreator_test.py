@@ -2,10 +2,8 @@ import os
 import tempfile
 from pathlib import Path
 
-from openpyxl.reader.excel import load_workbook
 from openpyxl.workbook import Workbook
 
-from otlmow_template.CsvTemplateCreator import CsvTemplateCreator
 from otlmow_template.ExcelTemplateCreator import ExcelTemplateCreator
 from otlmow_template.SubsetTemplateCreator import SubsetTemplateCreator
 
