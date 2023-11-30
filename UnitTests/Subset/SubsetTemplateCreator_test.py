@@ -61,24 +61,24 @@ def test_subset_actual_subset():
 
 
 def test_filter_returns_filtered_list():
-    db_location = Path(ROOT_DIR) / 'Flitspaal_noAgent3.0.db'
-    list_of_filter_uri = ['https://wegenenverkeer.data.vlaanderen.be/ns/installatie#Flitspaal']
+    db_location = Path(ROOT_DIR) / 'OTL_AllCasesTestClass.db'
+    list_of_filter_uri = ['https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#AllCasesTestClass']
     filtered = SubsetTemplateCreator.filters_assets_by_subset(db_location, list_of_otl_objectUri=list_of_filter_uri)
     assert len(filtered) == 1
-    assert filtered[0].name == 'Flitspaal'
+    assert filtered[0].name == 'AllCasesTestClass'
 
 
 def test_empty_filter_list_removes_all_entries():
-    db_location = Path(ROOT_DIR) / 'Flitspaal_noAgent3.0.db'
+    db_location = Path(ROOT_DIR) / 'OTL_AllCasesTestClass.db'
     list_of_filter_uri = []
     filtered = SubsetTemplateCreator.filters_assets_by_subset(db_location, list_of_otl_objectUri=list_of_filter_uri)
     assert len(filtered) == 0
 
 
 def test_no_filter_list_returns_all_entries():
-    db_location = Path(ROOT_DIR) / 'Flitspaal_noAgent3.0.db'
+    db_location = Path(ROOT_DIR) / 'OTL_AllCasesTestClass.db'
     filtered = SubsetTemplateCreator.filters_assets_by_subset(db_location)
-    assert len(filtered) == 11
+    assert len(filtered) == 5
 
 
 def test_remove_mockdata_csv_clears_data_if_no_examples_wanted():
