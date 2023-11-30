@@ -3,6 +3,7 @@ import ntpath
 import os
 import tempfile
 from pathlib import Path
+from typing import List, Sequence, Optional
 
 from otlmow_converter.DotnotationHelper import DotnotationHelper
 from otlmow_converter.OtlmowConverter import OtlmowConverter
@@ -62,8 +63,8 @@ class CsvTemplateCreator:
             if add_geo_artefact is False:
                 [header, data] = cls.remove_geo_artefact_csv(header=header, data=data)
             if add_attribute_info:
-                [info, header] = cls.add_attribute_info_csv(header=header, data=data,
-                                                            instantiated_attributes=instantiated_attributes)
+                info = cls.add_attribute_info_csv(header=header, data=data,
+                                                  instantiated_objects=instantiated_attributes)
                 new_file.write(delimiter.join(info) + '\n')
             data = cls.remove_mock_data_csv(data=data, rows_of_examples=amount_of_examples)
             if highlight_deprecated_attributes:
@@ -75,30 +76,25 @@ class CsvTemplateCreator:
             new_file.close()
 
     @classmethod
-    def add_attribute_info_csv(cls, header, data, instantiated_attributes):
+    def add_attribute_info_csv(cls, header: List[str], data: List[List[str]], instantiated_objects: List) -> List[str]:
         info_data = []
         info_data.extend(header)
-        found_uri = []
+
         dotnotation_module = DotnotationHelper()
-        uri_index = cls.find_uri_in_csv(header)
-        for d in data:
-            if d[uri_index] not in found_uri:
-                found_uri.append(d[uri_index])
-        for uri in found_uri:
-            single_object = next(x for x in instantiated_attributes if x.typeURI == uri)
-            for dotnototation_title in info_data:
+
+        uri_index = cls.get_type_uri_index_in_row(header)
+        found_uris = set(d[uri_index] for d in data)
+
+        for uri in found_uris:
+            single_object = next(x for x in instantiated_objects if x.typeURI == uri)
+            for index, dotnototation_title in enumerate(info_data):
                 if dotnototation_title == 'typeURI':
-                    index = info_data.index(dotnototation_title)
                     info_data[index] = 'De URI van het object volgens https://www.w3.org/2001/XMLSchema#anyURI .'
                 else:
-                    index = info_data.index(dotnototation_title)
-                    try:
-                        dotnotation_attribute = dotnotation_module.get_attribute_by_dotnotation(
-                            single_object, dotnototation_title)
-                    except AttributeError as e:
-                        continue
+                    dotnotation_attribute = dotnotation_module.get_attribute_by_dotnotation(
+                        single_object, dotnototation_title)
                     info_data[index] = dotnotation_attribute.definition
-        return [info_data, header]
+        return info_data
 
     @classmethod
     def remove_mock_data_csv(cls, data, rows_of_examples):
@@ -110,7 +106,7 @@ class CsvTemplateCreator:
     def highlight_deprecated_attributes_csv(cls, header, data, instantiated_attributes):
         found_uri = []
         dotnotation_module = DotnotationHelper()
-        uri_index = cls.find_uri_in_csv(header)
+        uri_index = cls.get_type_uri_index_in_row(header)
         for d in data:
             if d[uri_index] not in found_uri:
                 found_uri.append(d[uri_index])
@@ -142,11 +138,11 @@ class CsvTemplateCreator:
         return header
 
     @classmethod
-    def find_uri_in_csv(cls, header):
-        filter_uri = None
-        if 'typeURI' in header:
-            filter_uri = header.index('typeURI')
-        return filter_uri
+    def get_type_uri_index_in_row(cls, header: Sequence[str]) -> Optional[int]:
+        try:
+            return header.index('typeURI')
+        except ValueError:
+            return None
 
     @classmethod
     def remove_geo_artefact_csv(cls, header, data):

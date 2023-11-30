@@ -6,5 +6,5 @@ import pytest
 os.chdir(pathlib.Path.cwd())
 
 if __name__ == "__main__":
-    pytest.main(['--cov', '-v', 'path/to/testfile.py', '--cov-report=html'])
+    pytest.main(['--cov', '-v', 'Subset/CsvTemplateCreator_test.py', '--cov-report=html'])
     webbrowser.open_new_tab(str(pathlib.Path('htmlcov/index.html')))

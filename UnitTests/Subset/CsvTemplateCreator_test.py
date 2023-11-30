@@ -22,8 +22,8 @@ def test_add_attribute_info_csv():
     header = ['typeURI', 'assetId.identificator', 'assetId.toegekendDoor', 'testBooleanField']
     data = [['https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#AllCasesTestClass',
              '0000', 'AWV', 'True']]
-    instantiated_attributes = [AllCasesTestClass()]
-    info_data, header = CsvTemplateCreator.add_attribute_info_csv(header, data, instantiated_attributes)
+    instantiated_objects = [AllCasesTestClass()]
+    info_data = CsvTemplateCreator.add_attribute_info_csv(header, data, instantiated_objects)
     assert info_data == ['De URI van het object volgens https://www.w3.org/2001/XMLSchema#anyURI .',
                          'Een groep van tekens om een AIM object te identificeren of te benoemen.',
                          'Gegevens van de organisatie die de toekenning deed.',
@@ -32,11 +32,11 @@ def test_add_attribute_info_csv():
 
 def test_find_uri_in_csv_returns_index_of_uri():
     data = ['test1', 'typeURI', 'test3']
-    index = CsvTemplateCreator().find_uri_in_csv(header=data)
+    index = CsvTemplateCreator().get_type_uri_index_in_row(header=data)
     assert index == 1
 
 
 def test_find_uri_in_csv_returns_none_if_uri_not_found():
     data = ['test1', 'test2', 'test3']
-    index = CsvTemplateCreator().find_uri_in_csv(header=data)
+    index = CsvTemplateCreator().get_type_uri_index_in_row(header=data)
     assert index is None
