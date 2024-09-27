@@ -8,7 +8,7 @@ from otlmow_template.ExcelTemplateCreator import ExcelTemplateCreator
 from otlmow_template.SubsetTemplateCreator import SubsetTemplateCreator
 
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
-
+model_directory_path = Path(__file__).parent.parent / 'TestModel'
 
 def test_files_get_generated(subtests):
     subset_tool = SubsetTemplateCreator()
@@ -38,6 +38,46 @@ def test_files_get_generated(subtests):
     path = Path(ROOT_DIR) / 'testFileStorage'
     [f.unlink() for f in Path(path).glob("*") if f.is_file()]
     # Add an __init__.py file to the testFileStorage folder to make it a package
+    open(Path(ROOT_DIR) / 'testFileStorage' / '__init__.py', 'a').close()
+
+
+def test_subset_with_AllCasesTestClass_no_double_kard():
+    subset_tool = SubsetTemplateCreator()
+    csv_location = Path(ROOT_DIR) / 'testFileStorage' / 'OTL_AllCasesTestClass_no_double_kard.csv'
+    subset_tool.generate_template_from_subset(path_to_subset=Path(ROOT_DIR) / 'OTL_AllCasesTestClass_no_double_kard.db',
+                                              path_to_template_file_and_extension=csv_location, amount_of_examples=1,
+                                              split_per_type=True, model_directory=model_directory_path)
+    csv = Path(ROOT_DIR) / 'testFileStorage' / 'OTL_AllCasesTestClass_no_double_kard_onderdeel_AllCasesTestClass.csv'
+    assert csv.exists()
+
+    with open(csv, 'r') as f:
+        header_row = f.readline()
+    header_row_list = header_row.split(';')
+    union_headers = [header for header in header_row_list if header.startswith('testUnionType')]
+    print(union_headers)
+    header_row_list = [header for header in header_row_list if not header.startswith('testUnionType')]
+
+    assert header_row_list == ['typeURI', 'assetId.identificator', 'assetId.toegekendDoor', 'bestekPostNummer[]',
+        'datumOprichtingObject', 'isActief', 'notitie', 'standaardBestekPostNummer[]',
+        'testBooleanField', 'testComplexType.testBooleanField',
+        'testComplexType.testComplexType2.testKwantWrd',
+        'testComplexType.testComplexType2.testStringField',
+        'testComplexType.testKwantWrd', 'testComplexType.testStringField',
+        'testComplexTypeMetKard[].testBooleanField',
+        'testComplexTypeMetKard[].testComplexType2.testKwantWrd',
+        'testComplexTypeMetKard[].testComplexType2.testStringField',
+        'testComplexTypeMetKard[].testKwantWrd', 'testComplexTypeMetKard[].testStringField',
+        'testDateField', 'testDateTimeField', 'testDecimalField',
+        'testDecimalFieldMetKard[]', 'testEenvoudigType', 'testEenvoudigTypeMetKard[]',
+        'testIntegerField', 'testIntegerFieldMetKard[]', 'testKeuzelijst',
+        'testKeuzelijstMetKard[]', 'testKwantWrd', 'testKwantWrdMetKard[]',
+        'testStringField', 'testStringFieldMetKard[]', 'testTimeField', 'theoretischeLevensduur', 'toestand\n']
+
+    assert union_headers[0].startswith('testUnionType.')
+    assert union_headers[1].startswith('testUnionTypeMetKard[].')
+
+    path = Path(ROOT_DIR) / 'testFileStorage'
+    [f.unlink() for f in Path(path).glob("*") if f.is_file()]
     open(Path(ROOT_DIR) / 'testFileStorage' / '__init__.py', 'a').close()
 
 
