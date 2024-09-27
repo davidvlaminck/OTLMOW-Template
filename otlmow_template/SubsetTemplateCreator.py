@@ -14,7 +14,7 @@ from otlmow_converter.DotnotationHelper import DotnotationHelper
 from otlmow_converter.OtlmowConverter import OtlmowConverter
 from otlmow_model.OtlmowModel.BaseClasses.BooleanField import BooleanField
 from otlmow_model.OtlmowModel.BaseClasses.KeuzelijstField import KeuzelijstField
-from otlmow_model.OtlmowModel.Helpers.AssetCreator import dynamic_create_instance_from_uri
+from otlmow_model.OtlmowModel.BaseClasses.OTLObject import dynamic_create_instance_from_uri
 from otlmow_modelbuilder.OSLOCollector import OSLOCollector
 
 ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
@@ -141,11 +141,14 @@ class SubsetTemplateCreator:
         [f.unlink() for f in Path(file_location).glob("*") if f.is_file()]
 
     @classmethod
-    def filters_assets_by_subset(cls, path_to_subset: Path, **kwargs):
-        list_of_otl_objectUri = kwargs.get('list_of_otl_objectUri', [])
+    def filters_assets_by_subset(cls, path_to_subset: Path, list_of_otl_objectUri: [str] = None):
+        if list_of_otl_objectUri is None:
+            list_of_otl_objectUri = []
+
         collector = cls._load_collector_from_subset_path(path_to_subset=path_to_subset)
-        filtered_list = [x for x in collector.classes if x.objectUri in list_of_otl_objectUri]
-        return filtered_list
+        if list_of_otl_objectUri == []:
+            return [x for x in collector.classes]
+        return [x for x in collector.classes if x.objectUri in list_of_otl_objectUri]
 
     @staticmethod
     def _try_getting_settings_of_converter() -> Path:

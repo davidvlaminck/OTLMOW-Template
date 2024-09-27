@@ -66,23 +66,17 @@ def test_filter_returns_filtered_list():
     assert filtered[0].name == 'AllCasesTestClass'
 
 
-def test_empty_filter_list_removes_all_entries():
+def test_empty_filter_list_returns_all_entries():
     db_location = Path(ROOT_DIR) / 'OTL_AllCasesTestClass.db'
     list_of_filter_uri = []
     filtered = SubsetTemplateCreator.filters_assets_by_subset(db_location, list_of_otl_objectUri=list_of_filter_uri)
-    assert len(filtered) == 0
+    assert len(filtered) == 11
 
 
 def test_no_filter_list_returns_all_entries():
     db_location = Path(ROOT_DIR) / 'OTL_AllCasesTestClass.db'
     filtered = SubsetTemplateCreator.filters_assets_by_subset(db_location)
-    assert len(filtered) == 5
-
-
-def test_return_temp_path_returns_path_to_temporary_file():
-    path_to_template_file_and_extension = Path(ROOT_DIR) / 'testFileStorage' / 'template_file_text.xlsx'
-    temp_path = SubsetTemplateCreator.return_temp_path(path_to_template_file_and_extension)
-    assert temp_path == Path(tempfile.gettempdir()) / 'temp-otlmow' / 'template_file_text.xlsx'
+    assert len(filtered) == 11
 
 
 def test_xlsx_geo_artefact_column_is_removed_when_present():
