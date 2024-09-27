@@ -84,6 +84,7 @@ class SubsetTemplateCreator:
                 instance.fill_with_dummy_data()
                 otl_objects.append(instance)
 
+            # TODO: check if this is needed, as the above line should cover this
             attributen = collector.find_attributes_by_class(class_object)
             for attribute_object in attributen:
                 attr = getattr(instance, '_' + attribute_object.name)
