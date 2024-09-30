@@ -2,6 +2,7 @@ import os
 import tempfile
 from pathlib import Path
 
+import openpyxl
 from openpyxl.workbook import Workbook
 
 from otlmow_template.ExcelTemplateCreator import ExcelTemplateCreator
@@ -41,7 +42,53 @@ def test_files_get_generated(subtests):
     open(Path(ROOT_DIR) / 'testFileStorage' / '__init__.py', 'a').close()
 
 
-def test_subset_with_AllCasesTestClass_no_double_kard():
+def test_subset_with_AllCasesTestClass_no_double_kard_excel():
+    subset_tool = SubsetTemplateCreator()
+    excel_path = Path(ROOT_DIR) / 'testFileStorage' / 'OTL_AllCasesTestClass_no_double_kard.xlsx'
+    subset_tool.generate_template_from_subset(path_to_subset=Path(ROOT_DIR) / 'OTL_AllCasesTestClass_no_double_kard.db',
+                                              path_to_template_file_and_extension=excel_path, amount_of_examples=1,
+                                              split_per_type=True, model_directory=model_directory_path)
+    assert excel_path.exists()
+
+    book = openpyxl.load_workbook(excel_path, data_only=True, read_only=True)
+    header_row_list = []
+    for sheet in book.worksheets:
+        sheet_name = sheet.title
+        if sheet_name != 'onderdeel#AllCasesTestClass':
+            continue
+        for row in sheet.rows:
+            header_row_list = [cell.value for cell in row]
+            break
+    book.close()
+    
+    union_headers = [header for header in header_row_list if header.startswith('testUnionType')]
+    header_row_list = [header for header in header_row_list if not header.startswith('testUnionType')]
+
+    assert header_row_list == ['typeURI', 'assetId.identificator', 'assetId.toegekendDoor', 'bestekPostNummer[]',
+        'datumOprichtingObject', 'isActief', 'notitie', 'standaardBestekPostNummer[]',
+        'testBooleanField', 'testComplexType.testBooleanField',
+        'testComplexType.testComplexType2.testKwantWrd',
+        'testComplexType.testComplexType2.testStringField',
+        'testComplexType.testKwantWrd', 'testComplexType.testStringField',
+        'testComplexTypeMetKard[].testBooleanField',
+        'testComplexTypeMetKard[].testComplexType2.testKwantWrd',
+        'testComplexTypeMetKard[].testComplexType2.testStringField',
+        'testComplexTypeMetKard[].testKwantWrd', 'testComplexTypeMetKard[].testStringField',
+        'testDateField', 'testDateTimeField', 'testDecimalField',
+        'testDecimalFieldMetKard[]', 'testEenvoudigType', 'testEenvoudigTypeMetKard[]',
+        'testIntegerField', 'testIntegerFieldMetKard[]', 'testKeuzelijst',
+        'testKeuzelijstMetKard[]', 'testKwantWrd', 'testKwantWrdMetKard[]',
+        'testStringField', 'testStringFieldMetKard[]', 'testTimeField', 'theoretischeLevensduur', 'toestand']
+
+    assert union_headers[0].startswith('testUnionType.')
+    assert union_headers[1].startswith('testUnionTypeMetKard[].')
+
+    path = Path(ROOT_DIR) / 'testFileStorage'
+    [f.unlink() for f in Path(path).glob("*") if f.is_file()]
+    open(Path(ROOT_DIR) / 'testFileStorage' / '__init__.py', 'a').close()
+
+
+def test_subset_with_AllCasesTestClass_no_double_kard_csv():
     subset_tool = SubsetTemplateCreator()
     csv_location = Path(ROOT_DIR) / 'testFileStorage' / 'OTL_AllCasesTestClass_no_double_kard.csv'
     subset_tool.generate_template_from_subset(path_to_subset=Path(ROOT_DIR) / 'OTL_AllCasesTestClass_no_double_kard.db',
