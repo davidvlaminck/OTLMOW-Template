@@ -1,4 +1,4 @@
-otlmow-converter >= 0.14
+otlmow-converter >= 1.1
 otlmow-modelbuilder >= 0.11
 attrs>=22.2.0
 coverage>=3.7.1

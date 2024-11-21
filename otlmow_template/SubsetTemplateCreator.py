@@ -90,13 +90,13 @@ class SubsetTemplateCreator:
                 attr = getattr(instance, '_' + attribute_object.name)
                 attr.fill_with_dummy_data()
         converter = OtlmowConverter()
-        converter.create_file_from_assets(filepath=temporary_path,
-                                          list_of_objects=otl_objects, **kwargs)
+        converter.from_objects_to_file(file_path=temporary_path,
+                                          sequence_of_objects=otl_objects, **kwargs)
         path_is_split = kwargs.get('split_per_type', True)
         extension = os.path.splitext(path_to_template_file_and_extension)[-1].lower()
         instantiated_attributes = []
         if path_is_split is False or extension == '.xlsx':
-            instantiated_attributes = converter.create_assets_from_file(filepath=temporary_path,
+            instantiated_attributes = converter.from_file_to_objects(file_path=temporary_path,
                                                                         path_to_subset=path_to_subset)
         return instantiated_attributes
 
@@ -323,7 +323,7 @@ class SubsetTemplateCreator:
     def alter_csv_template(cls, path_to_template_file_and_extension, path_to_subset, temporary_path,
                            **kwargs):
         converter = OtlmowConverter()
-        instantiated_attributes = converter.create_assets_from_file(filepath=temporary_path,
+        instantiated_attributes = converter.from_file_to_objects(file_path=temporary_path,
                                                                     path_to_subset=path_to_subset)
         header = []
         data = []
