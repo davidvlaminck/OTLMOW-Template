@@ -1,10 +1,11 @@
+import csv
 import ntpath
 import os
-import csv
 import site
 import tempfile
 from pathlib import Path
 from typing import List
+
 from openpyxl.reader.excel import load_workbook
 from openpyxl.styles import PatternFill
 from openpyxl.utils import get_column_letter
@@ -88,15 +89,16 @@ class SubsetTemplateCreator:
             for attribute_object in attributen:
                 attr = getattr(instance, '_' + attribute_object.name)
                 attr.fill_with_dummy_data()
+
+            self.clear_list_of_list_attributes(instance)
+
         converter = OtlmowConverter()
-        converter.create_file_from_assets(filepath=temporary_path,
-                                          list_of_objects=otl_objects, **kwargs)
+        converter.from_objects_to_file(file_path=temporary_path, sequence_of_objects=otl_objects, **kwargs)
         path_is_split = kwargs.get('split_per_type', True)
         extension = os.path.splitext(path_to_template_file_and_extension)[-1].lower()
         instantiated_attributes = []
         if path_is_split is False or extension == '.xlsx':
-            instantiated_attributes = converter.create_assets_from_file(filepath=temporary_path,
-                                                                        path_to_subset=path_to_subset)
+            instantiated_attributes = converter.from_file_to_objects(file_path=temporary_path)
         return instantiated_attributes
 
     @classmethod
@@ -319,8 +321,7 @@ class SubsetTemplateCreator:
     def alter_csv_template(cls, path_to_template_file_and_extension, path_to_subset, temporary_path,
                            **kwargs):
         converter = OtlmowConverter()
-        instantiated_attributes = converter.create_assets_from_file(filepath=temporary_path,
-                                                                    path_to_subset=path_to_subset)
+        instantiated_attributes = converter.from_file_to_objects(file_path=temporary_path)
         header = []
         data = []
         delimiter = ';'
@@ -445,16 +446,24 @@ class SubsetTemplateCreator:
                     break
         return choice_list_dict
 
+    def clear_list_of_list_attributes(self, instance_or_attribute, cardinality_level: int = 0):
+        for attribute in instance_or_attribute:
+            if attribute.naam == 'testComplexTypeMetKard':
+                pass
+            if attribute.waarde is None or attribute.waarde == []:
+                continue
 
-if __name__ == '__main__':
-    subset_tool = SubsetTemplateCreator()
-    subset_location = Path(ROOT_DIR) / 'UnitTests' / 'Subset' / 'Flitspaal_noAgent3.0.db'
-    # directory = Path(ROOT_DIR) / 'UnitTests' / 'TestClasses'
-    # Slash op het einde toevoegen verandert weinig of niks aan het resultaat
-    # directory = os.path.join(directory, '')
-    xls_location = Path(ROOT_DIR) / 'UnitTests' / 'Subset' / 'testFileStorage' / 'template_file.xlsx'
-    subset_tool.generate_template_from_subset(path_to_subset=subset_location,
-                                              path_to_template_file_and_extension=xls_location, add_attribute_info=True,
-                                              highlight_deprecated_attributes=True,
-                                              amount_of_examples=5,
-                                              generate_choice_list=True)
+            if cardinality_level > 1 and attribute.field.waardeObject is None:
+                attribute.set_waarde(None)
+                continue
+
+            if attribute.field.waardeObject is None:
+                if attribute.kardinaliteit_max == '1':
+                    continue
+                if cardinality_level >= 1:
+                    attribute.set_waarde(None)
+            else: # complex attribute
+                if attribute.kardinaliteit_max != '1':
+                    self.clear_list_of_list_attributes(attribute.waarde[0], cardinality_level + 1)
+                else:
+                    self.clear_list_of_list_attributes(attribute.waarde, cardinality_level)
