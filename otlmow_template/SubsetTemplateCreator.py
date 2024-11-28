@@ -15,6 +15,8 @@ from otlmow_converter.OtlmowConverter import OtlmowConverter
 from otlmow_model.OtlmowModel.BaseClasses.BooleanField import BooleanField
 from otlmow_model.OtlmowModel.BaseClasses.KeuzelijstField import KeuzelijstField
 from otlmow_model.OtlmowModel.BaseClasses.OTLObject import dynamic_create_instance_from_uri
+from otlmow_model.OtlmowModel.Helpers.OTLObjectHelper import is_relation
+from otlmow_model.OtlmowModel.Helpers.generated_lists import get_hardcoded_relation_dict
 from otlmow_modelbuilder.OSLOCollector import OSLOCollector
 
 ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
@@ -37,16 +39,15 @@ class SubsetTemplateCreator:
         return collector
 
     def generate_template_from_subset(self, path_to_subset: Path, path_to_template_file_and_extension: Path,
-                                      **kwargs):
+                                      ignore_relations: bool = True, **kwargs):
         tempdir = Path(tempfile.gettempdir()) / 'temp-otlmow'
         if not tempdir.exists():
             os.makedirs(tempdir)
         test = ntpath.basename(path_to_template_file_and_extension)
         temporary_path = Path(tempdir) / test
-        instantiated_attributes = self.generate_basic_template(path_to_subset=path_to_subset,
-                                                               temporary_path=temporary_path,
-                                                               path_to_template_file_and_extension=path_to_template_file_and_extension,
-                                                               **kwargs)
+        instantiated_attributes = self.generate_basic_template(
+            path_to_subset=path_to_subset, temporary_path=temporary_path, ignore_relations=ignore_relations,
+            path_to_template_file_and_extension=path_to_template_file_and_extension, **kwargs)
         extension = os.path.splitext(path_to_template_file_and_extension)[-1].lower()
         if extension == '.xlsx':
             self.alter_excel_template(path_to_template_file_and_extension=path_to_template_file_and_extension,
@@ -61,15 +62,19 @@ class SubsetTemplateCreator:
                                             **kwargs)
 
     def generate_basic_template(self, path_to_subset: Path, path_to_template_file_and_extension: Path,
-                                temporary_path: Path, **kwargs):
+                                temporary_path: Path, ignore_relations: bool = True, **kwargs):
         collector = self._load_collector_from_subset_path(path_to_subset=path_to_subset)
         otl_objects = []
         amount_of_examples = kwargs.get('amount_of_examples', 0)
+        model_directory = None
+        if kwargs is not None:
+            model_directory = kwargs.get('model_directory', None)
+        relation_dict = get_hardcoded_relation_dict(model_directory=model_directory)
 
         for class_object in list(filter(lambda cl: cl.abstract == 0, collector.classes)):
-            model_directory = None
-            if kwargs is not None:
-                model_directory = kwargs.get('model_directory', None)
+            if ignore_relations and class_object.objectUri in relation_dict:
+                continue
+
             if amount_of_examples != 0:
                 for i in range(amount_of_examples):
                     instance = dynamic_create_instance_from_uri(class_object.objectUri, model_directory=model_directory)
