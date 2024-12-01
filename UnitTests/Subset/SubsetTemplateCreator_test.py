@@ -137,9 +137,17 @@ def test_subset_actual_subset():
     csv1 = Path(ROOT_DIR) / 'testFileStorage' / 'camera_steun_onderdeel_Bevestiging.csv'
     csv2 = Path(ROOT_DIR) / 'testFileStorage' / 'camera_steun_onderdeel_Camera.csv'
     csv3 = Path(ROOT_DIR) / 'testFileStorage' / 'camera_steun_onderdeel_RechteSteun.csv'
+    assert not csv1.exists()
+    assert csv2.exists()
+    assert csv3.exists()
+
+    subset_tool.generate_template_from_subset(path_to_subset=Path(ROOT_DIR) / 'camera_steun.db',
+                                              path_to_template_file_and_extension=csv_location,
+                                              split_per_type=True, ignore_relations=False)
     assert csv1.exists()
     assert csv2.exists()
     assert csv3.exists()
+
     path = Path(ROOT_DIR) / 'testFileStorage'
     [f.unlink() for f in Path(path).glob("*") if f.is_file()]
     open(Path(ROOT_DIR) / 'testFileStorage' / '__init__.py', 'a').close()
