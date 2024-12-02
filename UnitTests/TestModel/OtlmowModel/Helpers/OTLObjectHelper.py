@@ -1,4 +1,5 @@
 import base64
+import warnings
 from collections import defaultdict
 from pathlib import Path
 from typing import Iterable, List, Dict
@@ -127,14 +128,14 @@ def verify_asset_id_is_unique_within_list(dict_list: List[Dict]) -> bool:
 
 def is_relation(otl_object: OTLObject, model_directory=Path(__file__).parent.parent.parent) -> bool:
     type_uri = otl_object.typeURI
-    relation_dict = get_hardcoded_relation_dict()
+    relation_dict = get_hardcoded_relation_dict(model_directory=model_directory)
     if type_uri in relation_dict:
         return True
 
 
 def is_directional_relation(otl_object: OTLObject, model_directory=Path(__file__).parent.parent.parent) -> bool:
     type_uri = otl_object.typeURI
-    relation_dict = get_hardcoded_relation_dict()
+    relation_dict = get_hardcoded_relation_dict(model_directory=model_directory)
     relation_info = relation_dict.get(type_uri)
     if relation_info is None:
         return False
@@ -223,5 +224,8 @@ def is_aim_id(aim_id: str, model_directory: Path = None) -> bool:
         ns, name = short_uri.split('#')
         instance = dynamic_create_instance_from_ns_and_name(ns, name, model_directory=model_directory)
         return instance is not None
+    except ModuleNotFoundError:
+        warnings.warn('Could not import the module for the given aim_id, did you forget the model_directory?', category=ImportWarning)
+        return False
     except ValueError:
         return False
