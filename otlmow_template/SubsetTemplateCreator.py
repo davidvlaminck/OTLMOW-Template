@@ -77,7 +77,7 @@ class SubsetTemplateCreator:
                 continue
 
             if amount_of_examples != 0:
-                for i in range(amount_of_examples):
+                for _ in range(amount_of_examples):
                     instance = dynamic_create_instance_from_uri(class_object.objectUri, model_directory=model_directory)
                     if instance is None:
                         continue
@@ -90,11 +90,8 @@ class SubsetTemplateCreator:
                 instance.fill_with_dummy_data()
                 otl_objects.append(instance)
 
-            # TODO: check if this is needed, as the above line should cover this
-            attributen = collector.find_attributes_by_class(class_object)
-            for attribute_object in attributen:
-                attr = getattr(instance, '_' + attribute_object.name)
-                attr.fill_with_dummy_data()
+            DotnotationHelper.clear_list_of_list_attributes(instance)
+
         converter = OtlmowConverter()
         converter.from_objects_to_file(file_path=temporary_path,
                                           sequence_of_objects=otl_objects, **kwargs)
@@ -154,7 +151,7 @@ class SubsetTemplateCreator:
 
         collector = cls._load_collector_from_subset_path(path_to_subset=path_to_subset)
         if list_of_otl_objectUri == []:
-            return [x for x in collector.classes]
+            return collector.classes
         return [x for x in collector.classes if x.objectUri in list_of_otl_objectUri]
 
     @staticmethod
@@ -221,7 +218,7 @@ class SubsetTemplateCreator:
                         is_deprecated = True
 
                     if is_deprecated:
-                        cell.value = '[DEPRECATED] ' + cell.value
+                        cell.value = f'[DEPRECATED] {cell.value}'
 
     @classmethod
     def find_uri_in_sheet(cls, sheet):
@@ -265,16 +262,10 @@ class SubsetTemplateCreator:
                         name = dotnotation_attribute.field.naam
                         valid_options = [v.invulwaarde for k, v in dotnotation_attribute.field.options.items()
                                          if v.status != 'verwijderd']
-                        if dotnotation_attribute.field.naam in choice_list_dict:
-                            column = choice_list_dict[dotnotation_attribute.field.naam]
-                        else:
-                            choice_list_dict = cls.add_choice_list_to_sheet(workbook=workbook, name=name,
-                                                                            options=valid_options,
-                                                                            choice_list_dict=choice_list_dict)
-                            column = choice_list_dict[dotnotation_attribute.field.naam]
-                        option_list = []
-                        for option in valid_options:
-                            option_list.append(option)
+                        if (dotnotation_attribute.field.naam not in choice_list_dict):
+                            choice_list_dict = cls.add_choice_list_to_sheet(
+                                workbook=workbook, name=name,  options=valid_options, choice_list_dict=choice_list_dict)
+                        column = choice_list_dict[dotnotation_attribute.field.naam]
                         start_range = f"${column}$2"
                         end_range = f"${column}${len(valid_options) + 1}"
                         data_val = DataValidation(type="list", formula1=f"Keuzelijsten!{start_range}:{end_range}",
@@ -316,7 +307,7 @@ class SubsetTemplateCreator:
         file_name = ntpath.basename(path_to_template_file_and_extension)
         split_file_name = file_name.split('.')
         things_in_there = os.listdir(tempdir)
-        csv_templates = [x for x in things_in_there if x.startswith(split_file_name[0] + '_')]
+        csv_templates = [x for x in things_in_there if x.startswith(f'{split_file_name[0]}_')]
         for file in csv_templates:
             test_template_loc = Path(os.path.dirname(path_to_template_file_and_extension)) / file
             temp_loc = Path(tempdir) / file
@@ -338,27 +329,26 @@ class SubsetTemplateCreator:
         amount_of_examples = kwargs.get('amount_of_examples', 0)
         quote_char = '"'
         with open(temporary_path, 'r+', encoding='utf-8') as csvfile:
-            new_file = open(path_to_template_file_and_extension, 'w', encoding='utf-8')
-            reader = csv.reader(csvfile, delimiter=delimiter, quotechar=quote_char)
-            for row_nr, row in enumerate(reader):
-                if row_nr == 0:
-                    header = row
-                else:
-                    data.append(row)
-            if add_geo_artefact is False:
-                [header, data] = cls.remove_geo_artefact_csv(header=header, data=data)
-            if add_attribute_info:
-                [info, header] = cls.add_attribute_info_csv(header=header, data=data,
-                                                            instantiated_attributes=instantiated_attributes)
-                new_file.write(delimiter.join(info) + '\n')
-            data = cls.add_mock_data_csv(header=header, data=data, rows_of_examples=amount_of_examples)
-            if highlight_deprecated_attributes:
-                header = cls.highlight_deprecated_attributes_csv(header=header, data=data,
-                                                                 instantiated_attributes=instantiated_attributes)
-            new_file.write(delimiter.join(header) + '\n')
-            for d in data:
-                new_file.write(delimiter.join(d) + '\n')
-            new_file.close()
+            with open(path_to_template_file_and_extension, 'w', encoding='utf-8') as new_file:
+                reader = csv.reader(csvfile, delimiter=delimiter, quotechar=quote_char)
+                for row_nr, row in enumerate(reader):
+                    if row_nr == 0:
+                        header = row
+                    else:
+                        data.append(row)
+                if add_geo_artefact is False:
+                    [header, data] = cls.remove_geo_artefact_csv(header=header, data=data)
+                if add_attribute_info:
+                    [info, header] = cls.add_attribute_info_csv(header=header, data=data,
+                                                                instantiated_attributes=instantiated_attributes)
+                    new_file.write(delimiter.join(info) + '\n')
+                data = cls.add_mock_data_csv(header=header, data=data, rows_of_examples=amount_of_examples)
+                if highlight_deprecated_attributes:
+                    header = cls.highlight_deprecated_attributes_csv(header=header, data=data,
+                                                                     instantiated_attributes=instantiated_attributes)
+                new_file.write(delimiter.join(header) + '\n')
+                for d in data:
+                    new_file.write(delimiter.join(d) + '\n')
 
     @classmethod
     def add_attribute_info_csv(cls, header, data, instantiated_attributes):
@@ -405,34 +395,31 @@ class SubsetTemplateCreator:
             for dotnototation_title in header:
                 if dotnototation_title == 'typeURI':
                     continue
-                else:
-                    index = header.index(dotnototation_title)
-                    value = header[index]
-                    try:
-                        is_deprecated = False
-                        if dotnototation_title.count('.') == 1:
-                            dot_split = dotnototation_title.split('.')
-                            attribute = dotnotation_module.get_attribute_by_dotnotation(single_object,
-                                                                                        dot_split[0])
 
-                            if len(attribute.deprecated_version) > 0:
-                                is_deprecated = True
-                        dotnotation_attribute = dotnotation_module.get_attribute_by_dotnotation(single_object,
-                                                                                                dotnototation_title)
-                        if len(dotnotation_attribute.deprecated_version) > 0:
+                index = header.index(dotnototation_title)
+                value = header[index]
+                try:
+                    is_deprecated = False
+                    if dotnototation_title.count('.') == 1:
+                        dot_split = dotnototation_title.split('.')
+                        attribute = dotnotation_module.get_attribute_by_dotnotation(single_object,
+                                                                                    dot_split[0])
+
+                        if len(attribute.deprecated_version) > 0:
                             is_deprecated = True
-                    except AttributeError:
-                        continue
-                    if is_deprecated:
-                        header[index] = "[DEPRECATED] " + value
+                    dotnotation_attribute = dotnotation_module.get_attribute_by_dotnotation(single_object,
+                                                                                            dotnototation_title)
+                    if len(dotnotation_attribute.deprecated_version) > 0:
+                        is_deprecated = True
+                except AttributeError:
+                    continue
+                if is_deprecated:
+                    header[index] = f"[DEPRECATED] {value}"
         return header
 
     @classmethod
     def find_uri_in_csv(cls, header):
-        filter_uri = None
-        if 'typeURI' in header:
-            filter_uri = header.index('typeURI')
-        return filter_uri
+        return header.index('typeURI') if 'typeURI' in header else None
 
     @classmethod
     def add_choice_list_to_sheet(cls, workbook, name, options, choice_list_dict):
