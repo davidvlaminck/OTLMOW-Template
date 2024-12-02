@@ -90,11 +90,8 @@ class SubsetTemplateCreator:
                 instance.fill_with_dummy_data()
                 otl_objects.append(instance)
 
-            # TODO: check if this is needed, as the above line should cover this
-            attributen = collector.find_attributes_by_class(class_object)
-            for attribute_object in attributen:
-                attr = getattr(instance, '_' + attribute_object.name)
-                attr.fill_with_dummy_data()
+            DotnotationHelper.clear_list_of_list_attributes(instance)
+
         converter = OtlmowConverter()
         converter.from_objects_to_file(file_path=temporary_path,
                                           sequence_of_objects=otl_objects, **kwargs)
