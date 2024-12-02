@@ -1,11 +1,12 @@
+import csv
 import logging
 import ntpath
 import os
-import csv
 import site
 import tempfile
 from pathlib import Path
-from typing import List
+
+
 from openpyxl.reader.excel import load_workbook
 from openpyxl.styles import PatternFill
 from openpyxl.utils import get_column_letter
@@ -16,7 +17,6 @@ from otlmow_converter.OtlmowConverter import OtlmowConverter
 from otlmow_model.OtlmowModel.BaseClasses.BooleanField import BooleanField
 from otlmow_model.OtlmowModel.BaseClasses.KeuzelijstField import KeuzelijstField
 from otlmow_model.OtlmowModel.BaseClasses.OTLObject import dynamic_create_instance_from_uri
-from otlmow_model.OtlmowModel.Helpers.OTLObjectHelper import is_relation
 from otlmow_model.OtlmowModel.Helpers.generated_lists import get_hardcoded_relation_dict
 from otlmow_modelbuilder.OSLOCollector import OSLOCollector
 
@@ -108,7 +108,7 @@ class SubsetTemplateCreator:
 
     @classmethod
     def alter_excel_template(cls, path_to_template_file_and_extension: Path, path_to_subset: Path,
-                             instantiated_attributes: List, temporary_path, **kwargs):
+                             instantiated_attributes: list, temporary_path, **kwargs):
         generate_choice_list = kwargs.get('generate_choice_list', False)
         add_geo_artefact = kwargs.get('add_geo_artefact', False)
         add_attribute_info = kwargs.get('add_attribute_info', False)
@@ -134,7 +134,7 @@ class SubsetTemplateCreator:
         [f.unlink() for f in Path(file_location).glob("*") if f.is_file()]
 
     def determine_multiplicity_csv(self, path_to_template_file_and_extension: Path, path_to_subset: Path,
-                                   instantiated_attributes: List, temporary_path: Path, **kwargs):
+                                   instantiated_attributes: list, temporary_path: Path, **kwargs):
         path_is_split = kwargs.get('split_per_type', True)
         if path_is_split is False:
             self.alter_csv_template(path_to_template_file_and_extension=path_to_template_file_and_extension,
@@ -171,7 +171,7 @@ class SubsetTemplateCreator:
             sheet.column_dimensions = dim_holder
 
     @classmethod
-    def add_attribute_info_excel(cls, workbook, instantiated_attributes: List):
+    def add_attribute_info_excel(cls, workbook, instantiated_attributes: list):
         dotnotation_module = DotnotationHelper()
         for sheet in workbook:
             if sheet == workbook['Keuzelijsten']:
@@ -198,7 +198,7 @@ class SubsetTemplateCreator:
                                                                              fill_type="solid")
 
     @classmethod
-    def check_for_deprecated_attributes(cls, workbook, instantiated_attributes: List):
+    def check_for_deprecated_attributes(cls, workbook, instantiated_attributes: list):
         dotnotation_module = DotnotationHelper()
         for sheet in workbook:
             if sheet == workbook['Keuzelijsten']:
@@ -243,7 +243,7 @@ class SubsetTemplateCreator:
                         sheet.delete_cols(cell.column)
 
     @classmethod
-    def add_choice_list_excel(cls, workbook, instantiated_attributes: List, path_to_subset: Path):
+    def add_choice_list_excel(cls, workbook, instantiated_attributes: list, path_to_subset: Path):
         choice_list_dict = {}
         dotnotation_module = DotnotationHelper()
         for sheet in workbook:
