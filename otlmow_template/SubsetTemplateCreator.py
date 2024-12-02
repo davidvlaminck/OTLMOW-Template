@@ -19,6 +19,7 @@ from otlmow_model.OtlmowModel.BaseClasses.KeuzelijstField import KeuzelijstField
 from otlmow_model.OtlmowModel.BaseClasses.OTLObject import dynamic_create_instance_from_uri
 from otlmow_model.OtlmowModel.Helpers.generated_lists import get_hardcoded_relation_dict
 from otlmow_modelbuilder.OSLOCollector import OSLOCollector
+from otlmow_modelbuilder.SQLDataClasses.OSLOClass import OSLOClass
 
 ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 
@@ -64,7 +65,11 @@ class SubsetTemplateCreator:
 
     def generate_basic_template(self, path_to_subset: Path, path_to_template_file_and_extension: Path,
                                 temporary_path: Path, ignore_relations: bool = True, **kwargs):
-        collector = self._load_collector_from_subset_path(path_to_subset=path_to_subset)
+        list_of_otl_objectUri = None
+        if kwargs is not None:
+            list_of_otl_objectUri = kwargs.get('list_of_otl_objectUri', None)
+        filtered_class_list = self.filters_classes_by_subset(
+            path_to_subset=path_to_subset, list_of_otl_objectUri=list_of_otl_objectUri)
         otl_objects = []
         amount_of_examples = kwargs.get('amount_of_examples', 0)
         model_directory = None
@@ -72,7 +77,7 @@ class SubsetTemplateCreator:
             model_directory = kwargs.get('model_directory', None)
         relation_dict = get_hardcoded_relation_dict(model_directory=model_directory)
 
-        for class_object in list(filter(lambda cl: cl.abstract == 0, collector.classes)):
+        for class_object in [cl for cl in filtered_class_list if cl.abstract == 0]:
             if ignore_relations and class_object.objectUri in relation_dict:
                 continue
 
@@ -145,7 +150,7 @@ class SubsetTemplateCreator:
         [f.unlink() for f in Path(file_location).glob("*") if f.is_file()]
 
     @classmethod
-    def filters_assets_by_subset(cls, path_to_subset: Path, list_of_otl_objectUri: [str] = None):
+    def filters_classes_by_subset(cls, path_to_subset: Path, list_of_otl_objectUri: [str] = None) -> list[OSLOClass]:
         if list_of_otl_objectUri is None:
             list_of_otl_objectUri = []
 

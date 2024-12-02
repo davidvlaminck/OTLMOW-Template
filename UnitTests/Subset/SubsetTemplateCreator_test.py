@@ -69,7 +69,12 @@ def test_subset_with_AllCasesTestClass_no_double_kard_excel():
         'testBooleanField', 'testComplexType.testBooleanField',
         'testComplexType.testComplexType2.testKwantWrd',
         'testComplexType.testComplexType2.testStringField',
-        'testComplexType.testKwantWrd', 'testComplexType.testStringField',
+        'testComplexType.testComplexType2MetKard[].testKwantWrd',
+        'testComplexType.testComplexType2MetKard[].testStringField',
+        'testComplexType.testKwantWrd',
+        'testComplexType.testKwantWrdMetKard[]',
+        'testComplexType.testStringField',
+        'testComplexType.testStringFieldMetKard[]',
         'testComplexTypeMetKard[].testBooleanField',
         'testComplexTypeMetKard[].testComplexType2.testKwantWrd',
         'testComplexTypeMetKard[].testComplexType2.testStringField',
@@ -109,7 +114,12 @@ def test_subset_with_AllCasesTestClass_no_double_kard_csv():
         'testBooleanField', 'testComplexType.testBooleanField',
         'testComplexType.testComplexType2.testKwantWrd',
         'testComplexType.testComplexType2.testStringField',
-        'testComplexType.testKwantWrd', 'testComplexType.testStringField',
+        'testComplexType.testComplexType2MetKard[].testKwantWrd',
+        'testComplexType.testComplexType2MetKard[].testStringField',
+        'testComplexType.testKwantWrd',
+        'testComplexType.testKwantWrdMetKard[]',
+        'testComplexType.testStringField',
+        'testComplexType.testStringFieldMetKard[]',
         'testComplexTypeMetKard[].testBooleanField',
         'testComplexTypeMetKard[].testComplexType2.testKwantWrd',
         'testComplexTypeMetKard[].testComplexType2.testStringField',
@@ -156,7 +166,7 @@ def test_subset_actual_subset():
 def test_filter_returns_filtered_list():
     db_location = Path(ROOT_DIR) / 'OTL_AllCasesTestClass.db'
     list_of_filter_uri = ['https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#AllCasesTestClass']
-    filtered = SubsetTemplateCreator.filters_assets_by_subset(db_location, list_of_otl_objectUri=list_of_filter_uri)
+    filtered = SubsetTemplateCreator.filters_classes_by_subset(db_location, list_of_otl_objectUri=list_of_filter_uri)
     assert len(filtered) == 1
     assert filtered[0].name == 'AllCasesTestClass'
 
@@ -164,13 +174,13 @@ def test_filter_returns_filtered_list():
 def test_empty_filter_list_returns_all_entries():
     db_location = Path(ROOT_DIR) / 'OTL_AllCasesTestClass.db'
     list_of_filter_uri = []
-    filtered = SubsetTemplateCreator.filters_assets_by_subset(db_location, list_of_otl_objectUri=list_of_filter_uri)
+    filtered = SubsetTemplateCreator.filters_classes_by_subset(db_location, list_of_otl_objectUri=list_of_filter_uri)
     assert len(filtered) == 11
 
 
 def test_no_filter_list_returns_all_entries():
     db_location = Path(ROOT_DIR) / 'OTL_AllCasesTestClass.db'
-    filtered = SubsetTemplateCreator.filters_assets_by_subset(db_location)
+    filtered = SubsetTemplateCreator.filters_classes_by_subset(db_location)
     assert len(filtered) == 11
 
 
