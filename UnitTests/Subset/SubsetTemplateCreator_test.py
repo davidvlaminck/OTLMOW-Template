@@ -75,16 +75,58 @@ def test_subset_with_AllCasesTestClass_no_double_kard_excel():
         'testComplexType.testKwantWrdMetKard[]',
         'testComplexType.testStringField',
         'testComplexType.testStringFieldMetKard[]',
-        'testComplexTypeMetKard[].testBooleanField',
-        'testComplexTypeMetKard[].testComplexType2.testKwantWrd',
+        'testComplexTypeMetKard[].testBooleanField', 'testComplexTypeMetKard[].testComplexType2.testKwantWrd',
         'testComplexTypeMetKard[].testComplexType2.testStringField',
-        'testComplexTypeMetKard[].testKwantWrd', 'testComplexTypeMetKard[].testStringField',
+        'testComplexTypeMetKard[].testKwantWrd',
+        'testComplexTypeMetKard[].testStringField',
         'testDateField', 'testDateTimeField', 'testDecimalField',
         'testDecimalFieldMetKard[]', 'testEenvoudigType', 'testEenvoudigTypeMetKard[]',
         'testIntegerField', 'testIntegerFieldMetKard[]', 'testKeuzelijst',
         'testKeuzelijstMetKard[]', 'testKwantWrd', 'testKwantWrdMetKard[]',
         'testStringField', 'testStringFieldMetKard[]', 'testTimeField', 'theoretischeLevensduur', 'toestand']
 
+    assert union_headers[0].startswith('testUnionType.')
+    assert union_headers[1].startswith('testUnionTypeMetKard[].')
+
+    path = Path(ROOT_DIR) / 'testFileStorage'
+    [f.unlink() for f in Path(path).glob("*") if f.is_file()]
+    open(Path(ROOT_DIR) / 'testFileStorage' / '__init__.py', 'a').close()
+
+
+def test_subset_with_AllCasesTestClass_fewer_attributes_excel():
+    subset_tool = SubsetTemplateCreator()
+    excel_path = Path(ROOT_DIR) / 'testFileStorage' / 'OTL_AllCasesTestClass_fewer_attributes.xlsx'
+    subset_tool.generate_template_from_subset(path_to_subset=Path(ROOT_DIR) / 'OTL_AllCasesTestClass_fewer_attributes.db',
+                                              path_to_template_file_and_extension=excel_path, amount_of_examples=1,
+                                              split_per_type=True, model_directory=model_directory_path)
+    assert excel_path.exists()
+
+    book = openpyxl.load_workbook(excel_path, data_only=True, read_only=True)
+    header_row_list = []
+    for sheet in book.worksheets:
+        sheet_name = sheet.title
+        if sheet_name != 'onderdeel#AllCasesTestClass':
+            continue
+        for row in sheet.rows:
+            header_row_list = [cell.value for cell in row]
+            break
+    book.close()
+
+    union_headers = [header for header in header_row_list if header.startswith('testUnionType')]
+    header_row_list = [header for header in header_row_list if not header.startswith('testUnionType')]
+
+    assert header_row_list == [
+        'typeURI', 'assetId.identificator', 'assetId.toegekendDoor', 'bestekPostNummer[]', 'datumOprichtingObject',
+        'isActief', 'notitie', 'standaardBestekPostNummer[]', 'testBooleanField', 'testComplexType.testBooleanField',
+        'testComplexType.testComplexType2.testKwantWrd', 'testComplexType.testComplexType2.testStringField',
+        'testComplexType.testComplexType2MetKard[].testKwantWrd',
+        'testComplexType.testComplexType2MetKard[].testStringField', 'testComplexType.testKwantWrd',
+        'testComplexType.testKwantWrdMetKard[]', 'testComplexType.testStringField',
+        'testComplexType.testStringFieldMetKard[]', 'testComplexTypeMetKard[].testBooleanField',
+        'testComplexTypeMetKard[].testComplexType2.testKwantWrd',
+        'testComplexTypeMetKard[].testComplexType2.testStringField', 'testComplexTypeMetKard[].testKwantWrd',
+        'testComplexTypeMetKard[].testStringField', 'testEenvoudigType', 'testEenvoudigTypeMetKard[]', 'testKeuzelijst',
+        'testKeuzelijstMetKard[]', 'testKwantWrd', 'testKwantWrdMetKard[]', 'theoretischeLevensduur', 'toestand']
     assert union_headers[0].startswith('testUnionType.')
     assert union_headers[1].startswith('testUnionTypeMetKard[].')
 
@@ -166,7 +208,9 @@ def test_subset_actual_subset():
 def test_filter_returns_filtered_list():
     db_location = Path(ROOT_DIR) / 'OTL_AllCasesTestClass.db'
     list_of_filter_uri = ['https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#AllCasesTestClass']
-    filtered = SubsetTemplateCreator.filters_classes_by_subset(db_location, list_of_otl_objectUri=list_of_filter_uri)
+    filtered = SubsetTemplateCreator.filters_classes_by_subset(
+        collector = SubsetTemplateCreator._load_collector_from_subset_path(db_location),
+        list_of_otl_objectUri=list_of_filter_uri)
     assert len(filtered) == 1
     assert filtered[0].name == 'AllCasesTestClass'
 
@@ -174,13 +218,16 @@ def test_filter_returns_filtered_list():
 def test_empty_filter_list_returns_all_entries():
     db_location = Path(ROOT_DIR) / 'OTL_AllCasesTestClass.db'
     list_of_filter_uri = []
-    filtered = SubsetTemplateCreator.filters_classes_by_subset(db_location, list_of_otl_objectUri=list_of_filter_uri)
+    filtered = SubsetTemplateCreator.filters_classes_by_subset(
+        collector = SubsetTemplateCreator._load_collector_from_subset_path(db_location),
+        list_of_otl_objectUri=list_of_filter_uri)
     assert len(filtered) == 11
 
 
 def test_no_filter_list_returns_all_entries():
     db_location = Path(ROOT_DIR) / 'OTL_AllCasesTestClass.db'
-    filtered = SubsetTemplateCreator.filters_classes_by_subset(db_location)
+    filtered = SubsetTemplateCreator.filters_classes_by_subset(
+        collector = SubsetTemplateCreator._load_collector_from_subset_path(db_location))
     assert len(filtered) == 11
 
 

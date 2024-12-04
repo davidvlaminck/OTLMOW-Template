@@ -41,15 +41,17 @@ class SubsetTemplateCreator:
         return collector
 
     def generate_template_from_subset(self, path_to_subset: Path, path_to_template_file_and_extension: Path,
-                                      ignore_relations: bool = True, **kwargs):
+                                      ignore_relations: bool = True, filter_attributes_by_subset: bool = True,
+                                      **kwargs):
         tempdir = Path(tempfile.gettempdir()) / 'temp-otlmow'
         if not tempdir.exists():
             os.makedirs(tempdir)
         test = ntpath.basename(path_to_template_file_and_extension)
         temporary_path = Path(tempdir) / test
-        instantiated_attributes = self.generate_basic_template(
+        instantiated_attributes = (self.generate_basic_template(
             path_to_subset=path_to_subset, temporary_path=temporary_path, ignore_relations=ignore_relations,
-            path_to_template_file_and_extension=path_to_template_file_and_extension, **kwargs)
+            path_to_template_file_and_extension=path_to_template_file_and_extension,
+            filter_attributes_by_subset=filter_attributes_by_subset, **kwargs))
         extension = os.path.splitext(path_to_template_file_and_extension)[-1].lower()
         if extension == '.xlsx':
             self.alter_excel_template(path_to_template_file_and_extension=path_to_template_file_and_extension,
@@ -68,8 +70,9 @@ class SubsetTemplateCreator:
         list_of_otl_objectUri = None
         if kwargs is not None:
             list_of_otl_objectUri = kwargs.get('list_of_otl_objectUri', None)
+        collector = self._load_collector_from_subset_path(path_to_subset=path_to_subset)
         filtered_class_list = self.filters_classes_by_subset(
-            path_to_subset=path_to_subset, list_of_otl_objectUri=list_of_otl_objectUri)
+            collector=collector, list_of_otl_objectUri=list_of_otl_objectUri)
         otl_objects = []
         amount_of_examples = kwargs.get('amount_of_examples', 0)
         model_directory = None
@@ -77,25 +80,24 @@ class SubsetTemplateCreator:
             model_directory = kwargs.get('model_directory', None)
         relation_dict = get_hardcoded_relation_dict(model_directory=model_directory)
 
+        generate_dummy_records = 1
+        if amount_of_examples > 1:
+            generate_dummy_records = amount_of_examples
+
         for class_object in [cl for cl in filtered_class_list if cl.abstract == 0]:
             if ignore_relations and class_object.objectUri in relation_dict:
                 continue
-
-            if amount_of_examples != 0:
-                for _ in range(amount_of_examples):
-                    instance = dynamic_create_instance_from_uri(class_object.objectUri, model_directory=model_directory)
-                    if instance is None:
-                        continue
-                    instance.fill_with_dummy_data()
-                    otl_objects.append(instance)
-            else:
+            for _ in range(generate_dummy_records):
                 instance = dynamic_create_instance_from_uri(class_object.objectUri, model_directory=model_directory)
                 if instance is None:
                     continue
-                instance.fill_with_dummy_data()
+                attributen = collector.find_attributes_by_class(class_object)
+                for attribute_object in attributen:
+                    attr = getattr(instance, '_' + attribute_object.name)
+                    attr.fill_with_dummy_data()
                 otl_objects.append(instance)
 
-            DotnotationHelper.clear_list_of_list_attributes(instance)
+                DotnotationHelper.clear_list_of_list_attributes(instance)
 
         converter = OtlmowConverter()
         converter.from_objects_to_file(file_path=temporary_path,
@@ -150,11 +152,11 @@ class SubsetTemplateCreator:
         [f.unlink() for f in Path(file_location).glob("*") if f.is_file()]
 
     @classmethod
-    def filters_classes_by_subset(cls, path_to_subset: Path, list_of_otl_objectUri: [str] = None) -> list[OSLOClass]:
+    def filters_classes_by_subset(cls, collector: OSLOCollector,
+                                  list_of_otl_objectUri: [str] = None) -> list[OSLOClass]:
         if list_of_otl_objectUri is None:
             list_of_otl_objectUri = []
 
-        collector = cls._load_collector_from_subset_path(path_to_subset=path_to_subset)
         if list_of_otl_objectUri == []:
             return collector.classes
         return [x for x in collector.classes if x.objectUri in list_of_otl_objectUri]
