@@ -8,7 +8,7 @@ from pathlib import Path
 
 
 from openpyxl.reader.excel import load_workbook
-from openpyxl.styles import PatternFill
+from openpyxl.styles import PatternFill, Alignment
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 from openpyxl.worksheet.dimensions import DimensionHolder, ColumnDimension
@@ -201,10 +201,12 @@ class SubsetTemplateCreator:
                         dotnotation_attribute = dotnotation_module.get_attribute_by_dotnotation(single_attribute,
                                                                                                 cell.value)
                         value = dotnotation_attribute.definition
-
                     sheet.cell(row=1, column=cell.column, value=value)
-                    sheet.cell(row=1, column=cell.column).fill = PatternFill(start_color="808080", end_color="808080",
-                                                                             fill_type="solid")
+
+            for row in sheet.iter_rows(min_row=1, max_row=1, min_col=1):
+                for cell in row:
+                    cell.alignment = Alignment(wrapText=True, vertical='top')
+                    cell.fill = PatternFill(start_color="808080", end_color="808080", fill_type="solid")
 
     @classmethod
     def check_for_deprecated_attributes(cls, workbook, instantiated_attributes: list):
