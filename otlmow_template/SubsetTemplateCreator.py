@@ -176,7 +176,7 @@ class SubsetTemplateCreator:
         for sheet in workbook:
             dim_holder = DimensionHolder(worksheet=sheet)
             for col in range(sheet.min_column, sheet.max_column + 1):
-                dim_holder[get_column_letter(col)] = ColumnDimension(sheet, min=col, max=col, width=20)
+                dim_holder[get_column_letter(col)] = ColumnDimension(sheet, min=col, max=col, width=25)
             sheet.column_dimensions = dim_holder
 
     @classmethod
