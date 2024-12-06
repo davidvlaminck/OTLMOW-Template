@@ -47,7 +47,8 @@ def test_subset_with_AllCasesTestClass_no_double_kard_excel():
     excel_path = Path(ROOT_DIR) / 'testFileStorage' / 'OTL_AllCasesTestClass_no_double_kard.xlsx'
     subset_tool.generate_template_from_subset(path_to_subset=Path(ROOT_DIR) / 'OTL_AllCasesTestClass_no_double_kard.db',
                                               path_to_template_file_and_extension=excel_path, amount_of_examples=1,
-                                              split_per_type=True, model_directory=model_directory_path)
+                                              split_per_type=True, model_directory=model_directory_path,
+                                              add_geo_artefact=True)
     assert excel_path.exists()
 
     book = openpyxl.load_workbook(excel_path, data_only=True, read_only=True)
@@ -65,7 +66,7 @@ def test_subset_with_AllCasesTestClass_no_double_kard_excel():
     header_row_list = [header for header in header_row_list if not header.startswith('testUnionType')]
 
     assert header_row_list == ['typeURI', 'assetId.identificator', 'assetId.toegekendDoor', 'bestekPostNummer[]',
-        'datumOprichtingObject', 'isActief', 'notitie', 'standaardBestekPostNummer[]',
+        'datumOprichtingObject',  'geometry', 'isActief', 'notitie', 'standaardBestekPostNummer[]',
         'testBooleanField', 'testComplexType.testBooleanField',
         'testComplexType.testComplexType2.testKwantWrd',
         'testComplexType.testComplexType2.testStringField',

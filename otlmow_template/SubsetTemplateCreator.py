@@ -95,6 +95,11 @@ class SubsetTemplateCreator:
                 for attribute_object in attributen:
                     attr = getattr(instance, '_' + attribute_object.name)
                     attr.fill_with_dummy_data()
+                try:
+                    geo_attr = getattr(instance, '_geometry')
+                    geo_attr.fill_with_dummy_data()
+                except AttributeError:
+                    pass
                 otl_objects.append(instance)
 
                 DotnotationHelper.clear_list_of_list_attributes(instance)
