@@ -201,12 +201,10 @@ class SubsetTemplateCreator:
                         dotnotation_attribute = dotnotation_module.get_attribute_by_dotnotation(single_attribute,
                                                                                                 cell.value)
                         value = dotnotation_attribute.definition
-                    sheet.cell(row=1, column=cell.column, value=value)
-
-            for row in sheet.iter_rows(min_row=1, max_row=1, min_col=1):
-                for cell in row:
-                    cell.alignment = Alignment(wrapText=True, vertical='top')
-                    cell.fill = PatternFill(start_color="808080", end_color="808080", fill_type="solid")
+                    newcell = sheet.cell(row=1, column=cell.column, value=value)
+                    newcell.alignment = Alignment(wrapText=True, vertical='top')
+                    newcell.fill = PatternFill(start_color="808080", end_color="808080",
+                                               fill_type="solid")
 
     @classmethod
     def check_for_deprecated_attributes(cls, workbook, instantiated_attributes: list):
