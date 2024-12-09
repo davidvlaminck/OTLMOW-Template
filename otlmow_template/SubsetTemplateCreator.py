@@ -123,6 +123,8 @@ class SubsetTemplateCreator:
         add_attribute_info = kwargs.get('add_attribute_info', False)
         highlight_deprecated_attributes = kwargs.get('highlight_deprecated_attributes', False)
         amount_of_examples = kwargs.get('amount_of_examples', 0)
+        if add_attribute_info and amount_of_examples == 0:
+            amount_of_examples = 1
         wb = load_workbook(temporary_path)
         wb.create_sheet('Keuzelijsten')
         # Volgorde is belangrijk! Eerst rijen verwijderen indien nodig dan choice list toevoegen,
