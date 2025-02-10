@@ -52,10 +52,12 @@ class SubsetTemplateCreator:
             os.makedirs(tempdir)
         test = ntpath.basename(path_to_template_file_and_extension)
         temporary_path = Path(tempdir) / test
+        await sleep(0)
         instantiated_attributes = (await self.generate_basic_template(
             path_to_subset=path_to_subset, temporary_path=temporary_path, ignore_relations=ignore_relations,
             path_to_template_file_and_extension=path_to_template_file_and_extension,
             filter_attributes_by_subset=filter_attributes_by_subset, **kwargs))
+        await sleep(0)
         extension = os.path.splitext(path_to_template_file_and_extension)[-1].lower()
         if extension == '.xlsx':
             await self.alter_excel_template(path_to_template_file_and_extension=path_to_template_file_and_extension,
@@ -117,14 +119,15 @@ class SubsetTemplateCreator:
         extension = os.path.splitext(path_to_template_file_and_extension)[-1].lower()
         instantiated_attributes = []
         if path_is_split is False or extension == '.xlsx':
-            instantiated_attributes = converter.from_file_to_objects(file_path=temporary_path,
+            instantiated_attributes = await converter.from_file_to_objects(file_path=temporary_path,
                                                                         path_to_subset=path_to_subset)
-        return instantiated_attributes
+        return list(instantiated_attributes)
 
     @classmethod
     @async_to_sync_wraps
     async def alter_excel_template(cls, path_to_template_file_and_extension: Path, path_to_subset: Path,
                              instantiated_attributes: list, temporary_path, **kwargs):
+        await sleep(0)
         generate_choice_list = kwargs.get('generate_choice_list', False)
         add_geo_artefact = kwargs.get('add_geo_artefact', False)
         add_attribute_info = kwargs.get('add_attribute_info', False)
@@ -138,16 +141,23 @@ class SubsetTemplateCreator:
         # Volgorde is belangrijk! Eerst rijen verwijderen indien nodig dan choice list toevoegen,
         # staat namelijk vast op de kolom en niet het attribuut in die kolom
         if add_geo_artefact is False:
+            await sleep(0)
             cls.remove_geo_artefact_excel(workbook=wb)
         if generate_choice_list:
-            cls.add_choice_list_excel(workbook=wb, instantiated_attributes=instantiated_attributes,
+            await sleep(0)
+            await cls.add_choice_list_excel(workbook=wb, instantiated_attributes=instantiated_attributes,
                                       path_to_subset=path_to_subset)
+        await sleep(0)
         cls.add_mock_data_excel(workbook=wb, rows_of_examples=amount_of_examples)
         if highlight_deprecated_attributes:
+            await sleep(0)
             cls.check_for_deprecated_attributes(workbook=wb, instantiated_attributes=instantiated_attributes)
         if add_attribute_info:
-            cls.add_attribute_info_excel(workbook=wb, instantiated_attributes=instantiated_attributes)
-        cls.design_workbook_excel(workbook=wb)
+            await sleep(0)
+            await cls.add_attribute_info_excel(workbook=wb, instantiated_attributes=instantiated_attributes)
+        await sleep(0)
+        await cls.design_workbook_excel(workbook=wb)
+        await sleep(0)
         wb.save(path_to_template_file_and_extension)
         file_location = os.path.dirname(temporary_path)
         [f.unlink() for f in Path(file_location).glob("*") if f.is_file()]
@@ -184,24 +194,29 @@ class SubsetTemplateCreator:
         return converter_path / 'settings_otlmow_converter.json'
 
     @classmethod
-    def design_workbook_excel(cls, workbook):
+    @async_to_sync_wraps
+    async def design_workbook_excel(cls, workbook):
         for sheet in workbook:
             dim_holder = DimensionHolder(worksheet=sheet)
             for col in range(sheet.min_column, sheet.max_column + 1):
+                await sleep(0)
                 dim_holder[get_column_letter(col)] = ColumnDimension(sheet, min=col, max=col, width=25)
             sheet.column_dimensions = dim_holder
 
     @classmethod
-    def add_attribute_info_excel(cls, workbook, instantiated_attributes: list):
+    @async_to_sync_wraps
+    async def add_attribute_info_excel(cls, workbook, instantiated_attributes: list):
         dotnotation_module = DotnotationHelper()
         for sheet in workbook:
             if sheet == workbook['Keuzelijsten']:
                 break
             filter_uri = SubsetTemplateCreator.find_uri_in_sheet(sheet)
+            await sleep(0)
             single_attribute = next(x for x in instantiated_attributes if x.typeURI == filter_uri)
             sheet.insert_rows(1)
             for rows in sheet.iter_rows(min_row=2, max_row=2, min_col=1):
                 for cell in rows:
+                    await sleep(0)
                     if cell.value == 'typeURI':
                         value = 'De URI van het object volgens https://www.w3.org/2001/XMLSchema#anyURI .'
                     elif cell.value.find('[DEPRECATED]') != -1:
@@ -264,16 +279,19 @@ class SubsetTemplateCreator:
                         sheet.delete_cols(cell.column)
 
     @classmethod
-    def add_choice_list_excel(cls, workbook, instantiated_attributes: list, path_to_subset: Path):
+    @async_to_sync_wraps
+    async def add_choice_list_excel(cls, workbook, instantiated_attributes: list, path_to_subset: Path):
         choice_list_dict = {}
         dotnotation_module = DotnotationHelper()
         for sheet in workbook:
+            await sleep(0)
             if sheet == workbook['Keuzelijsten']:
                 break
             filter_uri = SubsetTemplateCreator.find_uri_in_sheet(sheet)
             single_attribute = next(x for x in instantiated_attributes if x.typeURI == filter_uri)
             for rows in sheet.iter_rows(min_row=1, max_row=1, min_col=2):
                 for cell in rows:
+                    await sleep(0)
                     if cell.value.find('[DEPRECATED]') != -1:
                         strip = cell.value.split(' ')
                         dotnotation_attribute = dotnotation_module.get_attribute_by_dotnotation(single_attribute,
@@ -281,7 +299,7 @@ class SubsetTemplateCreator:
                     else:
                         dotnotation_attribute = dotnotation_module.get_attribute_by_dotnotation(single_attribute,
                                                                                                 cell.value)
-
+                    await sleep(0)
                     if issubclass(dotnotation_attribute.field, KeuzelijstField):
                         name = dotnotation_attribute.field.naam
                         valid_options = [v.invulwaarde for k, v in dotnotation_attribute.field.options.items()
@@ -296,8 +314,10 @@ class SubsetTemplateCreator:
                                                   allowBlank=True)
                         sheet.add_data_validation(data_val)
                         data_val.add(f'{get_column_letter(cell.column)}2:{get_column_letter(cell.column)}1000')
+
+                    await sleep(0)
                     if issubclass(dotnotation_attribute.field, BooleanField):
-                        data_validation = DataValidation(type="list", formula1='"TRUE,FALSE,-"', allow_blank=True)
+                        data_validation = DataValidation(type="list", formula1='"TRUE,FALSE,"', allow_blank=True)
                         column = cell.column
                         sheet.add_data_validation(data_validation)
                         data_validation.add(f'{get_column_letter(column)}2:{get_column_letter(column)}1000')
