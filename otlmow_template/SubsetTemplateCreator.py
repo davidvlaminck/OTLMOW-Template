@@ -149,6 +149,7 @@ class SubsetTemplateCreator:
                                       path_to_subset=path_to_subset)
         await sleep(0)
         cls.add_mock_data_excel(workbook=wb, rows_of_examples=amount_of_examples)
+        await cls.add_type_uri_choice_list_in_excel(workbook=wb, instantiated_attributes=instantiated_attributes)
         if highlight_deprecated_attributes:
             await sleep(0)
             cls.check_for_deprecated_attributes(workbook=wb, instantiated_attributes=instantiated_attributes)
@@ -192,6 +193,48 @@ class SubsetTemplateCreator:
     def _try_getting_settings_of_converter() -> Path:
         converter_path = Path(site.getsitepackages()[0]) / 'otlmow_converter'
         return converter_path / 'settings_otlmow_converter.json'
+
+    @classmethod
+    @async_to_sync_wraps
+    async def add_type_uri_choice_list_in_excel(cls, workbook, instantiated_attributes):
+        for sheet in workbook:
+            await sleep(0)
+            if sheet.title == 'Keuzelijsten':
+                break
+            type_uri_found = False
+            for row in sheet.iter_rows(min_row=1, max_row=1):
+                for cell in row:
+                    if cell.value == 'typeURI':
+                        type_uri_found = True
+                        break
+                if type_uri_found:
+                    break
+            if not type_uri_found:
+                continue
+
+            await sleep(0)
+            sheet_name = sheet.title
+            type_uri = ''
+            if sheet_name.startswith('http'):
+                type_uri = sheet_name
+            else:
+                split_name = sheet_name.split("#")
+                subclass_name = split_name[1]
+
+                possible_classes = [x for x in instantiated_attributes if x.typeURI.endswith(subclass_name)]
+                if len(possible_classes) == 1:
+                    type_uri = possible_classes[0].typeURI
+
+            if type_uri == '':
+                continue
+
+            data_validation = DataValidation(type="list", formula1=f'"{type_uri}"', allow_blank=True)
+            await sleep(0)
+            for rows in sheet.iter_rows(min_row=1, max_row=1, min_col=1, max_col=1):
+                for cell in rows:
+                    column = cell.column
+                    sheet.add_data_validation(data_validation)
+                    data_validation.add(f'{get_column_letter(column)}2:{get_column_letter(column)}1000')
 
     @classmethod
     @async_to_sync_wraps
@@ -321,7 +364,7 @@ class SubsetTemplateCreator:
                         column = cell.column
                         sheet.add_data_validation(data_validation)
                         data_validation.add(f'{get_column_letter(column)}2:{get_column_letter(column)}1000')
-                        sheet.add_data_validation(data_validation)
+
 
     @classmethod
     def add_mock_data_excel(cls, workbook, rows_of_examples: int):
