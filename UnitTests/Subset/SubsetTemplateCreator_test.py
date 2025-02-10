@@ -147,7 +147,7 @@ def test_subset_with_AllCasesTestClass_no_double_kard_excel_async():
     assert union_headers[1].startswith('testUnionTypeMetKard[].')
 
     path = Path(ROOT_DIR) / 'testFileStorage'
-    #[f.unlink() for f in Path(path).glob("*") if f.is_file()]
+    [f.unlink() for f in Path(path).glob("*") if f.is_file()]
     open(Path(ROOT_DIR) / 'testFileStorage' / '__init__.py', 'a').close()
 
 
