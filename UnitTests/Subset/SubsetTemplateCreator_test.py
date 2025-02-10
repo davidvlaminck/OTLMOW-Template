@@ -3,6 +3,7 @@ import tempfile
 from pathlib import Path
 
 import openpyxl
+import pytest
 from openpyxl.workbook import Workbook
 
 from otlmow_template.ExcelTemplateCreator import ExcelTemplateCreator
@@ -128,6 +129,53 @@ def test_subset_with_AllCasesTestClass_fewer_attributes_excel():
         'testComplexTypeMetKard[].testComplexType2.testStringField', 'testComplexTypeMetKard[].testKwantWrd',
         'testComplexTypeMetKard[].testStringField', 'testEenvoudigType', 'testEenvoudigTypeMetKard[]', 'testKeuzelijst',
         'testKeuzelijstMetKard[]', 'testKwantWrd', 'testKwantWrdMetKard[]', 'theoretischeLevensduur', 'toestand']
+    assert union_headers[0].startswith('testUnionType.')
+    assert union_headers[1].startswith('testUnionTypeMetKard[].')
+
+    path = Path(ROOT_DIR) / 'testFileStorage'
+    [f.unlink() for f in Path(path).glob("*") if f.is_file()]
+    open(Path(ROOT_DIR) / 'testFileStorage' / '__init__.py', 'a').close()
+
+
+@pytest.mark.asyncio(scope="module")
+async def test_subset_with_AllCasesTestClass_no_double_kard_csv_async():
+    subset_tool = SubsetTemplateCreator()
+    csv_location = Path(ROOT_DIR) / 'testFileStorage' / 'OTL_AllCasesTestClass_no_double_kard.csv'
+    await subset_tool.generate_template_from_subset(path_to_subset=Path(ROOT_DIR) /
+                                                              'OTL_AllCasesTestClass_no_double_kard.db',
+                                              path_to_template_file_and_extension=csv_location, amount_of_examples=1,
+                                              split_per_type=True, model_directory=model_directory_path)
+    csv = Path(ROOT_DIR) / 'testFileStorage' / 'OTL_AllCasesTestClass_no_double_kard_onderdeel_AllCasesTestClass.csv'
+    assert csv.exists()
+
+    with open(csv, 'r') as f:
+        header_row = f.readline()
+    header_row_list = header_row.split(';')
+    union_headers = [header for header in header_row_list if header.startswith('testUnionType')]
+    print(union_headers)
+    header_row_list = [header for header in header_row_list if not header.startswith('testUnionType')]
+
+    assert header_row_list == ['typeURI', 'assetId.identificator', 'assetId.toegekendDoor', 'bestekPostNummer[]',
+        'datumOprichtingObject', 'isActief', 'notitie', 'standaardBestekPostNummer[]',
+        'testBooleanField', 'testComplexType.testBooleanField',
+        'testComplexType.testComplexType2.testKwantWrd',
+        'testComplexType.testComplexType2.testStringField',
+        'testComplexType.testComplexType2MetKard[].testKwantWrd',
+        'testComplexType.testComplexType2MetKard[].testStringField',
+        'testComplexType.testKwantWrd',
+        'testComplexType.testKwantWrdMetKard[]',
+        'testComplexType.testStringField',
+        'testComplexType.testStringFieldMetKard[]',
+        'testComplexTypeMetKard[].testBooleanField',
+        'testComplexTypeMetKard[].testComplexType2.testKwantWrd',
+        'testComplexTypeMetKard[].testComplexType2.testStringField',
+        'testComplexTypeMetKard[].testKwantWrd', 'testComplexTypeMetKard[].testStringField',
+        'testDateField', 'testDateTimeField', 'testDecimalField',
+        'testDecimalFieldMetKard[]', 'testEenvoudigType', 'testEenvoudigTypeMetKard[]',
+        'testIntegerField', 'testIntegerFieldMetKard[]', 'testKeuzelijst',
+        'testKeuzelijstMetKard[]', 'testKwantWrd', 'testKwantWrdMetKard[]',
+        'testStringField', 'testStringFieldMetKard[]', 'testTimeField', 'theoretischeLevensduur', 'toestand\n']
+
     assert union_headers[0].startswith('testUnionType.')
     assert union_headers[1].startswith('testUnionTypeMetKard[].')
 

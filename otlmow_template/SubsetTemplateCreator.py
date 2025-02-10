@@ -1,9 +1,11 @@
+import asyncio
 import csv
 import logging
 import ntpath
 import os
 import site
 import tempfile
+from asyncio import sleep
 from pathlib import Path
 
 
@@ -20,6 +22,7 @@ from otlmow_model.OtlmowModel.BaseClasses.OTLObject import dynamic_create_instan
 from otlmow_model.OtlmowModel.Helpers.generated_lists import get_hardcoded_relation_dict
 from otlmow_modelbuilder.OSLOCollector import OSLOCollector
 from otlmow_modelbuilder.SQLDataClasses.OSLOClass import OSLOClass
+from universalasync import async_to_sync_wraps
 
 ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 
@@ -40,7 +43,8 @@ class SubsetTemplateCreator:
         collector.collect_all(include_abstract=True)
         return collector
 
-    def generate_template_from_subset(self, path_to_subset: Path, path_to_template_file_and_extension: Path,
+    @async_to_sync_wraps
+    async def generate_template_from_subset(self, path_to_subset: Path, path_to_template_file_and_extension: Path,
                                       ignore_relations: bool = True, filter_attributes_by_subset: bool = True,
                                       **kwargs):
         tempdir = Path(tempfile.gettempdir()) / 'temp-otlmow'
@@ -48,24 +52,26 @@ class SubsetTemplateCreator:
             os.makedirs(tempdir)
         test = ntpath.basename(path_to_template_file_and_extension)
         temporary_path = Path(tempdir) / test
-        instantiated_attributes = (self.generate_basic_template(
+        instantiated_attributes = (await self.generate_basic_template(
             path_to_subset=path_to_subset, temporary_path=temporary_path, ignore_relations=ignore_relations,
             path_to_template_file_and_extension=path_to_template_file_and_extension,
             filter_attributes_by_subset=filter_attributes_by_subset, **kwargs))
         extension = os.path.splitext(path_to_template_file_and_extension)[-1].lower()
         if extension == '.xlsx':
-            self.alter_excel_template(path_to_template_file_and_extension=path_to_template_file_and_extension,
+            await self.alter_excel_template(path_to_template_file_and_extension=path_to_template_file_and_extension,
                                       temporary_path=temporary_path,
                                       path_to_subset=path_to_subset, instantiated_attributes=instantiated_attributes,
                                       **kwargs)
         elif extension == '.csv':
-            self.determine_multiplicity_csv(path_to_template_file_and_extension=path_to_template_file_and_extension,
+            await self.determine_multiplicity_csv(
+                path_to_template_file_and_extension=path_to_template_file_and_extension,
                                             path_to_subset=path_to_subset,
                                             instantiated_attributes=instantiated_attributes,
                                             temporary_path=temporary_path,
                                             **kwargs)
 
-    def generate_basic_template(self, path_to_subset: Path, path_to_template_file_and_extension: Path,
+    @async_to_sync_wraps
+    async def generate_basic_template(self, path_to_subset: Path, path_to_template_file_and_extension: Path,
                                 temporary_path: Path, ignore_relations: bool = True, **kwargs):
         list_of_otl_objectUri = None
         if kwargs is not None:
@@ -105,7 +111,7 @@ class SubsetTemplateCreator:
                 DotnotationHelper.clear_list_of_list_attributes(instance)
 
         converter = OtlmowConverter()
-        converter.from_objects_to_file(file_path=temporary_path,
+        await converter.from_objects_to_file(file_path=temporary_path,
                                           sequence_of_objects=otl_objects, **kwargs)
         path_is_split = kwargs.get('split_per_type', True)
         extension = os.path.splitext(path_to_template_file_and_extension)[-1].lower()
@@ -116,7 +122,8 @@ class SubsetTemplateCreator:
         return instantiated_attributes
 
     @classmethod
-    def alter_excel_template(cls, path_to_template_file_and_extension: Path, path_to_subset: Path,
+    @async_to_sync_wraps
+    async def alter_excel_template(cls, path_to_template_file_and_extension: Path, path_to_subset: Path,
                              instantiated_attributes: list, temporary_path, **kwargs):
         generate_choice_list = kwargs.get('generate_choice_list', False)
         add_geo_artefact = kwargs.get('add_geo_artefact', False)
@@ -125,6 +132,7 @@ class SubsetTemplateCreator:
         amount_of_examples = kwargs.get('amount_of_examples', 0)
         if add_attribute_info and amount_of_examples == 0:
             amount_of_examples = 1
+        await sleep(0)
         wb = load_workbook(temporary_path)
         wb.create_sheet('Keuzelijsten')
         # Volgorde is belangrijk! Eerst rijen verwijderen indien nodig dan choice list toevoegen,
@@ -144,9 +152,11 @@ class SubsetTemplateCreator:
         file_location = os.path.dirname(temporary_path)
         [f.unlink() for f in Path(file_location).glob("*") if f.is_file()]
 
-    def determine_multiplicity_csv(self, path_to_template_file_and_extension: Path, path_to_subset: Path,
+    @async_to_sync_wraps
+    async def determine_multiplicity_csv(self, path_to_template_file_and_extension: Path, path_to_subset: Path,
                                    instantiated_attributes: list, temporary_path: Path, **kwargs):
         path_is_split = kwargs.get('split_per_type', True)
+        await sleep(0)
         if path_is_split is False:
             self.alter_csv_template(path_to_template_file_and_extension=path_to_template_file_and_extension,
                                     temporary_path=temporary_path, path_to_subset=path_to_subset, **kwargs)
