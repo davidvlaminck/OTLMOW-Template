@@ -97,6 +97,7 @@ class SubsetTemplateCreator:
                 continue
             for _ in range(generate_dummy_records):
                 instance = dynamic_create_instance_from_uri(class_object.objectUri, model_directory=model_directory)
+                await sleep(0)
                 if instance is None:
                     continue
                 attributen = collector.find_attributes_by_class(class_object)
@@ -112,6 +113,7 @@ class SubsetTemplateCreator:
 
                 DotnotationHelper.clear_list_of_list_attributes(instance)
 
+        await sleep(0)
         converter = OtlmowConverter()
         await converter.from_objects_to_file(file_path=temporary_path,
                                           sequence_of_objects=otl_objects, **kwargs)
@@ -146,18 +148,19 @@ class SubsetTemplateCreator:
         if generate_choice_list:
             await sleep(0)
             await cls.add_choice_list_excel(workbook=wb, instantiated_attributes=instantiated_attributes,
-                                      path_to_subset=path_to_subset)
+                                      path_to_subset=path_to_subset, add_attribute_info=add_attribute_info)
         await sleep(0)
-        cls.add_mock_data_excel(workbook=wb, rows_of_examples=amount_of_examples)
-        await cls.add_type_uri_choice_list_in_excel(workbook=wb, instantiated_attributes=instantiated_attributes)
+        cls.add_mock_data_excel(workbook=wb, rows_of_examples=amount_of_examples) # remove dummy rows if needed
+
+        await cls.custom_exel_fixes(workbook=wb, instantiated_attributes=instantiated_attributes,
+                                    add_attribute_info=add_attribute_info)
+        await sleep(0)
         if highlight_deprecated_attributes:
             await sleep(0)
             cls.check_for_deprecated_attributes(workbook=wb, instantiated_attributes=instantiated_attributes)
         if add_attribute_info:
             await sleep(0)
             await cls.add_attribute_info_excel(workbook=wb, instantiated_attributes=instantiated_attributes)
-        await sleep(0)
-        await cls.design_workbook_excel(workbook=wb)
         await sleep(0)
         wb.save(path_to_template_file_and_extension)
         file_location = os.path.dirname(temporary_path)
@@ -196,55 +199,78 @@ class SubsetTemplateCreator:
 
     @classmethod
     @async_to_sync_wraps
-    async def add_type_uri_choice_list_in_excel(cls, workbook, instantiated_attributes):
-        for sheet in workbook:
-            await sleep(0)
-            if sheet.title == 'Keuzelijsten':
-                break
-            type_uri_found = False
-            for row in sheet.iter_rows(min_row=1, max_row=1):
-                for cell in row:
-                    if cell.value == 'typeURI':
-                        type_uri_found = True
-                        break
-                if type_uri_found:
+    async def add_type_uri_choice_list_in_excel(cls, sheet, instantiated_attributes, add_attribute_info: bool):
+        starting_row = '3' if add_attribute_info else '2'
+        await sleep(0)
+        if sheet.title == 'Keuzelijsten':
+            return
+        type_uri_found = False
+        for row in sheet.iter_rows(min_row=1, max_row=1):
+            for cell in row:
+                if cell.value == 'typeURI':
+                    type_uri_found = True
                     break
-            if not type_uri_found:
-                continue
+            if type_uri_found:
+                break
+        if not type_uri_found:
+            return
 
-            await sleep(0)
-            sheet_name = sheet.title
-            type_uri = ''
-            if sheet_name.startswith('http'):
-                type_uri = sheet_name
-            else:
-                split_name = sheet_name.split("#")
-                subclass_name = split_name[1]
+        await sleep(0)
+        sheet_name = sheet.title
+        type_uri = ''
+        if sheet_name.startswith('http'):
+            type_uri = sheet_name
+        else:
+            split_name = sheet_name.split("#")
+            subclass_name = split_name[1]
 
-                possible_classes = [x for x in instantiated_attributes if x.typeURI.endswith(subclass_name)]
-                if len(possible_classes) == 1:
-                    type_uri = possible_classes[0].typeURI
+            possible_classes = [x for x in instantiated_attributes if x.typeURI.endswith(subclass_name)]
+            if len(possible_classes) == 1:
+                type_uri = possible_classes[0].typeURI
 
-            if type_uri == '':
-                continue
+        if type_uri == '':
+            return
 
-            data_validation = DataValidation(type="list", formula1=f'"{type_uri}"', allow_blank=True)
-            await sleep(0)
-            for rows in sheet.iter_rows(min_row=1, max_row=1, min_col=1, max_col=1):
-                for cell in rows:
-                    column = cell.column
-                    sheet.add_data_validation(data_validation)
-                    data_validation.add(f'{get_column_letter(column)}2:{get_column_letter(column)}1000')
+        data_validation = DataValidation(type="list", formula1=f'"{type_uri}"', allow_blank=True)
+        await sleep(0)
+        for rows in sheet.iter_rows(min_row=1, max_row=1, min_col=1, max_col=1):
+            for cell in rows:
+                await sleep(0)
+                column = cell.column
+                sheet.add_data_validation(data_validation)
+                data_validation.add(f'{get_column_letter(column)}{starting_row}:{get_column_letter(column)}1000')
 
     @classmethod
     @async_to_sync_wraps
-    async def design_workbook_excel(cls, workbook):
+    async def custom_exel_fixes(cls, workbook, instantiated_attributes, add_attribute_info: bool):
         for sheet in workbook:
-            dim_holder = DimensionHolder(worksheet=sheet)
-            for col in range(sheet.min_column, sheet.max_column + 1):
+            await sleep(0)
+            await cls.set_fixed_column_width(sheet=sheet, width=25)
+            await cls.add_type_uri_choice_list_in_excel(sheet=sheet, instantiated_attributes=instantiated_attributes,
+                                                        add_attribute_info=add_attribute_info)
+            await cls.remove_asset_versie(sheet=sheet)
+
+    @classmethod
+    @async_to_sync_wraps
+    async def remove_asset_versie(cls, sheet):
+        for row in sheet.iter_rows(min_row=1, max_row=1, min_col=4):
+            for cell in row:
                 await sleep(0)
-                dim_holder[get_column_letter(col)] = ColumnDimension(sheet, min=col, max=col, width=25)
-            sheet.column_dimensions = dim_holder
+                if cell.value is None or not cell.value.startswith('assetVersie'):
+                    continue
+                for rows in sheet.iter_rows(min_row=row, max_row=row, min_col=2, max_col=1000):
+                    for c in rows:
+                        await sleep(0)
+                        c.value = ''
+
+    @classmethod
+    @async_to_sync_wraps
+    async def set_fixed_column_width(cls, sheet, width: int):
+        dim_holder = DimensionHolder(worksheet=sheet)
+        for col in range(sheet.min_column, sheet.max_column + 1):
+            await sleep(0)
+            dim_holder[get_column_letter(col)] = ColumnDimension(sheet, min=col, max=col, width=width)
+        sheet.column_dimensions = dim_holder
 
     @classmethod
     @async_to_sync_wraps
@@ -323,8 +349,10 @@ class SubsetTemplateCreator:
 
     @classmethod
     @async_to_sync_wraps
-    async def add_choice_list_excel(cls, workbook, instantiated_attributes: list, path_to_subset: Path):
+    async def add_choice_list_excel(cls, workbook, instantiated_attributes: list, path_to_subset: Path, 
+                                    add_attribute_info: bool=False):
         choice_list_dict = {}
+        starting_row = '3' if add_attribute_info else '2'
         dotnotation_module = DotnotationHelper()
         for sheet in workbook:
             await sleep(0)
@@ -356,14 +384,16 @@ class SubsetTemplateCreator:
                         data_val = DataValidation(type="list", formula1=f"Keuzelijsten!{start_range}:{end_range}",
                                                   allowBlank=True)
                         sheet.add_data_validation(data_val)
-                        data_val.add(f'{get_column_letter(cell.column)}2:{get_column_letter(cell.column)}1000')
+                        data_val.add(f'{get_column_letter(cell.column)}{starting_row}:'
+                                     f'{get_column_letter(cell.column)}1000')
 
                     await sleep(0)
                     if issubclass(dotnotation_attribute.field, BooleanField):
                         data_validation = DataValidation(type="list", formula1='"TRUE,FALSE,"', allow_blank=True)
                         column = cell.column
                         sheet.add_data_validation(data_validation)
-                        data_validation.add(f'{get_column_letter(column)}2:{get_column_letter(column)}1000')
+                        data_validation.add(f'{get_column_letter(column)}{starting_row}:'
+                                            f'{get_column_letter(column)}1000')
 
 
     @classmethod
