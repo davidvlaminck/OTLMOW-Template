@@ -285,10 +285,44 @@ def test_subset_with_AllCasesTestClass_no_double_kard_csv():
     open(Path(ROOT_DIR) / 'testFileStorage' / '__init__.py', 'a').close()
 
 
-def test_subset_actual_subset():
+def test_subset_actual_subset_excel():
+    subset_tool = SubsetTemplateCreator()
+    excel_path = Path(ROOT_DIR) / 'testFileStorage' / 'camera_steun.xlsx'
+    subset_tool.generate_template_from_subset(path_to_subset=Path(ROOT_DIR) / 'camera_steun_2.14.db',
+                                              path_to_template_file_and_extension=excel_path,
+                                              split_per_type=True)
+
+    book = openpyxl.load_workbook(excel_path, data_only=True)
+    header_row_lists = []
+    for sheet in book.worksheets:
+        sheet_name = sheet.title
+        if sheet_name != 'Keuzelijsten':
+
+            header_row_lists.append([r.value for r in next(sheet.rows)])
+    book.close()
+
+    assert header_row_lists == [[
+        'typeURI', 'assetId.identificator', 'assetId.toegekendDoor',
+        'beeldverwerkingsinstelling[].configBestand.bestandsnaam',
+        'beeldverwerkingsinstelling[].configBestand.mimeType',
+        'beeldverwerkingsinstelling[].configBestand.omschrijving',
+        'beeldverwerkingsinstelling[].configBestand.opmaakdatum', 'beeldverwerkingsinstelling[].configBestand.uri',
+        'beeldverwerkingsinstelling[].typeBeeldverwerking', 'bestekPostNummer[]', 'datumOprichtingObject', 'dnsNaam',
+        'ipAdres', 'isActief', 'isPtz', 'merk', 'modelnaam', 'naam', 'notitie', 'opstelhoogte', 'spectrum',
+        'standaardBestekPostNummer[]', 'technischeFiche[].bestandsnaam', 'technischeFiche[].mimeType',
+        'technischeFiche[].omschrijving', 'technischeFiche[].opmaakdatum', 'technischeFiche[].uri',
+        'theoretischeLevensduur', 'toestand'],
+        ['typeURI', 'assetId.identificator', 'assetId.toegekendDoor', 'beschermlaag', 'bestekPostNummer[]',
+         'bijzonderTransport', 'datumOprichtingObject', 'elektrischeBeveiliging', 'fabrikant', 'hoogteBovenkant',
+         'isActief', 'kleur', 'naam', 'notitie', 'standaardBestekPostNummer[]', 'theoretischeLevensduur', 'toestand',
+         'type']]
+    excel_path.unlink()
+
+
+def test_subset_actual_subset_csv():
     subset_tool = SubsetTemplateCreator()
     csv_location = Path(ROOT_DIR) / 'testFileStorage' / 'camera_steun.csv'
-    subset_tool.generate_template_from_subset(path_to_subset=Path(ROOT_DIR) / 'camera_steun.db',
+    subset_tool.generate_template_from_subset(path_to_subset=Path(ROOT_DIR) / 'camera_steun_2.14.db',
                                               path_to_template_file_and_extension=csv_location,
                                               split_per_type=True)
     csv1 = Path(ROOT_DIR) / 'testFileStorage' / 'camera_steun_onderdeel_Bevestiging.csv'
@@ -298,7 +332,7 @@ def test_subset_actual_subset():
     assert csv2.exists()
     assert csv3.exists()
 
-    subset_tool.generate_template_from_subset(path_to_subset=Path(ROOT_DIR) / 'camera_steun.db',
+    subset_tool.generate_template_from_subset(path_to_subset=Path(ROOT_DIR) / 'camera_steun_2.14.db',
                                               path_to_template_file_and_extension=csv_location,
                                               split_per_type=True, ignore_relations=False)
     assert csv1.exists()
