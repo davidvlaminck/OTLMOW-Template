@@ -290,32 +290,37 @@ def test_subset_actual_subset_excel():
     excel_path = Path(ROOT_DIR) / 'testFileStorage' / 'camera_steun.xlsx'
     subset_tool.generate_template_from_subset(path_to_subset=Path(ROOT_DIR) / 'camera_steun_2.14.db',
                                               path_to_template_file_and_extension=excel_path,
-                                              split_per_type=True)
+                                              split_per_type=True, amount_of_examples=1)
 
     book = openpyxl.load_workbook(excel_path, data_only=True)
     header_row_lists = []
+    asset_versie_values = []
     for sheet in book.worksheets:
         sheet_name = sheet.title
-        if sheet_name != 'Keuzelijsten':
-
-            header_row_lists.append([r.value for r in next(sheet.rows)])
+        if sheet_name == 'Keuzelijsten':
+            continue
+        header_row_lists.append([r.value for r in next(sheet.rows)])
+        asset_versie_values.append(sheet['D2'].value)
+        asset_versie_values.append(sheet['E2'].value)
+        asset_versie_values.append(sheet['F2'].value)
     book.close()
 
+    assert asset_versie_values == [None, None, None, None, None, None]
     assert header_row_lists == [[
-        'typeURI', 'assetId.identificator', 'assetId.toegekendDoor',
-        'beeldverwerkingsinstelling[].configBestand.bestandsnaam',
+        'typeURI', 'assetId.identificator', 'assetId.toegekendDoor', 'assetVersie.context', 'assetVersie.timestamp',
+        'assetVersie.versienummer', 'beeldverwerkingsinstelling[].configBestand.bestandsnaam',
         'beeldverwerkingsinstelling[].configBestand.mimeType',
         'beeldverwerkingsinstelling[].configBestand.omschrijving',
         'beeldverwerkingsinstelling[].configBestand.opmaakdatum', 'beeldverwerkingsinstelling[].configBestand.uri',
         'beeldverwerkingsinstelling[].typeBeeldverwerking', 'bestekPostNummer[]', 'datumOprichtingObject', 'dnsNaam',
-        'ipAdres', 'isActief', 'isPtz', 'merk', 'modelnaam', 'naam', 'notitie', 'opstelhoogte', 'spectrum',
-        'standaardBestekPostNummer[]', 'technischeFiche[].bestandsnaam', 'technischeFiche[].mimeType',
-        'technischeFiche[].omschrijving', 'technischeFiche[].opmaakdatum', 'technischeFiche[].uri',
-        'theoretischeLevensduur', 'toestand'],
-        ['typeURI', 'assetId.identificator', 'assetId.toegekendDoor', 'beschermlaag', 'bestekPostNummer[]',
-         'bijzonderTransport', 'datumOprichtingObject', 'elektrischeBeveiliging', 'fabrikant', 'hoogteBovenkant',
-         'isActief', 'kleur', 'naam', 'notitie', 'standaardBestekPostNummer[]', 'theoretischeLevensduur', 'toestand',
-         'type']]
+        'heeftFlits', 'ipAdres', 'isActief', 'isPtz', 'merk', 'modelnaam', 'naam', 'notitie', 'opstelhoogte',
+        'opstelwijze', 'rijrichting', 'serienummer', 'spectrum', 'standaardBestekPostNummer[]',
+        'technischeFiche[].bestandsnaam', 'technischeFiche[].mimeType', 'technischeFiche[].omschrijving',
+        'technischeFiche[].opmaakdatum', 'technischeFiche[].uri', 'theoretischeLevensduur', 'toestand'],
+        ['typeURI', 'assetId.identificator', 'assetId.toegekendDoor', 'assetVersie.context', 'assetVersie.timestamp',
+         'assetVersie.versienummer', 'beschermendeLaag.beschermlaag', 'bestekPostNummer[]', 'bijzonderTransport',
+         'datumOprichtingObject', 'elektrischeBeveiliging', 'fabrikant', 'hoogteBovenkant', 'isActief', 'kleur', 'naam',
+         'notitie', 'standaardBestekPostNummer[]', 'theoretischeLevensduur', 'toestand', 'type']]
     excel_path.unlink()
 
 

@@ -258,7 +258,7 @@ class SubsetTemplateCreator:
                 await sleep(0)
                 if cell.value is None or not cell.value.startswith('assetVersie'):
                     continue
-                for rows in sheet.iter_rows(min_row=row, max_row=row, min_col=2, max_col=1000):
+                for rows in sheet.iter_rows(min_col=cell.column, max_col=cell.column, min_row=2, max_row=1000):
                     for c in rows:
                         await sleep(0)
                         c.value = ''
