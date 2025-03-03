@@ -123,8 +123,10 @@ class SubsetTemplateCreator:
         add_attribute_info = kwargs.get('add_attribute_info', False)
         highlight_deprecated_attributes = kwargs.get('highlight_deprecated_attributes', False)
         amount_of_examples = kwargs.get('amount_of_examples', 0)
+        original_amount_of_examples = amount_of_examples
         if add_attribute_info and amount_of_examples == 0:
             amount_of_examples = 1
+
         wb = load_workbook(temporary_path)
         wb.create_sheet('Keuzelijsten')
         # Volgorde is belangrijk! Eerst rijen verwijderen indien nodig dan choice list toevoegen,
@@ -139,6 +141,8 @@ class SubsetTemplateCreator:
             cls.check_for_deprecated_attributes(workbook=wb, instantiated_attributes=instantiated_attributes)
         if add_attribute_info:
             cls.add_attribute_info_excel(workbook=wb, instantiated_attributes=instantiated_attributes)
+        if original_amount_of_examples == 0:
+            cls.remove_examples_from_excel_again(workbook=wb)
         cls.design_workbook_excel(workbook=wb)
         wb.save(path_to_template_file_and_extension)
         file_location = os.path.dirname(temporary_path)
@@ -450,6 +454,12 @@ class SubsetTemplateCreator:
                     choice_list_dict[name] = get_column_letter(column_nr)
                     break
         return choice_list_dict
+
+    @classmethod
+    def remove_examples_from_excel_again(cls, workbook):
+        first_value_row_i = 3 #with a description the values only start at row 2 (third row)
+        for sheet in workbook:
+            sheet.delete_rows(idx=first_value_row_i, amount=1)
 
 
 if __name__ == '__main__':

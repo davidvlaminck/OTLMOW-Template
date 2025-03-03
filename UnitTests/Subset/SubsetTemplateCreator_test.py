@@ -3,6 +3,7 @@ import tempfile
 from pathlib import Path
 
 import openpyxl
+from _pytest.fixtures import fixture
 from openpyxl.workbook import Workbook
 
 from otlmow_template.ExcelTemplateCreator import ExcelTemplateCreator
@@ -304,3 +305,60 @@ def test_return_column_letter_returns_correct_letter_if_column_already_exists():
     column = ExcelTemplateCreator().return_column_letter_of_choice_list(workbook=wb, choice_list_dict=choice_list_dict,
                                                                         name=name, options=options)
     assert column == "A"
+
+#test created by Christiaan:
+
+
+@fixture
+def cleanup_after_creating_a_file_to_delete():
+    to_delete = []
+    yield to_delete
+    for item in to_delete:
+        if os.path.exists(item):
+            os.remove(item)
+
+def test_generation_with_descriptions_no_examples(cleanup_after_creating_a_file_to_delete:list[Path]) -> None:
+
+    test_files_path = Path(ROOT_DIR).parent / 'test_files'
+    test_path_to_subset = test_files_path /'input'/'voorbeeld-slagboom.db'
+    output_filename = "slagboom_template_with_description_no_examples.xlsx"
+    test_template_output_path = test_files_path / 'output_test' / output_filename
+    cleanup_after_creating_a_file_to_delete.append(test_template_output_path)
+    expected_template_output_path = test_files_path / 'output_ref' / output_filename
+    test_kwargs = {'abbreviate_excel_sheettitles': True,
+     'add_attribute_info': True,
+     'add_geo_artefact': True,
+     'amount_of_examples': 0,
+     'filter_attributes_by_subset': True,
+     'generate_choice_list': True,
+     'highlight_deprecated_attributes': True,
+     'list_of_otl_objectUri': [],
+     'model_directory': None}
+
+    SubsetTemplateCreator().generate_template_from_subset(path_to_subset=test_path_to_subset, path_to_template_file_and_extension= test_template_output_path,**test_kwargs)
+
+    book = openpyxl.load_workbook(test_template_output_path, data_only=True, read_only=True)
+    # test_cell_value_list = []
+    # for sheet in book.worksheets:
+    #     for row in sheet.rows:
+    #         test_cell_value_list.append([cell.value for cell in row if cell.value and cell.value != 'None'])
+    test_cell_value_list = [
+        [[cell.value for cell in row if cell.value and cell.value != 'None'] for row in sheet.rows]
+        for sheet in book.worksheets]
+    book.close()
+
+    book = openpyxl.load_workbook(expected_template_output_path, data_only=True, read_only=True)
+    # expected_cell_value_list = []
+    # for sheet in book.worksheets:
+    #
+    #     for row in sheet.rows:
+    #         expected_cell_value_list.append([cell.value for cell in row if cell.value and cell.value != 'None'])
+    expected_cell_value_list = [
+        [[cell.value for cell in row if cell.value and cell.value != 'None'] for row in sheet.rows]
+        for sheet in book.worksheets]
+    book.close()
+
+
+
+    assert test_cell_value_list == expected_cell_value_list
+
