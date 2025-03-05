@@ -337,22 +337,15 @@ def test_generation_with_descriptions_no_examples(cleanup_after_creating_a_file_
 
     SubsetTemplateCreator().generate_template_from_subset(path_to_subset=test_path_to_subset, path_to_template_file_and_extension= test_template_output_path,**test_kwargs)
 
+    assert test_template_output_path.exists()
+
     book = openpyxl.load_workbook(test_template_output_path, data_only=True, read_only=True)
-    # test_cell_value_list = []
-    # for sheet in book.worksheets:
-    #     for row in sheet.rows:
-    #         test_cell_value_list.append([cell.value for cell in row if cell.value and cell.value != 'None'])
     test_cell_value_list = [
         [[cell.value for cell in row if cell.value and cell.value != 'None'] for row in sheet.rows]
         for sheet in book.worksheets]
     book.close()
 
     book = openpyxl.load_workbook(expected_template_output_path, data_only=True, read_only=True)
-    # expected_cell_value_list = []
-    # for sheet in book.worksheets:
-    #
-    #     for row in sheet.rows:
-    #         expected_cell_value_list.append([cell.value for cell in row if cell.value and cell.value != 'None'])
     expected_cell_value_list = [
         [[cell.value for cell in row if cell.value and cell.value != 'None'] for row in sheet.rows]
         for sheet in book.worksheets]
