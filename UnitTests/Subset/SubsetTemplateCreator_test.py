@@ -3,7 +3,7 @@ import tempfile
 from pathlib import Path
 
 import openpyxl
-import pytest
+from _pytest.fixtures import fixture
 from openpyxl.workbook import Workbook
 
 from otlmow_template.ExcelTemplateCreator import ExcelTemplateCreator
@@ -95,62 +95,6 @@ def test_subset_with_AllCasesTestClass_no_double_kard_excel():
     open(Path(ROOT_DIR) / 'testFileStorage' / '__init__.py', 'a').close()
 
 
-@pytest.mark.asyncio(scope="module")
-def test_subset_with_AllCasesTestClass_no_double_kard_excel_async():
-    subset_tool = SubsetTemplateCreator()
-    excel_path = Path(ROOT_DIR) / 'testFileStorage' / 'OTL_AllCasesTestClass_no_double_kard.xlsx'
-    subset_tool.generate_template_from_subset(
-        path_to_subset=Path(ROOT_DIR) / 'OTL_AllCasesTestClass_no_double_kard.db', amount_of_examples=1,
-        path_to_template_file_and_extension=excel_path, plit_per_type=True, model_directory=model_directory_path,
-        add_geo_artefact=True, filter_attributes_by_subset=True, generate_choice_list=True)
-    assert excel_path.exists()
-
-    book = openpyxl.load_workbook(excel_path, data_only=True, read_only=True)
-    header_row_list = []
-    for sheet in book.worksheets:
-        sheet_name = sheet.title
-        if sheet_name != 'onderdeel#AllCasesTestClass':
-            continue
-        for row in sheet.rows:
-            header_row_list = [cell.value for cell in row]
-            break
-    book.close()
-
-    union_headers = [header for header in header_row_list if header.startswith('testUnionType')]
-    header_row_list = [header for header in header_row_list if not header.startswith('testUnionType')]
-
-    assert header_row_list == ['typeURI', 'assetId.identificator', 'assetId.toegekendDoor', 'bestekPostNummer[]',
-                               'datumOprichtingObject', 'geometry', 'isActief', 'notitie',
-                               'standaardBestekPostNummer[]',
-                               'testBooleanField', 'testComplexType.testBooleanField',
-                               'testComplexType.testComplexType2.testKwantWrd',
-                               'testComplexType.testComplexType2.testStringField',
-                               'testComplexType.testComplexType2MetKard[].testKwantWrd',
-                               'testComplexType.testComplexType2MetKard[].testStringField',
-                               'testComplexType.testKwantWrd',
-                               'testComplexType.testKwantWrdMetKard[]',
-                               'testComplexType.testStringField',
-                               'testComplexType.testStringFieldMetKard[]',
-                               'testComplexTypeMetKard[].testBooleanField',
-                               'testComplexTypeMetKard[].testComplexType2.testKwantWrd',
-                               'testComplexTypeMetKard[].testComplexType2.testStringField',
-                               'testComplexTypeMetKard[].testKwantWrd',
-                               'testComplexTypeMetKard[].testStringField',
-                               'testDateField', 'testDateTimeField', 'testDecimalField',
-                               'testDecimalFieldMetKard[]', 'testEenvoudigType', 'testEenvoudigTypeMetKard[]',
-                               'testIntegerField', 'testIntegerFieldMetKard[]', 'testKeuzelijst',
-                               'testKeuzelijstMetKard[]', 'testKwantWrd', 'testKwantWrdMetKard[]',
-                               'testStringField', 'testStringFieldMetKard[]', 'testTimeField', 'theoretischeLevensduur',
-                               'toestand']
-
-    assert union_headers[0].startswith('testUnionType.')
-    assert union_headers[1].startswith('testUnionTypeMetKard[].')
-
-    path = Path(ROOT_DIR) / 'testFileStorage'
-    [f.unlink() for f in Path(path).glob("*") if f.is_file()]
-    open(Path(ROOT_DIR) / 'testFileStorage' / '__init__.py', 'a').close()
-
-
 def test_subset_with_AllCasesTestClass_fewer_attributes_excel():
     subset_tool = SubsetTemplateCreator()
     excel_path = Path(ROOT_DIR) / 'testFileStorage' / 'OTL_AllCasesTestClass_fewer_attributes.xlsx'
@@ -185,53 +129,6 @@ def test_subset_with_AllCasesTestClass_fewer_attributes_excel():
         'testComplexTypeMetKard[].testComplexType2.testStringField', 'testComplexTypeMetKard[].testKwantWrd',
         'testComplexTypeMetKard[].testStringField', 'testEenvoudigType', 'testEenvoudigTypeMetKard[]', 'testKeuzelijst',
         'testKeuzelijstMetKard[]', 'testKwantWrd', 'testKwantWrdMetKard[]', 'theoretischeLevensduur', 'toestand']
-    assert union_headers[0].startswith('testUnionType.')
-    assert union_headers[1].startswith('testUnionTypeMetKard[].')
-
-    path = Path(ROOT_DIR) / 'testFileStorage'
-    [f.unlink() for f in Path(path).glob("*") if f.is_file()]
-    open(Path(ROOT_DIR) / 'testFileStorage' / '__init__.py', 'a').close()
-
-
-@pytest.mark.asyncio(scope="module")
-async def test_subset_with_AllCasesTestClass_no_double_kard_csv_async():
-    subset_tool = SubsetTemplateCreator()
-    csv_location = Path(ROOT_DIR) / 'testFileStorage' / 'OTL_AllCasesTestClass_no_double_kard.csv'
-    await subset_tool.generate_template_from_subset(
-        path_to_subset=Path(ROOT_DIR) / 'OTL_AllCasesTestClass_no_double_kard.db', filter_attributes_by_subset=True,
-        path_to_template_file_and_extension=csv_location, amount_of_examples=1, generate_choice_list=True,
-        split_per_type=True, model_directory=model_directory_path)
-    csv = Path(ROOT_DIR) / 'testFileStorage' / 'OTL_AllCasesTestClass_no_double_kard_onderdeel_AllCasesTestClass.csv'
-    assert csv.exists()
-
-    with open(csv, 'r') as f:
-        header_row = f.readline()
-    header_row_list = header_row.split(';')
-    union_headers = [header for header in header_row_list if header.startswith('testUnionType')]
-    print(union_headers)
-    header_row_list = [header for header in header_row_list if not header.startswith('testUnionType')]
-
-    assert header_row_list == ['typeURI', 'assetId.identificator', 'assetId.toegekendDoor', 'bestekPostNummer[]',
-        'datumOprichtingObject', 'isActief', 'notitie', 'standaardBestekPostNummer[]',
-        'testBooleanField', 'testComplexType.testBooleanField',
-        'testComplexType.testComplexType2.testKwantWrd',
-        'testComplexType.testComplexType2.testStringField',
-        'testComplexType.testComplexType2MetKard[].testKwantWrd',
-        'testComplexType.testComplexType2MetKard[].testStringField',
-        'testComplexType.testKwantWrd',
-        'testComplexType.testKwantWrdMetKard[]',
-        'testComplexType.testStringField',
-        'testComplexType.testStringFieldMetKard[]',
-        'testComplexTypeMetKard[].testBooleanField',
-        'testComplexTypeMetKard[].testComplexType2.testKwantWrd',
-        'testComplexTypeMetKard[].testComplexType2.testStringField',
-        'testComplexTypeMetKard[].testKwantWrd', 'testComplexTypeMetKard[].testStringField',
-        'testDateField', 'testDateTimeField', 'testDecimalField',
-        'testDecimalFieldMetKard[]', 'testEenvoudigType', 'testEenvoudigTypeMetKard[]',
-        'testIntegerField', 'testIntegerFieldMetKard[]', 'testKeuzelijst',
-        'testKeuzelijstMetKard[]', 'testKwantWrd', 'testKwantWrdMetKard[]',
-        'testStringField', 'testStringFieldMetKard[]', 'testTimeField', 'theoretischeLevensduur', 'toestand\n']
-
     assert union_headers[0].startswith('testUnionType.')
     assert union_headers[1].startswith('testUnionTypeMetKard[].')
 
@@ -285,49 +182,10 @@ def test_subset_with_AllCasesTestClass_no_double_kard_csv():
     open(Path(ROOT_DIR) / 'testFileStorage' / '__init__.py', 'a').close()
 
 
-def test_subset_actual_subset_excel():
-    subset_tool = SubsetTemplateCreator()
-    excel_path = Path(ROOT_DIR) / 'testFileStorage' / 'camera_steun.xlsx'
-    subset_tool.generate_template_from_subset(path_to_subset=Path(ROOT_DIR) / 'camera_steun_2.14.db',
-                                              path_to_template_file_and_extension=excel_path,
-                                              split_per_type=True, amount_of_examples=1)
-
-    book = openpyxl.load_workbook(excel_path, data_only=True)
-    header_row_lists = []
-    asset_versie_values = []
-    for sheet in book.worksheets:
-        sheet_name = sheet.title
-        if sheet_name == 'Keuzelijsten':
-            continue
-        header_row_lists.append([r.value for r in next(sheet.rows)])
-        asset_versie_values.append(sheet['D2'].value)
-        asset_versie_values.append(sheet['E2'].value)
-        asset_versie_values.append(sheet['F2'].value)
-    book.close()
-
-    assert asset_versie_values == [None, None, None, None, None, None]
-    assert header_row_lists == [[
-        'typeURI', 'assetId.identificator', 'assetId.toegekendDoor', 'assetVersie.context', 'assetVersie.timestamp',
-        'assetVersie.versienummer', 'beeldverwerkingsinstelling[].configBestand.bestandsnaam',
-        'beeldverwerkingsinstelling[].configBestand.mimeType',
-        'beeldverwerkingsinstelling[].configBestand.omschrijving',
-        'beeldverwerkingsinstelling[].configBestand.opmaakdatum', 'beeldverwerkingsinstelling[].configBestand.uri',
-        'beeldverwerkingsinstelling[].typeBeeldverwerking', 'bestekPostNummer[]', 'datumOprichtingObject', 'dnsNaam',
-        'heeftFlits', 'ipAdres', 'isActief', 'isPtz', 'merk', 'modelnaam', 'naam', 'notitie', 'opstelhoogte',
-        'opstelwijze', 'rijrichting', 'serienummer', 'spectrum', 'standaardBestekPostNummer[]',
-        'technischeFiche[].bestandsnaam', 'technischeFiche[].mimeType', 'technischeFiche[].omschrijving',
-        'technischeFiche[].opmaakdatum', 'technischeFiche[].uri', 'theoretischeLevensduur', 'toestand'],
-        ['typeURI', 'assetId.identificator', 'assetId.toegekendDoor', 'assetVersie.context', 'assetVersie.timestamp',
-         'assetVersie.versienummer', 'beschermendeLaag.beschermlaag', 'bestekPostNummer[]', 'bijzonderTransport',
-         'datumOprichtingObject', 'elektrischeBeveiliging', 'fabrikant', 'hoogteBovenkant', 'isActief', 'kleur', 'naam',
-         'notitie', 'standaardBestekPostNummer[]', 'theoretischeLevensduur', 'toestand', 'type']]
-    excel_path.unlink()
-
-
-def test_subset_actual_subset_csv():
+def test_subset_actual_subset():
     subset_tool = SubsetTemplateCreator()
     csv_location = Path(ROOT_DIR) / 'testFileStorage' / 'camera_steun.csv'
-    subset_tool.generate_template_from_subset(path_to_subset=Path(ROOT_DIR) / 'camera_steun_2.14.db',
+    subset_tool.generate_template_from_subset(path_to_subset=Path(ROOT_DIR) / 'camera_steun.db',
                                               path_to_template_file_and_extension=csv_location,
                                               split_per_type=True)
     csv1 = Path(ROOT_DIR) / 'testFileStorage' / 'camera_steun_onderdeel_Bevestiging.csv'
@@ -337,7 +195,7 @@ def test_subset_actual_subset_csv():
     assert csv2.exists()
     assert csv3.exists()
 
-    subset_tool.generate_template_from_subset(path_to_subset=Path(ROOT_DIR) / 'camera_steun_2.14.db',
+    subset_tool.generate_template_from_subset(path_to_subset=Path(ROOT_DIR) / 'camera_steun.db',
                                               path_to_template_file_and_extension=csv_location,
                                               split_per_type=True, ignore_relations=False)
     assert csv1.exists()
@@ -447,3 +305,53 @@ def test_return_column_letter_returns_correct_letter_if_column_already_exists():
     column = ExcelTemplateCreator().return_column_letter_of_choice_list(workbook=wb, choice_list_dict=choice_list_dict,
                                                                         name=name, options=options)
     assert column == "A"
+
+#test created by Christiaan:
+
+
+@fixture
+def cleanup_after_creating_a_file_to_delete():
+    to_delete = []
+    yield to_delete
+    for item in to_delete:
+        if os.path.exists(item):
+            os.remove(item)
+
+def test_generation_with_descriptions_no_examples(cleanup_after_creating_a_file_to_delete:list[Path]) -> None:
+
+    test_files_path = Path(ROOT_DIR).parent / 'test_files'
+    test_path_to_subset = test_files_path /'input'/'voorbeeld-slagboom.db'
+    output_filename = "slagboom_template_with_description_no_examples.xlsx"
+    test_template_output_path = test_files_path / 'output_test' / output_filename
+    cleanup_after_creating_a_file_to_delete.append(test_template_output_path)
+    expected_template_output_path = test_files_path / 'output_ref' / output_filename
+    test_kwargs = {'abbreviate_excel_sheettitles': True,
+     'add_attribute_info': True,
+     'add_geo_artefact': True,
+     'amount_of_examples': 0,
+     'filter_attributes_by_subset': True,
+     'generate_choice_list': True,
+     'highlight_deprecated_attributes': True,
+     'list_of_otl_objectUri': [],
+     'model_directory': None}
+
+    SubsetTemplateCreator().generate_template_from_subset(path_to_subset=test_path_to_subset, path_to_template_file_and_extension= test_template_output_path,**test_kwargs)
+
+    assert test_template_output_path.exists()
+
+    book = openpyxl.load_workbook(test_template_output_path, data_only=True, read_only=True)
+    test_cell_value_list = [
+        [[cell.value for cell in row if cell.value and cell.value != 'None'] for row in sheet.rows]
+        for sheet in book.worksheets]
+    book.close()
+
+    book = openpyxl.load_workbook(expected_template_output_path, data_only=True, read_only=True)
+    expected_cell_value_list = [
+        [[cell.value for cell in row if cell.value and cell.value != 'None'] for row in sheet.rows]
+        for sheet in book.worksheets]
+    book.close()
+
+
+
+    assert test_cell_value_list == expected_cell_value_list
+
