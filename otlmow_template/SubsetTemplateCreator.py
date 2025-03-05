@@ -172,10 +172,10 @@ class SubsetTemplateCreator:
         path_is_split = kwargs.get('split_per_type', True)
         await sleep(0)
         if path_is_split is False:
-            self.alter_csv_template(path_to_template_file_and_extension=path_to_template_file_and_extension,
+            await self.alter_csv_template(path_to_template_file_and_extension=path_to_template_file_and_extension,
                                     temporary_path=temporary_path, path_to_subset=path_to_subset, **kwargs)
         else:
-            self.multiple_csv_template(path_to_template_file_and_extension=path_to_template_file_and_extension,
+            await self.multiple_csv_template(path_to_template_file_and_extension=path_to_template_file_and_extension,
                                        temporary_path=temporary_path,
                                        path_to_subset=path_to_subset, instantiated_attributes=instantiated_attributes,
                                        **kwargs)

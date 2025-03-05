@@ -7,6 +7,7 @@ from typing import List, Sequence, Optional
 
 from otlmow_converter.DotnotationHelper import DotnotationHelper
 from otlmow_converter.OtlmowConverter import OtlmowConverter
+from universalasync import async_to_sync_wraps
 
 
 class CsvTemplateCreator:
@@ -25,7 +26,8 @@ class CsvTemplateCreator:
         [f.unlink() for f in Path(file_location).glob("*") if f.is_file()]
 
     @classmethod
-    def multiple_csv_template(cls, path_to_template_file_and_extension, path_to_subset, **kwargs):
+    @async_to_sync_wraps
+    async def multiple_csv_template(cls, path_to_template_file_and_extension, path_to_subset, **kwargs):
         file_location = os.path.dirname(path_to_template_file_and_extension)
         tempdir = Path(tempfile.gettempdir()) / 'temp-otlmow'
         file_name = ntpath.basename(path_to_template_file_and_extension)
@@ -35,14 +37,15 @@ class CsvTemplateCreator:
         for file in csv_templates:
             test_template_loc = Path(os.path.dirname(path_to_template_file_and_extension)) / file
             temp_loc = Path(tempdir) / file
-            cls.alter_csv_template(path_to_template_file_and_extension=test_template_loc, temporary_path=temp_loc,
+            await cls.alter_csv_template(path_to_template_file_and_extension=test_template_loc, temporary_path=temp_loc,
                                    path_to_subset=path_to_subset, **kwargs)
 
     @classmethod
-    def alter_csv_template(cls, path_to_template_file_and_extension, path_to_subset, temporary_path,
+    @async_to_sync_wraps
+    async def alter_csv_template(cls, path_to_template_file_and_extension, path_to_subset, temporary_path,
                            **kwargs):
         converter = OtlmowConverter()
-        instantiated_attributes = converter.create_assets_from_file(filepath=temporary_path,
+        instantiated_attributes = await converter.create_assets_from_file(filepath=temporary_path,
                                                                     path_to_subset=path_to_subset)
         header = []
         data = []
