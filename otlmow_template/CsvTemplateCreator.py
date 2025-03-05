@@ -2,6 +2,7 @@ import csv
 import ntpath
 import os
 import tempfile
+from asyncio import sleep
 from pathlib import Path
 from typing import List, Sequence, Optional
 
@@ -56,6 +57,7 @@ class CsvTemplateCreator:
         amount_of_examples = kwargs.get('amount_of_examples', 0)
         quote_char = '"'
         with open(temporary_path, 'r+', encoding='utf-8') as csvfile:
+            sleep(0)
             new_file = open(path_to_template_file_and_extension, 'w', encoding='utf-8')
             reader = csv.reader(csvfile, delimiter=delimiter, quotechar=quote_char)
             for row_nr, row in enumerate(reader):

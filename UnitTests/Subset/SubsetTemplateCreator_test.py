@@ -317,9 +317,10 @@ def cleanup_after_creating_a_file_to_delete():
         if os.path.exists(item):
             os.remove(item)
 
-def test_generation_with_descriptions_no_examples(cleanup_after_creating_a_file_to_delete:list[Path]) -> None:
 
+def test_generation_with_descriptions_no_examples(cleanup_after_creating_a_file_to_delete:list[Path]) -> None:
     test_files_path = Path(ROOT_DIR).parent / 'test_files'
+    os.makedirs(test_files_path / 'output_test', exist_ok=True)
     test_path_to_subset = test_files_path /'input'/'voorbeeld-slagboom.db'
     output_filename = "slagboom_template_with_description_no_examples.xlsx"
     test_template_output_path = test_files_path / 'output_test' / output_filename
@@ -335,7 +336,9 @@ def test_generation_with_descriptions_no_examples(cleanup_after_creating_a_file_
      'list_of_otl_objectUri': [],
      'model_directory': None}
 
-    SubsetTemplateCreator().generate_template_from_subset(path_to_subset=test_path_to_subset, path_to_template_file_and_extension= test_template_output_path,**test_kwargs)
+    SubsetTemplateCreator().generate_template_from_subset(
+        path_to_subset=test_path_to_subset, path_to_template_file_and_extension=test_template_output_path,
+        **test_kwargs)
 
     assert test_template_output_path.exists()
 
@@ -351,7 +354,4 @@ def test_generation_with_descriptions_no_examples(cleanup_after_creating_a_file_
         for sheet in book.worksheets]
     book.close()
 
-
-
     assert test_cell_value_list == expected_cell_value_list
-
