@@ -8,11 +8,9 @@ from typing import List, Sequence, Optional
 
 from otlmow_converter.DotnotationHelper import DotnotationHelper
 from otlmow_converter.OtlmowConverter import OtlmowConverter
-from universalasync import async_to_sync_wraps
 
 
 class CsvTemplateCreator:
-
     @classmethod
     def determine_multiplicity_csv(cls, path_to_template_file_and_extension: Path, path_to_subset: Path,
                                    temporary_path: Path, **kwargs):
@@ -27,8 +25,7 @@ class CsvTemplateCreator:
         [f.unlink() for f in Path(file_location).glob("*") if f.is_file()]
 
     @classmethod
-    @async_to_sync_wraps
-    async def multiple_csv_template(cls, path_to_template_file_and_extension, path_to_subset, **kwargs):
+    def multiple_csv_template(cls, path_to_template_file_and_extension, path_to_subset, **kwargs):
         file_location = os.path.dirname(path_to_template_file_and_extension)
         tempdir = Path(tempfile.gettempdir()) / 'temp-otlmow'
         file_name = ntpath.basename(path_to_template_file_and_extension)
@@ -38,15 +35,65 @@ class CsvTemplateCreator:
         for file in csv_templates:
             test_template_loc = Path(os.path.dirname(path_to_template_file_and_extension)) / file
             temp_loc = Path(tempdir) / file
-            await cls.alter_csv_template(path_to_template_file_and_extension=test_template_loc, temporary_path=temp_loc,
+            cls.alter_csv_template(path_to_template_file_and_extension=test_template_loc, temporary_path=temp_loc,
                                    path_to_subset=path_to_subset, **kwargs)
 
     @classmethod
-    @async_to_sync_wraps
-    async def alter_csv_template(cls, path_to_template_file_and_extension, path_to_subset, temporary_path,
+    async def multiple_csv_template_async(cls, path_to_template_file_and_extension, path_to_subset, **kwargs):
+        file_location = os.path.dirname(path_to_template_file_and_extension)
+        tempdir = Path(tempfile.gettempdir()) / 'temp-otlmow'
+        file_name = ntpath.basename(path_to_template_file_and_extension)
+        split_file_name = file_name.split('.')
+        things_in_there = os.listdir(tempdir)
+        csv_templates = [x for x in things_in_there if x.startswith(f'{split_file_name[0]}_')]
+        for file in csv_templates:
+            test_template_loc = Path(os.path.dirname(path_to_template_file_and_extension)) / file
+            temp_loc = Path(tempdir) / file
+            await cls.alter_csv_template_async(path_to_template_file_and_extension=test_template_loc,
+                                          temporary_path=temp_loc,
+                                   path_to_subset=path_to_subset, **kwargs)
+
+    @classmethod
+    def alter_csv_template(cls, path_to_template_file_and_extension, path_to_subset, temporary_path,
                            **kwargs):
         converter = OtlmowConverter()
-        instantiated_attributes = await converter.create_assets_from_file(filepath=temporary_path,
+        instantiated_attributes = converter.from_file_to_objects(filepath=temporary_path, path_to_subset=path_to_subset)
+        header = []
+        data = []
+        delimiter = ';'
+        add_geo_artefact = kwargs.get('add_geo_artefact', False)
+        add_attribute_info = kwargs.get('add_attribute_info', False)
+        highlight_deprecated_attributes = kwargs.get('highlight_deprecated_attributes', False)
+        amount_of_examples = kwargs.get('amount_of_examples', 0)
+        quote_char = '"'
+        with open(temporary_path, 'r+', encoding='utf-8') as csvfile:
+            with open(path_to_template_file_and_extension, 'w', encoding='utf-8') as new_file:
+                reader = csv.reader(csvfile, delimiter=delimiter, quotechar=quote_char)
+                for row_nr, row in enumerate(reader):
+                    if row_nr == 0:
+                        header = row
+                    else:
+                        data.append(row)
+                if add_geo_artefact is False:
+                    [header, data] = cls.remove_geo_artefact_csv(header=header, data=data)
+                if add_attribute_info:
+                    info = cls.add_attribute_info_csv(header=header, data=data,
+                                                      instantiated_objects=instantiated_attributes)
+                    new_file.write(delimiter.join(info) + '\n')
+                data = cls.remove_mock_data_csv(data=data, rows_of_examples=amount_of_examples)
+                if highlight_deprecated_attributes:
+                    header = cls.highlight_deprecated_attributes_csv(header=header, data=data,
+                                                                     instantiated_attributes=instantiated_attributes)
+                new_file.write(delimiter.join(header) + '\n')
+                for d in data:
+                    new_file.write(delimiter.join(d) + '\n')
+
+
+    @classmethod
+    async def alter_csv_template_async(cls, path_to_template_file_and_extension, path_to_subset, temporary_path,
+                           **kwargs):
+        converter = OtlmowConverter()
+        instantiated_attributes = await converter.from_file_to_objects_async(filepath=temporary_path,
                                                                     path_to_subset=path_to_subset)
         header = []
         data = []
@@ -57,7 +104,7 @@ class CsvTemplateCreator:
         amount_of_examples = kwargs.get('amount_of_examples', 0)
         quote_char = '"'
         with open(temporary_path, 'r+', encoding='utf-8') as csvfile:
-            sleep(0)
+            await sleep(0)
             new_file = open(path_to_template_file_and_extension, 'w', encoding='utf-8')
             reader = csv.reader(csvfile, delimiter=delimiter, quotechar=quote_char)
             for row_nr, row in enumerate(reader):
