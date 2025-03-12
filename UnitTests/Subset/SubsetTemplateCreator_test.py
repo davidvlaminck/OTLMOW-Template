@@ -185,7 +185,7 @@ def test_subset_with_AllCasesTestClass_no_double_kard_csv():
 def test_subset_actual_subset():
     subset_tool = SubsetTemplateCreator()
     csv_location = Path(ROOT_DIR) / 'testFileStorage' / 'camera_steun.csv'
-    subset_tool.generate_template_from_subset(path_to_subset=Path(ROOT_DIR) / 'camera_steun.db',
+    subset_tool.generate_template_from_subset(path_to_subset=Path(ROOT_DIR) / 'camera_steun_2.14.db',
                                               path_to_template_file_and_extension=csv_location,
                                               split_per_type=True)
     csv1 = Path(ROOT_DIR) / 'testFileStorage' / 'camera_steun_onderdeel_Bevestiging.csv'
@@ -195,7 +195,7 @@ def test_subset_actual_subset():
     assert csv2.exists()
     assert csv3.exists()
 
-    subset_tool.generate_template_from_subset(path_to_subset=Path(ROOT_DIR) / 'camera_steun.db',
+    subset_tool.generate_template_from_subset(path_to_subset=Path(ROOT_DIR) / 'camera_steun_2.14.db',
                                               path_to_template_file_and_extension=csv_location,
                                               split_per_type=True, ignore_relations=False)
     assert csv1.exists()
