@@ -19,20 +19,20 @@ def test_files_get_generated(subtests):
     csv_location = Path(ROOT_DIR) / 'testFileStorage' / 'template_file_text.csv'
 
     with subtests.test(msg='xls'):
-        subset_tool.generate_template_from_subset(path_to_subset=subset_location,
-                                                  path_to_template_file_and_extension=xls_location,
+        subset_tool.generate_template_from_subset(subset_path=subset_location,
+                                                  template_file_path=xls_location,
                                                   )
         template_path = Path(ROOT_DIR) / 'testFileStorage' / 'template_file_text.xlsx'
         assert template_path.exists()
 
     with subtests.test(msg='csv, split per type'):
-        subset_tool.generate_template_from_subset(path_to_subset=subset_location,
-                                                  path_to_template_file_and_extension=csv_location,
+        subset_tool.generate_template_from_subset(subset_path=subset_location,
+                                                  template_file_path=csv_location,
                                                   split_per_type=True)
 
     with subtests.test(msg='csv, not split per type'):
-        subset_tool.generate_template_from_subset(path_to_subset=subset_location,
-                                                  path_to_template_file_and_extension=csv_location,
+        subset_tool.generate_template_from_subset(subset_path=subset_location,
+                                                  template_file_path=csv_location,
                                                   split_per_type=False)
         template_path = Path(ROOT_DIR) / 'testFileStorage' / 'template_file_text.csv'
         assert template_path.exists()
@@ -46,8 +46,8 @@ def test_files_get_generated(subtests):
 def test_subset_with_AllCasesTestClass_no_double_kard_excel():
     subset_tool = SubsetTemplateCreator()
     excel_path = Path(ROOT_DIR) / 'testFileStorage' / 'OTL_AllCasesTestClass_no_double_kard.xlsx'
-    subset_tool.generate_template_from_subset(path_to_subset=Path(ROOT_DIR) / 'OTL_AllCasesTestClass_no_double_kard.db',
-                                              path_to_template_file_and_extension=excel_path, amount_of_examples=1,
+    subset_tool.generate_template_from_subset(subset_path=Path(ROOT_DIR) / 'OTL_AllCasesTestClass_no_double_kard.db',
+                                              template_file_path=excel_path, amount_of_examples=1,
                                               split_per_type=True, model_directory=model_directory_path,
                                               add_geo_artefact=True)
     assert excel_path.exists()
@@ -98,8 +98,8 @@ def test_subset_with_AllCasesTestClass_no_double_kard_excel():
 def test_subset_with_AllCasesTestClass_fewer_attributes_excel():
     subset_tool = SubsetTemplateCreator()
     excel_path = Path(ROOT_DIR) / 'testFileStorage' / 'OTL_AllCasesTestClass_fewer_attributes.xlsx'
-    subset_tool.generate_template_from_subset(path_to_subset=Path(ROOT_DIR) / 'OTL_AllCasesTestClass_fewer_attributes.db',
-                                              path_to_template_file_and_extension=excel_path, amount_of_examples=1,
+    subset_tool.generate_template_from_subset(subset_path=Path(ROOT_DIR) / 'OTL_AllCasesTestClass_fewer_attributes.db',
+                                              template_file_path=excel_path, amount_of_examples=1,
                                               split_per_type=True, model_directory=model_directory_path)
     assert excel_path.exists()
 
@@ -140,8 +140,8 @@ def test_subset_with_AllCasesTestClass_fewer_attributes_excel():
 def test_subset_with_AllCasesTestClass_no_double_kard_csv():
     subset_tool = SubsetTemplateCreator()
     csv_location = Path(ROOT_DIR) / 'testFileStorage' / 'OTL_AllCasesTestClass_no_double_kard.csv'
-    subset_tool.generate_template_from_subset(path_to_subset=Path(ROOT_DIR) / 'OTL_AllCasesTestClass_no_double_kard.db',
-                                              path_to_template_file_and_extension=csv_location, amount_of_examples=1,
+    subset_tool.generate_template_from_subset(subset_path=Path(ROOT_DIR) / 'OTL_AllCasesTestClass_no_double_kard.db',
+                                              template_file_path=csv_location, amount_of_examples=1,
                                               split_per_type=True, model_directory=model_directory_path)
     csv = Path(ROOT_DIR) / 'testFileStorage' / 'OTL_AllCasesTestClass_no_double_kard_onderdeel_AllCasesTestClass.csv'
     assert csv.exists()
@@ -185,8 +185,8 @@ def test_subset_with_AllCasesTestClass_no_double_kard_csv():
 def test_subset_actual_subset():
     subset_tool = SubsetTemplateCreator()
     csv_location = Path(ROOT_DIR) / 'testFileStorage' / 'camera_steun.csv'
-    subset_tool.generate_template_from_subset(path_to_subset=Path(ROOT_DIR) / 'camera_steun_2.14.db',
-                                              path_to_template_file_and_extension=csv_location,
+    subset_tool.generate_template_from_subset(subset_path=Path(ROOT_DIR) / 'camera_steun_2.14.db',
+                                              template_file_path=csv_location,
                                               split_per_type=True)
     csv1 = Path(ROOT_DIR) / 'testFileStorage' / 'camera_steun_onderdeel_Bevestiging.csv'
     csv2 = Path(ROOT_DIR) / 'testFileStorage' / 'camera_steun_onderdeel_Camera.csv'
@@ -195,8 +195,8 @@ def test_subset_actual_subset():
     assert csv2.exists()
     assert csv3.exists()
 
-    subset_tool.generate_template_from_subset(path_to_subset=Path(ROOT_DIR) / 'camera_steun_2.14.db',
-                                              path_to_template_file_and_extension=csv_location,
+    subset_tool.generate_template_from_subset(subset_path=Path(ROOT_DIR) / 'camera_steun_2.14.db',
+                                              template_file_path=csv_location,
                                               split_per_type=True, ignore_relations=False)
     assert csv1.exists()
     assert csv2.exists()
@@ -321,7 +321,7 @@ def cleanup_after_creating_a_file_to_delete():
 def test_generation_with_descriptions_no_examples(cleanup_after_creating_a_file_to_delete:list[Path]) -> None:
     test_files_path = Path(ROOT_DIR).parent / 'test_files'
     os.makedirs(test_files_path / 'output_test', exist_ok=True)
-    test_path_to_subset = test_files_path /'input'/'voorbeeld-slagboom.db'
+    test_subset_path = test_files_path /'input'/'voorbeeld-slagboom.db'
     output_filename = "slagboom_template_with_description_no_examples.xlsx"
     test_template_output_path = test_files_path / 'output_test' / output_filename
     cleanup_after_creating_a_file_to_delete.append(test_template_output_path)
@@ -337,7 +337,7 @@ def test_generation_with_descriptions_no_examples(cleanup_after_creating_a_file_
      'model_directory': None}
 
     SubsetTemplateCreator().generate_template_from_subset(
-        path_to_subset=test_path_to_subset, path_to_template_file_and_extension=test_template_output_path,
+        subset_path=test_subset_path, template_file_path=test_template_output_path,
         **test_kwargs)
 
     assert test_template_output_path.exists()

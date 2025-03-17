@@ -12,8 +12,8 @@ model_directory_path = Path(__file__).parent.parent / 'TestModel'
 def test_subset_with_AllCasesTestClass_excel_generic():
     subset_tool = SubsetTemplateCreator()
     excel_path = current_dir / 'OTL_AllCasesTestClass.xlsx'
-    subset_tool.generate_template_from_subset(path_to_subset=current_dir / 'OTL_AllCasesTestClass.db',
-                                              path_to_template_file_and_extension=excel_path, amount_of_examples=1,
+    subset_tool.generate_template_from_subset(subset_path=current_dir / 'OTL_AllCasesTestClass.db',
+                                              template_file_path=excel_path, amount_of_examples=1,
                                               split_per_type=True, model_directory=model_directory_path,
                                               add_geo_artefact=True)
     assert excel_path.exists()
@@ -63,8 +63,8 @@ def test_subset_with_AllCasesTestClass_excel_generic():
 async def test_subset_with_AllCasesTestClass_excel_generic_async():
     subset_tool = SubsetTemplateCreator()
     excel_path = current_dir / 'async_OTL_AllCasesTestClass.xlsx'
-    await subset_tool.generate_template_from_subset_async(path_to_subset=current_dir / 'OTL_AllCasesTestClass.db',
-                                              path_to_template_file_and_extension=excel_path, amount_of_examples=1,
+    await subset_tool.generate_template_from_subset_async(subset_path=current_dir / 'OTL_AllCasesTestClass.db',
+                                              template_file_path=excel_path, amount_of_examples=1,
                                               split_per_type=True, model_directory=model_directory_path,
                                               add_geo_artefact=True)
     assert excel_path.exists()
@@ -116,8 +116,8 @@ async def test_subset_with_AllCasesTestClass_excel_generic_async():
 def test_subset_with_AllCasesTestClass_generic_csv():
     subset_tool = SubsetTemplateCreator()
     csv_path = current_dir / 'OTL_AllCasesTestClass.csv'
-    subset_tool.generate_template_from_subset(path_to_subset=current_dir / 'OTL_AllCasesTestClass.db',
-                                              path_to_template_file_and_extension=csv_path, amount_of_examples=1,
+    subset_tool.generate_template_from_subset(subset_path=current_dir / 'OTL_AllCasesTestClass.db',
+                                              template_file_path=csv_path, amount_of_examples=1,
                                               split_per_type=True, model_directory=model_directory_path,
                                               add_geo_artefact=True)
 
@@ -171,8 +171,8 @@ def test_subset_with_AllCasesTestClass_generic_csv():
 async def test_subset_with_AllCasesTestClass_generic_csv_async():
     subset_tool = SubsetTemplateCreator()
     csv_path = current_dir / 'generic_OTL_AllCasesTestClass.csv'
-    await subset_tool.generate_template_from_subset_async(path_to_subset=current_dir / 'OTL_AllCasesTestClass.db',
-                                              path_to_template_file_and_extension=csv_path, amount_of_examples=1,
+    await subset_tool.generate_template_from_subset_async(subset_path=current_dir / 'OTL_AllCasesTestClass.db',
+                                              template_file_path=csv_path, amount_of_examples=1,
                                               split_per_type=True, model_directory=model_directory_path,
                                               add_geo_artefact=True)
 

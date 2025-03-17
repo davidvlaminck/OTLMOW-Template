@@ -15,7 +15,7 @@ from otlmow_model.OtlmowModel.BaseClasses.KeuzelijstField import KeuzelijstField
 class ExcelTemplateCreator:
 
     @classmethod
-    def alter_excel_template(cls, path_to_template_file_and_extension: Path, instantiated_attributes: List,
+    def alter_excel_template(cls, template_file_path: Path, instantiated_attributes: List,
                              temporary_path: Path, **kwargs):
         generate_choice_list = kwargs.get('generate_choice_list', False)
         add_geo_artefact = kwargs.get('add_geo_artefact', False)
@@ -36,7 +36,7 @@ class ExcelTemplateCreator:
         if add_attribute_info:
             cls.add_attribute_info_excel(workbook=wb, instantiated_attributes=instantiated_attributes)
         cls.design_workbook_excel(workbook=wb)
-        wb.save(path_to_template_file_and_extension)
+        wb.save(template_file_path)
         file_location = os.path.dirname(temporary_path)
         [f.unlink() for f in Path(file_location).glob("*") if f.is_file()]
 

@@ -12,52 +12,52 @@ from otlmow_converter.OtlmowConverter import OtlmowConverter
 
 class CsvTemplateCreator:
     @classmethod
-    def determine_multiplicity_csv(cls, path_to_template_file_and_extension: Path, path_to_subset: Path,
+    def determine_multiplicity_csv(cls, template_file_path: Path, subset_path: Path,
                                    temporary_path: Path, **kwargs):
         path_is_split = kwargs.get('split_per_type', True)
         if path_is_split is False:
-            cls.alter_csv_template(path_to_template_file_and_extension=path_to_template_file_and_extension,
-                                   temporary_path=temporary_path, path_to_subset=path_to_subset, **kwargs)
+            cls.alter_csv_template(template_file_path=template_file_path,
+                                   temporary_path=temporary_path, subset_path=subset_path, **kwargs)
         else:
-            cls.multiple_csv_template(path_to_template_file_and_extension=path_to_template_file_and_extension,
-                                      path_to_subset=path_to_subset, **kwargs)
+            cls.multiple_csv_template(template_file_path=template_file_path,
+                                      subset_path=subset_path, **kwargs)
         file_location = os.path.dirname(temporary_path)
         [f.unlink() for f in Path(file_location).glob("*") if f.is_file()]
 
     @classmethod
-    def multiple_csv_template(cls, path_to_template_file_and_extension, path_to_subset, **kwargs):
-        file_location = os.path.dirname(path_to_template_file_and_extension)
+    def multiple_csv_template(cls, template_file_path, subset_path, **kwargs):
+        file_location = os.path.dirname(template_file_path)
         tempdir = Path(tempfile.gettempdir()) / 'temp-otlmow'
-        file_name = ntpath.basename(path_to_template_file_and_extension)
+        file_name = ntpath.basename(template_file_path)
         split_file_name = file_name.split('.')
         things_in_there = os.listdir(tempdir)
         csv_templates = [x for x in things_in_there if x.startswith(split_file_name[0] + '_')]
         for file in csv_templates:
-            test_template_loc = Path(os.path.dirname(path_to_template_file_and_extension)) / file
+            test_template_loc = Path(os.path.dirname(template_file_path)) / file
             temp_loc = Path(tempdir) / file
-            cls.alter_csv_template(path_to_template_file_and_extension=test_template_loc, temporary_path=temp_loc,
-                                   path_to_subset=path_to_subset, **kwargs)
+            cls.alter_csv_template(template_file_path=test_template_loc, temporary_path=temp_loc,
+                                   subset_path=subset_path, **kwargs)
 
     @classmethod
-    async def multiple_csv_template_async(cls, path_to_template_file_and_extension, path_to_subset, **kwargs):
-        file_location = os.path.dirname(path_to_template_file_and_extension)
+    async def multiple_csv_template_async(cls, template_file_path, subset_path, **kwargs):
+        file_location = os.path.dirname(template_file_path)
         tempdir = Path(tempfile.gettempdir()) / 'temp-otlmow'
-        file_name = ntpath.basename(path_to_template_file_and_extension)
+        file_name = ntpath.basename(template_file_path)
         split_file_name = file_name.split('.')
         things_in_there = os.listdir(tempdir)
         csv_templates = [x for x in things_in_there if x.startswith(f'{split_file_name[0]}_')]
         for file in csv_templates:
-            test_template_loc = Path(os.path.dirname(path_to_template_file_and_extension)) / file
+            test_template_loc = Path(os.path.dirname(template_file_path)) / file
             temp_loc = Path(tempdir) / file
-            await cls.alter_csv_template_async(path_to_template_file_and_extension=test_template_loc,
+            await cls.alter_csv_template_async(template_file_path=test_template_loc,
                                           temporary_path=temp_loc,
-                                   path_to_subset=path_to_subset, **kwargs)
+                                   subset_path=subset_path, **kwargs)
 
     @classmethod
-    def alter_csv_template(cls, path_to_template_file_and_extension, path_to_subset, temporary_path,
+    def alter_csv_template(cls, template_file_path, subset_path, temporary_path,
                            **kwargs):
         converter = OtlmowConverter()
-        instantiated_attributes = converter.from_file_to_objects(filepath=temporary_path, path_to_subset=path_to_subset)
+        instantiated_attributes = converter.from_file_to_objects(filepath=temporary_path, subset_path=subset_path)
         header = []
         data = []
         delimiter = ';'
@@ -67,7 +67,7 @@ class CsvTemplateCreator:
         amount_of_examples = kwargs.get('amount_of_examples', 0)
         quote_char = '"'
         with open(temporary_path, 'r+', encoding='utf-8') as csvfile:
-            with open(path_to_template_file_and_extension, 'w', encoding='utf-8') as new_file:
+            with open(template_file_path, 'w', encoding='utf-8') as new_file:
                 reader = csv.reader(csvfile, delimiter=delimiter, quotechar=quote_char)
                 for row_nr, row in enumerate(reader):
                     if row_nr == 0:
@@ -90,11 +90,11 @@ class CsvTemplateCreator:
 
 
     @classmethod
-    async def alter_csv_template_async(cls, path_to_template_file_and_extension, path_to_subset, temporary_path,
+    async def alter_csv_template_async(cls, template_file_path, subset_path, temporary_path,
                            **kwargs):
         converter = OtlmowConverter()
         instantiated_attributes = await converter.from_file_to_objects_async(filepath=temporary_path,
-                                                                    path_to_subset=path_to_subset)
+                                                                    subset_path=subset_path)
         header = []
         data = []
         delimiter = ';'
@@ -105,7 +105,7 @@ class CsvTemplateCreator:
         quote_char = '"'
         with open(temporary_path, 'r+', encoding='utf-8') as csvfile:
             await sleep(0)
-            new_file = open(path_to_template_file_and_extension, 'w', encoding='utf-8')
+            new_file = open(template_file_path, 'w', encoding='utf-8')
             reader = csv.reader(csvfile, delimiter=delimiter, quotechar=quote_char)
             for row_nr, row in enumerate(reader):
                 if row_nr == 0:

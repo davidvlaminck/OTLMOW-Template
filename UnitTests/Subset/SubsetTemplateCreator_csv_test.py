@@ -45,7 +45,7 @@ model_directory_path = Path(__file__).parent.parent / 'TestModel'
 def test_generate_csv_template(index, amount_of_examples, add_geo_artefact, add_attribute_info,
                                add_deprecated_info):
     # Arrange
-    path_to_subset = current_dir / 'OTL_AllCasesTestClass.db'
+    subset_path = current_dir / 'OTL_AllCasesTestClass.db'
     path_to_template_file = current_dir / f'OTL_AllCasesTestClass_{index}.csv'
     kwargs = {
         'amount_of_examples': amount_of_examples,
@@ -57,7 +57,7 @@ def test_generate_csv_template(index, amount_of_examples, add_geo_artefact, add_
     # Act
     subset_tool = SubsetTemplateCreator()
     subset_tool.generate_template_from_subset(
-        path_to_subset=path_to_subset, path_to_template_file_and_extension=path_to_template_file, split_per_type=False,
+        subset_path=subset_path, template_file_path=path_to_template_file, split_per_type=False,
         list_of_otl_objectUri=["https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#AnotherTestClass"],
         model_directory=model_directory_path, **kwargs)
 
@@ -140,7 +140,7 @@ def test_generate_csv_template(index, amount_of_examples, add_geo_artefact, add_
 async def test_generate_csv_template_async(index, amount_of_examples, add_geo_artefact, add_attribute_info,
                                add_deprecated_info):
     # Arrange
-    path_to_subset = current_dir / 'OTL_AllCasesTestClass.db'
+    subset_path = current_dir / 'OTL_AllCasesTestClass.db'
     path_to_template_file = current_dir / f'OTL_AllCasesTestClass_async_{index}.csv'
     kwargs = {
         'amount_of_examples': amount_of_examples,
@@ -152,7 +152,7 @@ async def test_generate_csv_template_async(index, amount_of_examples, add_geo_ar
     # Act
     subset_tool = SubsetTemplateCreator()
     await subset_tool.generate_template_from_subset_async(
-        path_to_subset=path_to_subset, path_to_template_file_and_extension=path_to_template_file, split_per_type=False,
+        subset_path=subset_path, template_file_path=path_to_template_file, split_per_type=False,
         list_of_otl_objectUri=["https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#AnotherTestClass"],
         model_directory=model_directory_path, **kwargs)
 
