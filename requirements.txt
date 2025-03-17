@@ -1,4 +1,4 @@
-otlmow-converter >= 1.1
+otlmow-converter >= 1.10
 otlmow-modelbuilder >= 0.11
 attrs>=22.2.0
 coverage>=3.7.1
@@ -11,4 +11,3 @@ pytest-subtests>=0.8.0
 pytest-asyncio>=0.15.1
 openpyxl~=3.1.2
 otlmow-model>=2.9.2
-universalasync>=0.4.0

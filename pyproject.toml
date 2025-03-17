@@ -30,8 +30,7 @@ classifiers = [
 requires-python = ">=3.9"
 dependencies = [
   'otlmow-converter >= 1.10',
-  'otlmow-modelbuilder >= 0.25',
-  'universalasync>=0.4.0'
+  'otlmow-modelbuilder >= 0.25'
 ]
 
 [tool.setuptools.packages.find]
