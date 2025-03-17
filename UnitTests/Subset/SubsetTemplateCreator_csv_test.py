@@ -10,7 +10,7 @@ model_directory_path = Path(__file__).parent.parent / 'TestModel'
 
 
 @pytest.mark.parametrize(
-    "index, amount_of_examples, add_geo_artefact, add_attribute_info, add_deprecated_info",
+    "index, dummy_data_rows, add_geometry, add_attribute_info, add_deprecated_info",
     [
         (i, amount, geo, attr, dep) for i, (amount, geo, attr, dep) in enumerate(
         [
@@ -42,16 +42,16 @@ model_directory_path = Path(__file__).parent.parent / 'TestModel'
     )
     ]
 )
-def test_generate_csv_template(index, amount_of_examples, add_geo_artefact, add_attribute_info,
+def test_generate_csv_template(index, dummy_data_rows, add_geometry, add_attribute_info,
                                add_deprecated_info):
     # Arrange
     subset_path = current_dir / 'OTL_AllCasesTestClass.db'
     path_to_template_file = current_dir / f'OTL_AllCasesTestClass_{index}.csv'
     kwargs = {
-        'amount_of_examples': amount_of_examples,
-        'add_geo_artefact': add_geo_artefact,
+        'dummy_data_rows': dummy_data_rows,
+        'add_geometry': add_geometry,
         'add_attribute_info': add_attribute_info,
-        'highlight_deprecated_attributes': add_deprecated_info,
+        'tag_deprecated': add_deprecated_info,
     }
 
     # Act
@@ -82,9 +82,9 @@ def test_generate_csv_template(index, amount_of_examples, add_geo_artefact, add_
                            'datumOprichtingObject', 'deprecatedString', 'isActief', 'notitie',
                            'standaardBestekPostNummer[]', 'theoretischeLevensduur', 'toestand']
 
-    expected_row_count = amount_of_examples + 1
+    expected_row_count = dummy_data_rows + 1
 
-    if add_geo_artefact:
+    if add_geometry:
         expected_header_row.insert(6, 'geometry')
         expected_attribute_info_row.insert(6, 'geometry voor DAVIE')
 
@@ -104,7 +104,7 @@ def test_generate_csv_template(index, amount_of_examples, add_geo_artefact, add_
 
 
 @pytest.mark.parametrize(
-    "index, amount_of_examples, add_geo_artefact, add_attribute_info, add_deprecated_info",
+    "index, dummy_data_rows, add_geometry, add_attribute_info, add_deprecated_info",
     [
         (i, amount, geo, attr, dep) for i, (amount, geo, attr, dep) in enumerate(
         [
@@ -137,16 +137,16 @@ def test_generate_csv_template(index, amount_of_examples, add_geo_artefact, add_
     ]
 )
 @pytest.mark.asyncio
-async def test_generate_csv_template_async(index, amount_of_examples, add_geo_artefact, add_attribute_info,
+async def test_generate_csv_template_async(index, dummy_data_rows, add_geometry, add_attribute_info,
                                add_deprecated_info):
     # Arrange
     subset_path = current_dir / 'OTL_AllCasesTestClass.db'
     path_to_template_file = current_dir / f'OTL_AllCasesTestClass_async_{index}.csv'
     kwargs = {
-        'amount_of_examples': amount_of_examples,
-        'add_geo_artefact': add_geo_artefact,
+        'dummy_data_rows': dummy_data_rows,
+        'add_geometry': add_geometry,
         'add_attribute_info': add_attribute_info,
-        'highlight_deprecated_attributes': add_deprecated_info,
+        'tag_deprecated': add_deprecated_info,
     }
 
     # Act
@@ -177,9 +177,9 @@ async def test_generate_csv_template_async(index, amount_of_examples, add_geo_ar
                            'datumOprichtingObject', 'deprecatedString', 'isActief', 'notitie',
                            'standaardBestekPostNummer[]', 'theoretischeLevensduur', 'toestand']
 
-    expected_row_count = amount_of_examples + 1
+    expected_row_count = dummy_data_rows + 1
 
-    if add_geo_artefact:
+    if add_geometry:
         expected_header_row.insert(6, 'geometry')
         expected_attribute_info_row.insert(6, 'geometry voor DAVIE')
 

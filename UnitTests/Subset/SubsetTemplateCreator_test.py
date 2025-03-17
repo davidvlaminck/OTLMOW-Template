@@ -47,9 +47,9 @@ def test_subset_with_AllCasesTestClass_no_double_kard_excel():
     subset_tool = SubsetTemplateCreator()
     excel_path = Path(ROOT_DIR) / 'testFileStorage' / 'OTL_AllCasesTestClass_no_double_kard.xlsx'
     subset_tool.generate_template_from_subset(subset_path=Path(ROOT_DIR) / 'OTL_AllCasesTestClass_no_double_kard.db',
-                                              template_file_path=excel_path, amount_of_examples=1,
+                                              template_file_path=excel_path, dummy_data_rows=1,
                                               split_per_type=True, model_directory=model_directory_path,
-                                              add_geo_artefact=True)
+                                              add_geometry=True)
     assert excel_path.exists()
 
     book = openpyxl.load_workbook(excel_path, data_only=True, read_only=True)
@@ -99,7 +99,7 @@ def test_subset_with_AllCasesTestClass_fewer_attributes_excel():
     subset_tool = SubsetTemplateCreator()
     excel_path = Path(ROOT_DIR) / 'testFileStorage' / 'OTL_AllCasesTestClass_fewer_attributes.xlsx'
     subset_tool.generate_template_from_subset(subset_path=Path(ROOT_DIR) / 'OTL_AllCasesTestClass_fewer_attributes.db',
-                                              template_file_path=excel_path, amount_of_examples=1,
+                                              template_file_path=excel_path, dummy_data_rows=1,
                                               split_per_type=True, model_directory=model_directory_path)
     assert excel_path.exists()
 
@@ -141,7 +141,7 @@ def test_subset_with_AllCasesTestClass_no_double_kard_csv():
     subset_tool = SubsetTemplateCreator()
     csv_location = Path(ROOT_DIR) / 'testFileStorage' / 'OTL_AllCasesTestClass_no_double_kard.csv'
     subset_tool.generate_template_from_subset(subset_path=Path(ROOT_DIR) / 'OTL_AllCasesTestClass_no_double_kard.db',
-                                              template_file_path=csv_location, amount_of_examples=1,
+                                              template_file_path=csv_location, dummy_data_rows=1,
                                               split_per_type=True, model_directory=model_directory_path)
     csv = Path(ROOT_DIR) / 'testFileStorage' / 'OTL_AllCasesTestClass_no_double_kard_onderdeel_AllCasesTestClass.csv'
     assert csv.exists()
@@ -328,11 +328,11 @@ def test_generation_with_descriptions_no_examples(cleanup_after_creating_a_file_
     expected_template_output_path = test_files_path / 'output_ref' / output_filename
     test_kwargs = {'abbreviate_excel_sheettitles': True,
      'add_attribute_info': True,
-     'add_geo_artefact': True,
-     'amount_of_examples': 0,
+     'add_geometry': True,
+     'dummy_data_rows': 0,
      'filter_attributes_by_subset': True,
      'generate_choice_list': True,
-     'highlight_deprecated_attributes': True,
+     'tag_deprecated': True,
      'list_of_otl_objectUri': [],
      'model_directory': None}
 

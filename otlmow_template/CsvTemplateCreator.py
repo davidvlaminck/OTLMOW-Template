@@ -61,10 +61,10 @@ class CsvTemplateCreator:
         header = []
         data = []
         delimiter = ';'
-        add_geo_artefact = kwargs.get('add_geo_artefact', False)
+        add_geometry = kwargs.get('add_geometry', False)
         add_attribute_info = kwargs.get('add_attribute_info', False)
-        highlight_deprecated_attributes = kwargs.get('highlight_deprecated_attributes', False)
-        amount_of_examples = kwargs.get('amount_of_examples', 0)
+        tag_deprecated = kwargs.get('tag_deprecated', False)
+        dummy_data_rows = kwargs.get('dummy_data_rows', 0)
         quote_char = '"'
         with open(temporary_path, 'r+', encoding='utf-8') as csvfile:
             with open(template_file_path, 'w', encoding='utf-8') as new_file:
@@ -74,15 +74,15 @@ class CsvTemplateCreator:
                         header = row
                     else:
                         data.append(row)
-                if add_geo_artefact is False:
+                if add_geometry is False:
                     [header, data] = cls.remove_geo_artefact_csv(header=header, data=data)
                 if add_attribute_info:
                     info = cls.add_attribute_info_csv(header=header, data=data,
                                                       instantiated_objects=instantiated_attributes)
                     new_file.write(delimiter.join(info) + '\n')
-                data = cls.remove_mock_data_csv(data=data, rows_of_examples=amount_of_examples)
-                if highlight_deprecated_attributes:
-                    header = cls.highlight_deprecated_attributes_csv(header=header, data=data,
+                data = cls.remove_mock_data_csv(data=data, rows_of_examples=dummy_data_rows)
+                if tag_deprecated:
+                    header = cls.tag_deprecated_csv(header=header, data=data,
                                                                      instantiated_attributes=instantiated_attributes)
                 new_file.write(delimiter.join(header) + '\n')
                 for d in data:
@@ -98,10 +98,10 @@ class CsvTemplateCreator:
         header = []
         data = []
         delimiter = ';'
-        add_geo_artefact = kwargs.get('add_geo_artefact', False)
+        add_geometry = kwargs.get('add_geometry', False)
         add_attribute_info = kwargs.get('add_attribute_info', False)
-        highlight_deprecated_attributes = kwargs.get('highlight_deprecated_attributes', False)
-        amount_of_examples = kwargs.get('amount_of_examples', 0)
+        tag_deprecated = kwargs.get('tag_deprecated', False)
+        dummy_data_rows = kwargs.get('dummy_data_rows', 0)
         quote_char = '"'
         with open(temporary_path, 'r+', encoding='utf-8') as csvfile:
             await sleep(0)
@@ -112,15 +112,15 @@ class CsvTemplateCreator:
                     header = row
                 else:
                     data.append(row)
-            if add_geo_artefact is False:
+            if add_geometry is False:
                 [header, data] = cls.remove_geo_artefact_csv(header=header, data=data)
             if add_attribute_info:
                 info = cls.add_attribute_info_csv(header=header, data=data,
                                                   instantiated_objects=instantiated_attributes)
                 new_file.write(delimiter.join(info) + '\n')
-            data = cls.remove_mock_data_csv(data=data, rows_of_examples=amount_of_examples)
-            if highlight_deprecated_attributes:
-                header = cls.highlight_deprecated_attributes_csv(header=header, data=data,
+            data = cls.remove_mock_data_csv(data=data, rows_of_examples=dummy_data_rows)
+            if tag_deprecated:
+                header = cls.tag_deprecated_csv(header=header, data=data,
                                                                  instantiated_attributes=instantiated_attributes)
             new_file.write(delimiter.join(header) + '\n')
             for d in data:
@@ -155,7 +155,7 @@ class CsvTemplateCreator:
         return data
 
     @classmethod
-    def highlight_deprecated_attributes_csv(cls, header, data, instantiated_attributes):
+    def tag_deprecated_csv(cls, header, data, instantiated_attributes):
         found_uri = []
         dotnotation_module = DotnotationHelper()
         uri_index = cls.get_type_uri_index_in_row(header)

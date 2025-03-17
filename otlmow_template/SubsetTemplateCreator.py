@@ -41,17 +41,34 @@ class SubsetTemplateCreator:
 
     @classmethod
     def generate_template_from_subset(
-            cls, subset_path: Path, template_file_path: Path, ignore_relations: bool = True,
-            filter_attributes_by_subset: bool = True, class_uris_filter: [str] = None, **kwargs):
-
+            cls,
+            subset_path: Path,
+            template_file_path: Path,
+            ignore_relations: bool = True,
+            filter_attributes_by_subset: bool = True,
+            class_uris_filter: [str] = None,
+            dummy_data_rows: int = 1,
+            add_geometry: bool = True,
+            add_attribute_info: bool = False,
+            tag_deprecated: bool = False,
+            generate_choice_list: bool = True,
+            split_per_type: bool = True,
+            model_directory: Path = None):
         """
         Generate a template from a subset file
         :param subset_path: Path to the subset file
         :param template_file_path: Path to where the template file should be created
-        :param ignore_relations: Whether to ignore relations when creating the template
-        :param filter_attributes_by_subset: Whether to filter by the attributes in the subset
-        :param class_uris_filter: List of class URIs to filter by. If not None, only classes with these URIs will be included
-
+        :param ignore_relations: Whether to ignore relations when creating the template, defaults to True
+        :param filter_attributes_by_subset: Whether to filter by the attributes in the subset, defaults to True
+        :param class_uris_filter: List of class URIs to filter by. If not None, only classes with these URIs will be
+        included, defaults to None
+        :param dummy_data_rows: Amount of dummy data rows to add to the template, defaults to 1
+        :param add_geometry: Whether to include the geometry attribute in the template, defaults to True
+        :param add_attribute_info: Whether to add attribute information to the template (colored grey in Excel), defaults to False
+        :param tag_deprecated: Whether to tag deprecated attributes in the template, defaults to False
+        :param generate_choice_list: Whether to generate a choice list in the template (only for Excel), defaults to True
+        :param split_per_type: Whether to split the template into a file per type (only for CSV), defaults to True
+        :param model_directory: Path to the model directory, defaults to None
         :return:
         """
         tempdir = Path(tempfile.gettempdir()) / 'temp-otlmow'
@@ -61,23 +78,24 @@ class SubsetTemplateCreator:
         temporary_path = Path(tempdir) / template_file_path.name
         instantiated_attributes = cls.generate_basic_template(
             subset_path=subset_path, temporary_path=temporary_path, ignore_relations=ignore_relations,
-            template_file_path=template_file_path, class_uris_filter=class_uris_filter,
-            filter_attributes_by_subset=filter_attributes_by_subset, **kwargs)
+            template_file_path=template_file_path, class_uris_filter=class_uris_filter, add_geometry=add_geometry,
+            filter_attributes_by_subset=filter_attributes_by_subset, dummy_data_rows=dummy_data_rows,
+            model_directory=model_directory )
 
         # TODO split altering and moving the temp file to final location
         extension = template_file_path.suffix.lower()
         if extension == '.xlsx':
-            cls.alter_excel_template(template_file_path=template_file_path,
-                                      temporary_path=temporary_path,
+            cls.alter_excel_template(template_file_path=template_file_path, generate_choice_list=generate_choice_list,
+                                      temporary_path=temporary_path, dummy_data_rows=dummy_data_rows,
                                       subset_path=subset_path, instantiated_attributes=instantiated_attributes,
-                                      **kwargs)
+                                     model_directory=model_directory, tag_deprecated=tag_deprecated,
+                                     add_geometry=add_geometry)
         elif extension == '.csv':
             cls.determine_multiplicity_csv(
-                template_file_path=template_file_path,
-                                            subset_path=subset_path,
+                template_file_path=template_file_path, dummy_data_rows=dummy_data_rows, add_geometry=add_geometry,
+                                            subset_path=subset_path, split_per_type=split_per_type,
                                             instantiated_attributes=instantiated_attributes,
-                                            temporary_path=temporary_path,
-                                            **kwargs)
+                                            temporary_path=temporary_path, tag_deprecated=tag_deprecated)
 
     @classmethod
     async def generate_template_from_subset_async(cls, subset_path: Path, template_file_path: Path,
@@ -110,22 +128,20 @@ class SubsetTemplateCreator:
                                             **kwargs)
 
     @classmethod
-    def generate_basic_template(cls, subset_path: Path, template_file_path: Path,
-                                temporary_path: Path, class_uris_filter: [str] = None, ignore_relations: bool = True,
+    def generate_basic_template(cls, subset_path: Path, template_file_path: Path, temporary_path: Path,
+                                dummy_data_rows: int, add_geometry: bool,
+                                class_uris_filter: [str], ignore_relations: bool, split_per_type: bool = None,
+                                model_directory: Path = None,
                                 **kwargs):
         collector = cls._load_collector_from_subset_path(subset_path=subset_path)
         filtered_class_list = cls.filters_classes_by_subset(
             collector=collector, class_uris_filter=class_uris_filter)
         otl_objects = []
-        amount_of_examples = kwargs.get('amount_of_examples', 0)
-        model_directory = None
-        if kwargs is not None:
-            model_directory = kwargs.get('model_directory', None)
         relation_dict = get_hardcoded_relation_dict(model_directory=model_directory)
 
         generate_dummy_records = 1
-        if amount_of_examples > 1:
-            generate_dummy_records = amount_of_examples
+        if dummy_data_rows > 1:
+            generate_dummy_records = dummy_data_rows
 
         for class_object in [cl for cl in filtered_class_list if cl.abstract == 0]:
             if ignore_relations and class_object.objectUri in relation_dict:
@@ -147,7 +163,7 @@ class SubsetTemplateCreator:
 
         converter = OtlmowConverter()
         converter.from_objects_to_file(file_path=temporary_path, sequence_of_objects=otl_objects, **kwargs)
-        path_is_split = kwargs.get('split_per_type', True)
+        path_is_split = split_per_type
         extension = os.path.splitext(template_file_path)[-1].lower()
         instantiated_attributes = []
         if path_is_split is False or extension == '.xlsx':
@@ -163,15 +179,15 @@ class SubsetTemplateCreator:
         filtered_class_list = cls.filters_classes_by_subset(
             collector=collector, class_uris_filter=class_uris_filter)
         otl_objects = []
-        amount_of_examples = kwargs.get('amount_of_examples', 0)
+        dummy_data_rows = kwargs.get('dummy_data_rows', 0)
         model_directory = None
         if kwargs is not None:
             model_directory = kwargs.get('model_directory', None)
         relation_dict = get_hardcoded_relation_dict(model_directory=model_directory)
 
         generate_dummy_records = 1
-        if amount_of_examples > 1:
-            generate_dummy_records = amount_of_examples
+        if dummy_data_rows > 1:
+            generate_dummy_records = dummy_data_rows
 
         for class_object in [cl for cl in filtered_class_list if cl.abstract == 0]:
             if ignore_relations and class_object.objectUri in relation_dict:
@@ -204,34 +220,33 @@ class SubsetTemplateCreator:
         return list(instantiated_attributes)
 
     @classmethod
-    def alter_excel_template(cls, template_file_path: Path, subset_path: Path,
+    def alter_excel_template(cls, template_file_path: Path, subset_path: Path, add_geometry: bool,
                              instantiated_attributes: list, temporary_path, **kwargs):
         generate_choice_list = kwargs.get('generate_choice_list', False)
-        add_geo_artefact = kwargs.get('add_geo_artefact', False)
         add_attribute_info = kwargs.get('add_attribute_info', False)
-        highlight_deprecated_attributes = kwargs.get('highlight_deprecated_attributes', False)
-        amount_of_examples = kwargs.get('amount_of_examples', 0)
-        original_amount_of_examples = amount_of_examples
-        if add_attribute_info and amount_of_examples == 0:
-            amount_of_examples = 1
+        tag_deprecated = kwargs.get('tag_deprecated', False)
+        dummy_data_rows = kwargs.get('dummy_data_rows', 0)
+        original_dummy_data_rows = dummy_data_rows
+        if add_attribute_info and dummy_data_rows == 0:
+            dummy_data_rows = 1
         wb = load_workbook(temporary_path)
         wb.create_sheet('Keuzelijsten')
         # Volgorde is belangrijk! Eerst rijen verwijderen indien nodig dan choice list toevoegen,
         # staat namelijk vast op de kolom en niet het attribuut in die kolom
-        if add_geo_artefact is False:
+        if add_geometry is False:
             cls.remove_geo_artefact_excel(workbook=wb)
         if generate_choice_list:
             cls.add_choice_list_excel(workbook=wb, instantiated_attributes=instantiated_attributes,
                                       subset_path=subset_path, add_attribute_info=add_attribute_info)
-        cls.add_mock_data_excel(workbook=wb, rows_of_examples=amount_of_examples) # remove dummy rows if needed
+        cls.add_mock_data_excel(workbook=wb, rows_of_examples=dummy_data_rows) # remove dummy rows if needed
 
         cls.custom_exel_fixes(workbook=wb, instantiated_attributes=instantiated_attributes,
                                     add_attribute_info=add_attribute_info)
-        if highlight_deprecated_attributes:
+        if tag_deprecated:
             cls.check_for_deprecated_attributes(workbook=wb, instantiated_attributes=instantiated_attributes)
         if add_attribute_info:
             cls.add_attribute_info_excel(workbook=wb, instantiated_attributes=instantiated_attributes)
-        if original_amount_of_examples == 0 and add_attribute_info:
+        if original_dummy_data_rows == 0 and add_attribute_info:
             cls.remove_examples_from_excel_again(workbook=wb)
         wb.save(template_file_path)
         file_location = os.path.dirname(temporary_path)
@@ -239,23 +254,22 @@ class SubsetTemplateCreator:
 
 
     @classmethod
-    async def alter_excel_template_async(cls, template_file_path: Path, subset_path: Path,
+    async def alter_excel_template_async(cls, template_file_path: Path, subset_path: Path, add_geometry: bool,
                              instantiated_attributes: list, temporary_path, **kwargs):
         await sleep(0)
         generate_choice_list = kwargs.get('generate_choice_list', False)
-        add_geo_artefact = kwargs.get('add_geo_artefact', False)
         add_attribute_info = kwargs.get('add_attribute_info', False)
-        highlight_deprecated_attributes = kwargs.get('highlight_deprecated_attributes', False)
-        amount_of_examples = kwargs.get('amount_of_examples', 0)
-        original_amount_of_examples = amount_of_examples
-        if add_attribute_info and amount_of_examples == 0:
-            amount_of_examples = 1
+        tag_deprecated = kwargs.get('tag_deprecated', False)
+        dummy_data_rows = kwargs.get('dummy_data_rows', 0)
+        original_dummy_data_rows = dummy_data_rows
+        if add_attribute_info and dummy_data_rows == 0:
+            dummy_data_rows = 1
         await sleep(0)
         wb = load_workbook(temporary_path)
         wb.create_sheet('Keuzelijsten')
         # Volgorde is belangrijk! Eerst rijen verwijderen indien nodig dan choice list toevoegen,
         # staat namelijk vast op de kolom en niet het attribuut in die kolom
-        if add_geo_artefact is False:
+        if add_geometry is False:
             await sleep(0)
             cls.remove_geo_artefact_excel(workbook=wb)
         if generate_choice_list:
@@ -263,18 +277,18 @@ class SubsetTemplateCreator:
             await cls.add_choice_list_excel_async(workbook=wb, instantiated_attributes=instantiated_attributes,
                                       subset_path=subset_path, add_attribute_info=add_attribute_info)
         await sleep(0)
-        cls.add_mock_data_excel(workbook=wb, rows_of_examples=amount_of_examples) # remove dummy rows if needed
+        cls.add_mock_data_excel(workbook=wb, rows_of_examples=dummy_data_rows) # remove dummy rows if needed
 
         await cls.custom_exel_fixes_async(workbook=wb, instantiated_attributes=instantiated_attributes,
                                     add_attribute_info=add_attribute_info)
         await sleep(0)
-        if highlight_deprecated_attributes:
+        if tag_deprecated:
             await sleep(0)
             cls.check_for_deprecated_attributes(workbook=wb, instantiated_attributes=instantiated_attributes)
         if add_attribute_info:
             await sleep(0)
             await cls.add_attribute_info_excel_async(workbook=wb, instantiated_attributes=instantiated_attributes)
-        if original_amount_of_examples == 0 and add_attribute_info:
+        if original_dummy_data_rows == 0 and add_attribute_info:
             cls.remove_examples_from_excel_again(workbook=wb)
         await sleep(0)
         wb.save(template_file_path)
@@ -715,10 +729,10 @@ class SubsetTemplateCreator:
         header = []
         data = []
         delimiter = ';'
-        add_geo_artefact = kwargs.get('add_geo_artefact', False)
+        add_geometry = kwargs.get('add_geometry', False)
         add_attribute_info = kwargs.get('add_attribute_info', False)
-        highlight_deprecated_attributes = kwargs.get('highlight_deprecated_attributes', False)
-        amount_of_examples = kwargs.get('amount_of_examples', 0)
+        tag_deprecated = kwargs.get('tag_deprecated', False)
+        dummy_data_rows = kwargs.get('dummy_data_rows', 0)
         quote_char = '"'
         with open(temporary_path, 'r+', encoding='utf-8') as csvfile:
             with open(template_file_path, 'w', encoding='utf-8') as new_file:
@@ -728,15 +742,15 @@ class SubsetTemplateCreator:
                         header = row
                     else:
                         data.append(row)
-                if add_geo_artefact is False:
+                if add_geometry is False:
                     [header, data] = cls.remove_geo_artefact_csv(header=header, data=data)
                 if add_attribute_info:
                     [info, header] = cls.add_attribute_info_csv(header=header, data=data,
                                                                 instantiated_attributes=instantiated_attributes)
                     new_file.write(delimiter.join(info) + '\n')
-                data = cls.add_mock_data_csv(header=header, data=data, rows_of_examples=amount_of_examples)
-                if highlight_deprecated_attributes:
-                    header = cls.highlight_deprecated_attributes_csv(header=header, data=data,
+                data = cls.add_mock_data_csv(header=header, data=data, rows_of_examples=dummy_data_rows)
+                if tag_deprecated:
+                    header = cls.tag_deprecated_csv(header=header, data=data,
                                                                      instantiated_attributes=instantiated_attributes)
                 new_file.write(delimiter.join(header) + '\n')
                 for d in data:
@@ -751,10 +765,10 @@ class SubsetTemplateCreator:
         header = []
         data = []
         delimiter = ';'
-        add_geo_artefact = kwargs.get('add_geo_artefact', False)
+        add_geometry = kwargs.get('add_geometry', False)
         add_attribute_info = kwargs.get('add_attribute_info', False)
-        highlight_deprecated_attributes = kwargs.get('highlight_deprecated_attributes', False)
-        amount_of_examples = kwargs.get('amount_of_examples', 0)
+        tag_deprecated = kwargs.get('tag_deprecated', False)
+        dummy_data_rows = kwargs.get('dummy_data_rows', 0)
         quote_char = '"'
         with open(temporary_path, 'r+', encoding='utf-8') as csvfile:
             with open(template_file_path, 'w', encoding='utf-8') as new_file:
@@ -765,15 +779,15 @@ class SubsetTemplateCreator:
                     else:
                         data.append(row)
                         await sleep(0)
-                if add_geo_artefact is False:
+                if add_geometry is False:
                     [header, data] = cls.remove_geo_artefact_csv(header=header, data=data)
                 if add_attribute_info:
                     [info, header] = cls.add_attribute_info_csv(header=header, data=data,
                                                                 instantiated_attributes=instantiated_attributes)
                     new_file.write(delimiter.join(info) + '\n')
-                data = cls.add_mock_data_csv(header=header, data=data, rows_of_examples=amount_of_examples)
-                if highlight_deprecated_attributes:
-                    header = cls.highlight_deprecated_attributes_csv(header=header, data=data,
+                data = cls.add_mock_data_csv(header=header, data=data, rows_of_examples=dummy_data_rows)
+                if tag_deprecated:
+                    header = cls.tag_deprecated_csv(header=header, data=data,
                                                                      instantiated_attributes=instantiated_attributes)
                 new_file.write(delimiter.join(header) + '\n')
                 for d in data:
@@ -812,7 +826,7 @@ class SubsetTemplateCreator:
         return data
 
     @classmethod
-    def highlight_deprecated_attributes_csv(cls, header, data, instantiated_attributes):
+    def tag_deprecated_csv(cls, header, data, instantiated_attributes):
         found_uri = []
         dotnotation_module = DotnotationHelper()
         uri_index = cls.find_uri_in_csv(header)

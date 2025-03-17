@@ -18,20 +18,20 @@ class ExcelTemplateCreator:
     def alter_excel_template(cls, template_file_path: Path, instantiated_attributes: List,
                              temporary_path: Path, **kwargs):
         generate_choice_list = kwargs.get('generate_choice_list', False)
-        add_geo_artefact = kwargs.get('add_geo_artefact', False)
+        add_geometry = kwargs.get('add_geometry', False)
         add_attribute_info = kwargs.get('add_attribute_info', False)
-        highlight_deprecated_attributes = kwargs.get('highlight_deprecated_attributes', False)
-        amount_of_examples = kwargs.get('amount_of_examples', 0)
+        tag_deprecated = kwargs.get('tag_deprecated', False)
+        dummy_data_rows = kwargs.get('dummy_data_rows', 0)
         wb = load_workbook(temporary_path)
         wb.create_sheet('Keuzelijsten')
         # Volgorde is belangrijk! Eerst rijen verwijderen indien nodig dan choice list toevoegen,
         # staat namelijk vast op de kolom en niet het attribuut in die kolom
-        if add_geo_artefact is False:
+        if add_geometry is False:
             cls.remove_geo_artefact_excel(workbook=wb)
         if generate_choice_list:
             cls.add_choice_list_excel(workbook=wb, instantiated_attributes=instantiated_attributes)
-        cls.add_mock_data_excel(workbook=wb, rows_of_examples=amount_of_examples)
-        if highlight_deprecated_attributes:
+        cls.add_mock_data_excel(workbook=wb, rows_of_examples=dummy_data_rows)
+        if tag_deprecated:
             cls.check_for_deprecated_attributes_excel(workbook=wb, instantiated_attributes=instantiated_attributes)
         if add_attribute_info:
             cls.add_attribute_info_excel(workbook=wb, instantiated_attributes=instantiated_attributes)

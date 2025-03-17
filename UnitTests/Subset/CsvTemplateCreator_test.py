@@ -31,12 +31,12 @@ def test_add_attribute_info_csv():
                          'Test attribuut voor BooleanField']
 
 
-def test_highlight_deprecated_attributes_csv():
+def test_tag_deprecated_csv():
     header = ['typeURI', 'assetId.identificator', 'assetId.toegekendDoor', 'deprecatedString']
     data = [['https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#AnotherTestClass',
              '0000', 'AWV', 'deprecated']]
     instantiated_objects = [AnotherTestClass()]
-    info_data = CsvTemplateCreator.highlight_deprecated_attributes_csv(header, data, instantiated_objects)
+    info_data = CsvTemplateCreator.tag_deprecated_csv(header, data, instantiated_objects)
     assert info_data == ['typeURI',
                          'assetId.identificator',
                          'assetId.toegekendDoor',
