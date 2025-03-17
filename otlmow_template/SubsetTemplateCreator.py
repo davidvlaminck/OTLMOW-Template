@@ -33,6 +33,15 @@ enumeration_validation_rules = {
         "^https://wegenenverkeer.data.vlaanderen.be/ns/.+"]
 }
 
+short_to_long_ns = {
+    'ond': 'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#',
+    'onderdeel': 'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#',
+    'ins': 'https://wegenenverkeer.data.vlaanderen.be/ns/installatie#',
+    'installatie': 'https://wegenenverkeer.data.vlaanderen.be/ns/installatie#',
+    'imp': 'https://wegenenverkeer.data.vlaanderen.be/ns/implementatieelement#',
+    'implementatieelement': 'https://wegenenverkeer.data.vlaanderen.be/ns/implementatieelement#',
+}
+
 
 class SubsetTemplateCreator:
     @classmethod
@@ -265,9 +274,16 @@ class SubsetTemplateCreator:
         # set_fixed_column_width (25)
 
 
+
+
         for sheet in wb:
             if sheet.title == 'Keuzelijsten':
                 break
+
+            type_uri = cls.get_uri_from_sheet_name(sheet.title)
+
+            instance = next(x for x in instances if x.typeURI == type_uri)
+
             cls.add_type_uri_choice_list_in_excel(sheet=sheet, instances=instances,
                                                   add_attribute_info=add_attribute_info)
             cls.remove_asset_versie(sheet=sheet)
@@ -928,3 +944,12 @@ class SubsetTemplateCreator:
         first_value_row_i = 3 #with a description the values only start at row 2 (third row)
         for sheet in workbook:
             sheet.delete_rows(idx=first_value_row_i, amount=1)
+
+    @classmethod
+    def get_uri_from_sheet_name(cls, title: str) -> str:
+        if title == 'Agent':
+            return 'http://purl.org/dc/terms/Agent'
+        if '#' not in title:
+            raise ValueError('Sheet title does not contain a #')
+        class_ns, class_name = title.split('#', maxsplit=1)
+        return short_to_long_ns.get(class_ns, class_ns) + class_name
