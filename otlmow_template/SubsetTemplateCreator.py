@@ -33,43 +33,42 @@ enumeration_validation_rules = {
 
 
 class SubsetTemplateCreator:
-    def __init__(self):
-        pass
-
-    @staticmethod
-    def _load_collector_from_subset_path(path_to_subset: Path) -> OSLOCollector:
+    @classmethod
+    def _load_collector_from_subset_path(cls, path_to_subset: Path) -> OSLOCollector:
         collector = OSLOCollector(path_to_subset)
         collector.collect_all(include_abstract=True)
         return collector
 
-    def generate_template_from_subset(self, path_to_subset: Path, path_to_template_file_and_extension: Path,
+    @classmethod
+    def generate_template_from_subset(cls, path_to_subset: Path, path_to_template_file_and_extension: Path,
                                       ignore_relations: bool = True, filter_attributes_by_subset: bool = True,
                                       **kwargs):
         tempdir = Path(tempfile.gettempdir()) / 'temp-otlmow'
         if not tempdir.exists():
             os.makedirs(tempdir)
-        test = ntpath.basename(path_to_template_file_and_extension)
+
+        test = path_to_template_file_and_extension.name
         temporary_path = Path(tempdir) / test
-        instantiated_attributes = (self.generate_basic_template(
+        instantiated_attributes = (cls.generate_basic_template(
             path_to_subset=path_to_subset, temporary_path=temporary_path, ignore_relations=ignore_relations,
             path_to_template_file_and_extension=path_to_template_file_and_extension,
             filter_attributes_by_subset=filter_attributes_by_subset, **kwargs))
         extension = os.path.splitext(path_to_template_file_and_extension)[-1].lower()
         if extension == '.xlsx':
-            self.alter_excel_template(path_to_template_file_and_extension=path_to_template_file_and_extension,
+            cls.alter_excel_template(path_to_template_file_and_extension=path_to_template_file_and_extension,
                                       temporary_path=temporary_path,
                                       path_to_subset=path_to_subset, instantiated_attributes=instantiated_attributes,
                                       **kwargs)
         elif extension == '.csv':
-            self.determine_multiplicity_csv(
+            cls.determine_multiplicity_csv(
                 path_to_template_file_and_extension=path_to_template_file_and_extension,
                                             path_to_subset=path_to_subset,
                                             instantiated_attributes=instantiated_attributes,
                                             temporary_path=temporary_path,
                                             **kwargs)
 
-
-    async def generate_template_from_subset_async(self, path_to_subset: Path, path_to_template_file_and_extension: Path,
+    @classmethod
+    async def generate_template_from_subset_async(cls, path_to_subset: Path, path_to_template_file_and_extension: Path,
                                       ignore_relations: bool = True, filter_attributes_by_subset: bool = True,
                                       **kwargs):
         tempdir = Path(tempfile.gettempdir()) / 'temp-otlmow'
@@ -78,33 +77,34 @@ class SubsetTemplateCreator:
         test = ntpath.basename(path_to_template_file_and_extension)
         temporary_path = Path(tempdir) / test
         await sleep(0)
-        instantiated_attributes = (await self.generate_basic_template_async(
+        instantiated_attributes = (await cls.generate_basic_template_async(
             path_to_subset=path_to_subset, temporary_path=temporary_path, ignore_relations=ignore_relations,
             path_to_template_file_and_extension=path_to_template_file_and_extension,
             filter_attributes_by_subset=filter_attributes_by_subset, **kwargs))
         await sleep(0)
         extension = os.path.splitext(path_to_template_file_and_extension)[-1].lower()
         if extension == '.xlsx':
-            await self.alter_excel_template_async(
+            await cls.alter_excel_template_async(
                 path_to_template_file_and_extension=path_to_template_file_and_extension,
                                       temporary_path=temporary_path,
                                       path_to_subset=path_to_subset, instantiated_attributes=instantiated_attributes,
                                       **kwargs)
         elif extension == '.csv':
-            await self.determine_multiplicity_csv_async(
+            await cls.determine_multiplicity_csv_async(
                 path_to_template_file_and_extension=path_to_template_file_and_extension,
                                             path_to_subset=path_to_subset,
                                             instantiated_attributes=instantiated_attributes,
                                             temporary_path=temporary_path,
                                             **kwargs)
 
-    def generate_basic_template(self, path_to_subset: Path, path_to_template_file_and_extension: Path,
+    @classmethod
+    def generate_basic_template(cls, path_to_subset: Path, path_to_template_file_and_extension: Path,
                                 temporary_path: Path, ignore_relations: bool = True, **kwargs):
         list_of_otl_objectUri = None
         if kwargs is not None:
             list_of_otl_objectUri = kwargs.get('list_of_otl_objectUri', None)
-        collector = self._load_collector_from_subset_path(path_to_subset=path_to_subset)
-        filtered_class_list = self.filters_classes_by_subset(
+        collector = cls._load_collector_from_subset_path(path_to_subset=path_to_subset)
+        filtered_class_list = cls.filters_classes_by_subset(
             collector=collector, list_of_otl_objectUri=list_of_otl_objectUri)
         otl_objects = []
         amount_of_examples = kwargs.get('amount_of_examples', 0)
@@ -145,13 +145,14 @@ class SubsetTemplateCreator:
                 file_path=temporary_path, path_to_subset=path_to_subset)
         return list(instantiated_attributes)
 
-    async def generate_basic_template_async(self, path_to_subset: Path, path_to_template_file_and_extension: Path,
+    @classmethod
+    async def generate_basic_template_async(cls, path_to_subset: Path, path_to_template_file_and_extension: Path,
                                 temporary_path: Path, ignore_relations: bool = True, **kwargs):
         list_of_otl_objectUri = None
         if kwargs is not None:
             list_of_otl_objectUri = kwargs.get('list_of_otl_objectUri', None)
-        collector = self._load_collector_from_subset_path(path_to_subset=path_to_subset)
-        filtered_class_list = self.filters_classes_by_subset(
+        collector = cls._load_collector_from_subset_path(path_to_subset=path_to_subset)
+        filtered_class_list = cls.filters_classes_by_subset(
             collector=collector, list_of_otl_objectUri=list_of_otl_objectUri)
         otl_objects = []
         amount_of_examples = kwargs.get('amount_of_examples', 0)
@@ -272,14 +273,15 @@ class SubsetTemplateCreator:
         file_location = os.path.dirname(temporary_path)
         [f.unlink() for f in Path(file_location).glob("*") if f.is_file()]
 
-    def determine_multiplicity_csv(self, path_to_template_file_and_extension: Path, path_to_subset: Path,
+    @classmethod
+    def determine_multiplicity_csv(cls, path_to_template_file_and_extension: Path, path_to_subset: Path,
                                    instantiated_attributes: list, temporary_path: Path, **kwargs):
         path_is_split = kwargs.get('split_per_type', True)
         if path_is_split is False:
-            self.alter_csv_template(path_to_template_file_and_extension=path_to_template_file_and_extension,
+            cls.alter_csv_template(path_to_template_file_and_extension=path_to_template_file_and_extension,
                                     temporary_path=temporary_path, path_to_subset=path_to_subset, **kwargs)
         else:
-            self.multiple_csv_template(
+            cls.multiple_csv_template(
                 path_to_template_file_and_extension=path_to_template_file_and_extension,
                                        temporary_path=temporary_path,
                                        path_to_subset=path_to_subset, instantiated_attributes=instantiated_attributes,
@@ -287,15 +289,16 @@ class SubsetTemplateCreator:
         file_location = os.path.dirname(temporary_path)
         [f.unlink() for f in Path(file_location).glob("*") if f.is_file()]
 
-    async def determine_multiplicity_csv_async(self, path_to_template_file_and_extension: Path, path_to_subset: Path,
+    @classmethod
+    async def determine_multiplicity_csv_async(cls, path_to_template_file_and_extension: Path, path_to_subset: Path,
                                    instantiated_attributes: list, temporary_path: Path, **kwargs):
         path_is_split = kwargs.get('split_per_type', True)
         await sleep(0)
         if path_is_split is False:
-            await self.alter_csv_template_async(path_to_template_file_and_extension=path_to_template_file_and_extension,
+            await cls.alter_csv_template_async(path_to_template_file_and_extension=path_to_template_file_and_extension,
                                     temporary_path=temporary_path, path_to_subset=path_to_subset, **kwargs)
         else:
-            await self.multiple_csv_template_async(
+            await cls.multiple_csv_template_async(
                 path_to_template_file_and_extension=path_to_template_file_and_extension,
                                        temporary_path=temporary_path,
                                        path_to_subset=path_to_subset, instantiated_attributes=instantiated_attributes,
@@ -313,8 +316,8 @@ class SubsetTemplateCreator:
             return collector.classes
         return [x for x in collector.classes if x.objectUri in list_of_otl_objectUri]
 
-    @staticmethod
-    def _try_getting_settings_of_converter() -> Path:
+    @classmethod
+    def _try_getting_settings_of_converter(cls) -> Path:
         converter_path = Path(site.getsitepackages()[0]) / 'otlmow_converter'
         return converter_path / 'settings_otlmow_converter.json'
 
