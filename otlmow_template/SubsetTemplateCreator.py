@@ -61,7 +61,7 @@ class SubsetTemplateCreator:
         temporary_path = Path(tempdir) / template_file_path.name
         instantiated_attributes = cls.generate_basic_template(
             subset_path=subset_path, temporary_path=temporary_path, ignore_relations=ignore_relations,
-            template_file_path=template_file_path,
+            template_file_path=template_file_path, class_uris_filter=class_uris_filter,
             filter_attributes_by_subset=filter_attributes_by_subset, **kwargs)
 
         # TODO split altering and moving the temp file to final location
@@ -111,10 +111,8 @@ class SubsetTemplateCreator:
 
     @classmethod
     def generate_basic_template(cls, subset_path: Path, template_file_path: Path,
-                                temporary_path: Path, ignore_relations: bool = True, **kwargs):
-        class_uris_filter = None
-        if kwargs is not None:
-            class_uris_filter = kwargs.get('class_uris_filter', None)
+                                temporary_path: Path, class_uris_filter: [str] = None, ignore_relations: bool = True,
+                                **kwargs):
         collector = cls._load_collector_from_subset_path(subset_path=subset_path)
         filtered_class_list = cls.filters_classes_by_subset(
             collector=collector, class_uris_filter=class_uris_filter)
@@ -159,10 +157,8 @@ class SubsetTemplateCreator:
 
     @classmethod
     async def generate_basic_template_async(cls, subset_path: Path, template_file_path: Path,
-                                temporary_path: Path, ignore_relations: bool = True, **kwargs):
-        class_uris_filter = None
-        if kwargs is not None:
-            class_uris_filter = kwargs.get('class_uris_filter', None)
+                                temporary_path: Path, class_uris_filter: [str] = None, ignore_relations: bool = True,
+                                            **kwargs):
         collector = cls._load_collector_from_subset_path(subset_path=subset_path)
         filtered_class_list = cls.filters_classes_by_subset(
             collector=collector, class_uris_filter=class_uris_filter)
