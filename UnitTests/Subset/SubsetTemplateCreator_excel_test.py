@@ -1,0 +1,296 @@
+import csv
+from pathlib import Path
+
+import openpyxl
+import pytest
+
+from otlmow_template.SubsetTemplateCreator import SubsetTemplateCreator
+
+current_dir = Path(__file__).parent
+model_directory_path = Path(__file__).parent.parent / 'TestModel'
+
+
+# create one unit test for generating a excel template (see the generic_csv test) for every combination of the
+# following parameters
+# amount_of_examples: 0, 1, 2
+# add_geo_artefact: True, False
+# add_attribute_info: True, False
+# add_deprecated_info: True, False
+# generate_choice_list: True, False
+
+
+@pytest.mark.parametrize(
+    "index, amount_of_examples, add_geo_artefact, add_attribute_info, add_deprecated_info, generate_choice_list",
+    [
+        (i, amount, geo, attr, dep, choice) for i, (amount, geo, attr, dep, choice) in enumerate(
+        [
+            (0, True, True, True, True),
+            (0, True, True, True, False),
+            (0, True, True, False, True),
+            (0, True, True, False, False),
+            (0, True, False, True, True),
+            (0, True, False, True, False),
+            (0, True, False, False, True),
+            (0, True, False, False, False),
+            (0, False, True, True, True),
+            (0, False, True, True, False),
+            (0, False, True, False, True),
+            (0, False, True, False, False),
+            (0, False, False, True, True),
+            (0, False, False, True, False),
+            (0, False, False, False, True),
+            (0, False, False, False, False),
+            (1, True, True, True, True),
+            (1, True, True, True, False),
+            (1, True, True, False, True),
+            (1, True, True, False, False),
+            (1, True, False, True, True),
+            (1, True, False, True, False),
+            (1, True, False, False, True),
+            (1, True, False, False, False),
+            (1, False, True, True, True),
+            (1, False, True, True, False),
+            (1, False, True, False, True),
+            (1, False, True, False, False),
+            (1, False, False, True, True),
+            (1, False, False, True, False),
+            (1, False, False, False, True),
+            (1, False, False, False, False),
+            (2, True, True, True, True),
+            (2, True, True, True, False),
+            (2, True, True, False, True),
+            (2, True, True, False, False),
+            (2, True, False, True, True),
+            (2, True, False, True, False),
+            (2, True, False, False, True),
+            (2, True, False, False, False),
+            (2, False, True, True, True),
+            (2, False, True, True, False),
+            (2, False, True, False, True),
+            (2, False, True, False, False),
+            (2, False, False, True, True),
+            (2, False, False, True, False),
+            (2, False, False, False, True),
+            (2, False, False, False, False),
+        ]
+    )
+    ]
+)
+def test_generate_excel_template(index, amount_of_examples, add_geo_artefact, add_attribute_info,
+                               add_deprecated_info, generate_choice_list):
+    # Arrange
+    path_to_subset = current_dir / 'OTL_AllCasesTestClass.db'
+    path_to_template_file = current_dir / f'OTL_AllCasesTestClass_{index}.xlsx'
+    kwargs = {
+        'amount_of_examples': amount_of_examples,
+        'add_geo_artefact': add_geo_artefact,
+        'add_attribute_info': add_attribute_info,
+        'highlight_deprecated_attributes': add_deprecated_info,
+        'generate_choice_list': generate_choice_list,
+    }
+
+    # Act
+    subset_tool = SubsetTemplateCreator()
+    subset_tool.generate_template_from_subset(
+        path_to_subset=path_to_subset, path_to_template_file_and_extension=path_to_template_file,
+        list_of_otl_objectUri=["https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#AnotherTestClass"],
+        model_directory=model_directory_path, **kwargs)
+
+    # Assert
+    # sourcery skip: no-conditionals-in-tests
+
+    book = openpyxl.load_workbook(path_to_template_file, read_only=True, data_only=True)
+    output_rows = []
+    choice_list_sheet = False
+    choice_list_data = []
+
+    for sheet in book.worksheets:
+        sheet_name = sheet.title
+        if sheet_name == 'Keuzelijsten':
+            choice_list_sheet = True
+            for row in sheet.rows:
+                choice_list_data.append([cell.value for cell in row])
+            continue
+        if sheet_name != 'onderdeel#AnotherTestClass':
+            continue
+        for row in sheet.rows:
+            output_rows.append([cell.value for cell in row])
+    book.close()
+
+    expected_attribute_info_row = [
+        'De URI van het object volgens https://www.w3.org/2001/XMLSchema#anyURI .',
+        'Een groep van tekens om een AIM object te identificeren of te benoemen.',
+        'Gegevens van de organisatie die de toekenning deed.',
+        'Een verwijzing naar een postnummer uit het specifieke bestek waar het object mee verband houdt.',
+        'Datum van de oprichting van het object.',
+        'Tekstveld dat niet meer gebruikt wordt',
+        'Geeft aan of het object actief kan gebruikt worden of (zacht) verwijderd is uit het asset beheer systeem.',
+        'Extra notitie voor het object.',
+        'Een verwijzing naar een postnummer uit het standaardbestek waar het object mee verband houdt. De notatie van het postnummer moet overeenkomen met de notatie die gebruikt is in de catalogi van standaardbestekken, bijvoorbeeld postnummer 0701.20404G.',
+        'Bevat een getal die bij het datatype hoort.', 'Geeft de actuele stand in de levenscyclus van het object.']
+    expected_header_row = ['typeURI', 'assetId.identificator', 'assetId.toegekendDoor', 'bestekPostNummer[]',
+                           'datumOprichtingObject', 'deprecatedString', 'isActief', 'notitie',
+                           'standaardBestekPostNummer[]', 'theoretischeLevensduur', 'toestand']
+
+    expected_row_count = amount_of_examples + 1
+
+    if add_geo_artefact:
+        expected_header_row.insert(6, 'geometry')
+        expected_attribute_info_row.insert(6, 'geometry voor DAVIE')
+
+    if add_deprecated_info:
+        expected_header_row.insert(5, f'[DEPRECATED] {expected_header_row.pop(5)}')
+
+    if add_attribute_info:
+        assert output_rows[0] == expected_attribute_info_row
+        assert output_rows[1] == expected_header_row
+        expected_row_count += 1
+    else:
+        assert output_rows[0] == expected_header_row
+
+    assert len(output_rows) == expected_row_count
+
+    if generate_choice_list:
+        assert choice_list_sheet
+        assert choice_list_data[0][0] == 'KlAIMToestand'
+
+    path_to_template_file.unlink()
+
+
+@pytest.mark.parametrize(
+    "index, amount_of_examples, add_geo_artefact, add_attribute_info, add_deprecated_info, generate_choice_list",
+    [
+        (i, amount, geo, attr, dep, choice) for i, (amount, geo, attr, dep, choice) in enumerate(
+        [
+            (0, True, True, True, True),
+            (0, True, True, True, False),
+            (0, True, True, False, True),
+            (0, True, True, False, False),
+            (0, True, False, True, True),
+            (0, True, False, True, False),
+            (0, True, False, False, True),
+            (0, True, False, False, False),
+            (0, False, True, True, True),
+            (0, False, True, True, False),
+            (0, False, True, False, True),
+            (0, False, True, False, False),
+            (0, False, False, True, True),
+            (0, False, False, True, False),
+            (0, False, False, False, True),
+            (0, False, False, False, False),
+            (1, True, True, True, True),
+            (1, True, True, True, False),
+            (1, True, True, False, True),
+            (1, True, True, False, False),
+            (1, True, False, True, True),
+            (1, True, False, True, False),
+            (1, True, False, False, True),
+            (1, True, False, False, False),
+            (1, False, True, True, True),
+            (1, False, True, True, False),
+            (1, False, True, False, True),
+            (1, False, True, False, False),
+            (1, False, False, True, True),
+            (1, False, False, True, False),
+            (1, False, False, False, True),
+            (1, False, False, False, False),
+            (2, True, True, True, True),
+            (2, True, True, True, False),
+            (2, True, True, False, True),
+            (2, True, True, False, False),
+            (2, True, False, True, True),
+            (2, True, False, True, False),
+            (2, True, False, False, True),
+            (2, True, False, False, False),
+            (2, False, True, True, True),
+            (2, False, True, True, False),
+            (2, False, True, False, True),
+            (2, False, True, False, False),
+            (2, False, False, True, True),
+            (2, False, False, True, False),
+            (2, False, False, False, True),
+            (2, False, False, False, False),
+        ]
+    )
+    ]
+)
+@pytest.mark.asyncio
+async def test_generate_excel_template_async(index, amount_of_examples, add_geo_artefact, add_attribute_info,
+                               add_deprecated_info, generate_choice_list):
+    # Arrange
+    path_to_subset = current_dir / 'OTL_AllCasesTestClass.db'
+    path_to_template_file = current_dir / f'OTL_AllCasesTestClass_{index}.xlsx'
+    kwargs = {
+        'amount_of_examples': amount_of_examples,
+        'add_geo_artefact': add_geo_artefact,
+        'add_attribute_info': add_attribute_info,
+        'highlight_deprecated_attributes': add_deprecated_info,
+        'generate_choice_list': generate_choice_list,
+    }
+
+    # Act
+    subset_tool = SubsetTemplateCreator()
+    await subset_tool.generate_template_from_subset_async(
+        path_to_subset=path_to_subset, path_to_template_file_and_extension=path_to_template_file,
+        list_of_otl_objectUri=["https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#AnotherTestClass"],
+        model_directory=model_directory_path, **kwargs)
+
+    # Assert
+    # sourcery skip: no-conditionals-in-tests
+
+    book = openpyxl.load_workbook(path_to_template_file, read_only=True, data_only=True)
+    output_rows = []
+    choice_list_sheet = False
+    choice_list_data = []
+
+    for sheet in book.worksheets:
+        sheet_name = sheet.title
+        if sheet_name == 'Keuzelijsten':
+            choice_list_sheet = True
+            for row in sheet.rows:
+                choice_list_data.append([cell.value for cell in row])
+            continue
+        if sheet_name != 'onderdeel#AnotherTestClass':
+            continue
+        for row in sheet.rows:
+            output_rows.append([cell.value for cell in row])
+    book.close()
+
+    expected_attribute_info_row = [
+        'De URI van het object volgens https://www.w3.org/2001/XMLSchema#anyURI .',
+        'Een groep van tekens om een AIM object te identificeren of te benoemen.',
+        'Gegevens van de organisatie die de toekenning deed.',
+        'Een verwijzing naar een postnummer uit het specifieke bestek waar het object mee verband houdt.',
+        'Datum van de oprichting van het object.',
+        'Tekstveld dat niet meer gebruikt wordt',
+        'Geeft aan of het object actief kan gebruikt worden of (zacht) verwijderd is uit het asset beheer systeem.',
+        'Extra notitie voor het object.',
+        'Een verwijzing naar een postnummer uit het standaardbestek waar het object mee verband houdt. De notatie van het postnummer moet overeenkomen met de notatie die gebruikt is in de catalogi van standaardbestekken, bijvoorbeeld postnummer 0701.20404G.',
+        'Bevat een getal die bij het datatype hoort.', 'Geeft de actuele stand in de levenscyclus van het object.']
+    expected_header_row = ['typeURI', 'assetId.identificator', 'assetId.toegekendDoor', 'bestekPostNummer[]',
+                           'datumOprichtingObject', 'deprecatedString', 'isActief', 'notitie',
+                           'standaardBestekPostNummer[]', 'theoretischeLevensduur', 'toestand']
+
+    expected_row_count = amount_of_examples + 1
+
+    if add_geo_artefact:
+        expected_header_row.insert(6, 'geometry')
+        expected_attribute_info_row.insert(6, 'geometry voor DAVIE')
+
+    if add_deprecated_info:
+        expected_header_row.insert(5, f'[DEPRECATED] {expected_header_row.pop(5)}')
+
+    if add_attribute_info:
+        assert output_rows[0] == expected_attribute_info_row
+        assert output_rows[1] == expected_header_row
+        expected_row_count += 1
+    else:
+        assert output_rows[0] == expected_header_row
+
+    assert len(output_rows) == expected_row_count
+
+    if generate_choice_list:
+        assert choice_list_sheet
+        assert choice_list_data[0][0] == 'KlAIMToestand'
+
+    path_to_template_file.unlink()
