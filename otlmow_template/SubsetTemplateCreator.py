@@ -18,7 +18,8 @@ from otlmow_converter.DotnotationHelper import DotnotationHelper
 from otlmow_converter.OtlmowConverter import OtlmowConverter
 from otlmow_model.OtlmowModel.BaseClasses.BooleanField import BooleanField
 from otlmow_model.OtlmowModel.BaseClasses.KeuzelijstField import KeuzelijstField
-from otlmow_model.OtlmowModel.BaseClasses.OTLObject import dynamic_create_instance_from_uri
+from otlmow_model.OtlmowModel.BaseClasses.OTLObject import dynamic_create_instance_from_uri, OTLObject, \
+    get_attribute_by_name
 from otlmow_model.OtlmowModel.Helpers.generated_lists import get_hardcoded_relation_dict
 from otlmow_modelbuilder.OSLOCollector import OSLOCollector
 from otlmow_modelbuilder.SQLDataClasses.OSLOClass import OSLOClass
@@ -75,27 +76,35 @@ class SubsetTemplateCreator:
         if not tempdir.exists():
             os.makedirs(tempdir)
 
+        # generate objects to write to file
+        objects = cls.generate_objects_for_template(
+            subset_path=subset_path, ignore_relations=ignore_relations, class_uris_filter=class_uris_filter,
+            add_geometry=add_geometry, filter_attributes_by_subset=filter_attributes_by_subset,
+            dummy_data_rows=dummy_data_rows, model_directory=model_directory)
+
+        # write the file
         temporary_path = Path(tempdir) / template_file_path.name
-        instantiated_attributes = cls.generate_basic_template(
-            subset_path=subset_path, temporary_path=temporary_path, ignore_relations=ignore_relations,
-            template_file_path=template_file_path, class_uris_filter=class_uris_filter, add_geometry=add_geometry,
-            filter_attributes_by_subset=filter_attributes_by_subset, dummy_data_rows=dummy_data_rows,
-            model_directory=model_directory )
+        OtlmowConverter.from_objects_to_file(file_path=temporary_path, sequence_of_objects=objects,
+                                             split_per_type=split_per_type)
+
+        # alter the file if needed
+
+
+
 
         # TODO split altering and moving the temp file to final location
         extension = template_file_path.suffix.lower()
         if extension == '.xlsx':
             cls.alter_excel_template(template_file_path=template_file_path, generate_choice_list=generate_choice_list,
-                                      temporary_path=temporary_path, dummy_data_rows=dummy_data_rows,
-                                      subset_path=subset_path, instantiated_attributes=instantiated_attributes,
-                                     model_directory=model_directory, tag_deprecated=tag_deprecated,
-                                     add_geometry=add_geometry)
+                                     temporary_path=temporary_path, dummy_data_rows=dummy_data_rows,
+                                     subset_path=subset_path, instantiated_attributes=objects, tag_deprecated=tag_deprecated,
+                                     add_geometry=add_geometry, add_attribute_info=add_attribute_info)
         elif extension == '.csv':
             cls.determine_multiplicity_csv(
                 template_file_path=template_file_path, dummy_data_rows=dummy_data_rows, add_geometry=add_geometry,
-                                            subset_path=subset_path, split_per_type=split_per_type,
-                                            instantiated_attributes=instantiated_attributes,
-                                            temporary_path=temporary_path, tag_deprecated=tag_deprecated)
+                subset_path=subset_path, split_per_type=split_per_type, add_attribute_info=add_attribute_info,
+                instantiated_attributes=objects,
+                temporary_path=temporary_path, tag_deprecated=tag_deprecated)
 
     @classmethod
     async def generate_template_from_subset_async(cls, subset_path: Path, template_file_path: Path,
@@ -128,48 +137,59 @@ class SubsetTemplateCreator:
                                             **kwargs)
 
     @classmethod
-    def generate_basic_template(cls, subset_path: Path, template_file_path: Path, temporary_path: Path,
-                                dummy_data_rows: int, add_geometry: bool,
-                                class_uris_filter: [str], ignore_relations: bool, split_per_type: bool = None,
-                                model_directory: Path = None,
-                                **kwargs):
+    def generate_objects_for_template(
+            cls, subset_path: Path, class_uris_filter: [str], filter_attributes_by_subset: bool,
+            dummy_data_rows: int, add_geometry: bool, ignore_relations: bool, model_directory: Path = None
+    ) -> [OTLObject]:
+        """
+        This method is used to generate objects for the template. It will generate objects based on the subset file
+        """
         collector = cls._load_collector_from_subset_path(subset_path=subset_path)
-        filtered_class_list = cls.filters_classes_by_subset(
-            collector=collector, class_uris_filter=class_uris_filter)
-        otl_objects = []
+        filtered_class_list = cls.filters_classes_by_subset(collector=collector, class_uris_filter=class_uris_filter)
         relation_dict = get_hardcoded_relation_dict(model_directory=model_directory)
 
-        generate_dummy_records = 1
-        if dummy_data_rows > 1:
-            generate_dummy_records = dummy_data_rows
+        amount_objects_to_create = max(1, dummy_data_rows)
+        otl_objects = []
 
-        for class_object in [cl for cl in filtered_class_list if cl.abstract == 0]:
-            if ignore_relations and class_object.objectUri in relation_dict:
+        for oslo_class in [cl for cl in filtered_class_list if cl.abstract == 0]:
+            if ignore_relations and oslo_class.objectUri in relation_dict:
                 continue
-            for _ in range(generate_dummy_records):
-                instance = dynamic_create_instance_from_uri(class_object.objectUri, model_directory=model_directory)
-                if instance is None:
-                    continue
-                attributen = collector.find_attributes_by_class(class_object)
-                for attribute_object in attributen:
-                    attr = getattr(instance, f'_{attribute_object.name}')
-                    attr.fill_with_dummy_data()
-                with contextlib.suppress(AttributeError):
-                    geo_attr = getattr(instance, '_geometry')
-                    geo_attr.fill_with_dummy_data()
-                otl_objects.append(instance)
 
-                DotnotationHelper.clear_list_of_list_attributes(instance)
+            otl_objects.extend(cls.generate_objects_from_oslo_class(
+                oslo_class=oslo_class, amount_objects_to_create=amount_objects_to_create, add_geometry=add_geometry,
+                filter_attributes_by_subset=filter_attributes_by_subset, collector=collector,
+                model_directory=model_directory))
 
-        converter = OtlmowConverter()
-        converter.from_objects_to_file(file_path=temporary_path, sequence_of_objects=otl_objects, **kwargs)
-        path_is_split = split_per_type
-        extension = os.path.splitext(template_file_path)[-1].lower()
-        instantiated_attributes = []
-        if path_is_split is False or extension == '.xlsx':
-            instantiated_attributes = converter.from_file_to_objects(
-                file_path=temporary_path, subset_path=subset_path)
-        return list(instantiated_attributes)
+        return otl_objects
+
+    @classmethod
+    def generate_objects_from_oslo_class(
+            cls, oslo_class: OSLOClass, amount_objects_to_create: int, add_geometry: bool,
+            filter_attributes_by_subset: bool, collector: OSLOCollector, model_directory: Path = None) -> [OTLObject]:
+        """
+        Generate a number of objects from a given OSLO class
+        """
+
+        otl_objects = []
+
+        for _ in range(amount_objects_to_create):
+            instance = dynamic_create_instance_from_uri(oslo_class.objectUri, model_directory=model_directory)
+            if instance is None:
+                continue
+
+            for attribute_object in collector.find_attributes_by_class(oslo_class):
+                attr = get_attribute_by_name(instance, attribute_object.name)
+                attr.fill_with_dummy_data()
+            with contextlib.suppress(AttributeError):
+                geo_attr = get_attribute_by_name(instance, 'geometry')
+                geo_attr.fill_with_dummy_data()
+            otl_objects.append(instance)
+
+            DotnotationHelper.clear_list_of_list_attributes(instance)
+
+            otl_objects.append(instance)
+
+        return otl_objects
 
     @classmethod
     async def generate_basic_template_async(cls, subset_path: Path, template_file_path: Path,
@@ -221,11 +241,8 @@ class SubsetTemplateCreator:
 
     @classmethod
     def alter_excel_template(cls, template_file_path: Path, subset_path: Path, add_geometry: bool,
-                             instantiated_attributes: list, temporary_path, **kwargs):
-        generate_choice_list = kwargs.get('generate_choice_list', False)
-        add_attribute_info = kwargs.get('add_attribute_info', False)
-        tag_deprecated = kwargs.get('tag_deprecated', False)
-        dummy_data_rows = kwargs.get('dummy_data_rows', 0)
+                             instantiated_attributes: list, temporary_path: Path, add_attribute_info: bool,
+                             generate_choice_list: bool, dummy_data_rows: int, tag_deprecated: bool):
         original_dummy_data_rows = dummy_data_rows
         if add_attribute_info and dummy_data_rows == 0:
             dummy_data_rows = 1
