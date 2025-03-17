@@ -57,7 +57,7 @@ class CsvTemplateCreator:
     def alter_csv_template(cls, template_file_path, subset_path, temporary_path,
                            **kwargs):
         converter = OtlmowConverter()
-        instantiated_attributes = converter.from_file_to_objects(filepath=temporary_path, subset_path=subset_path)
+        instances = converter.from_file_to_objects(filepath=temporary_path, subset_path=subset_path)
         header = []
         data = []
         delimiter = ';'
@@ -78,12 +78,12 @@ class CsvTemplateCreator:
                     [header, data] = cls.remove_geo_artefact_csv(header=header, data=data)
                 if add_attribute_info:
                     info = cls.add_attribute_info_csv(header=header, data=data,
-                                                      instantiated_objects=instantiated_attributes)
+                                                      instantiated_objects=instances)
                     new_file.write(delimiter.join(info) + '\n')
                 data = cls.remove_mock_data_csv(data=data, rows_of_examples=dummy_data_rows)
                 if tag_deprecated:
                     header = cls.tag_deprecated_csv(header=header, data=data,
-                                                                     instantiated_attributes=instantiated_attributes)
+                                                                     instances=instances)
                 new_file.write(delimiter.join(header) + '\n')
                 for d in data:
                     new_file.write(delimiter.join(d) + '\n')
@@ -93,7 +93,7 @@ class CsvTemplateCreator:
     async def alter_csv_template_async(cls, template_file_path, subset_path, temporary_path,
                            **kwargs):
         converter = OtlmowConverter()
-        instantiated_attributes = await converter.from_file_to_objects_async(filepath=temporary_path,
+        instances = await converter.from_file_to_objects_async(filepath=temporary_path,
                                                                     subset_path=subset_path)
         header = []
         data = []
@@ -116,12 +116,12 @@ class CsvTemplateCreator:
                 [header, data] = cls.remove_geo_artefact_csv(header=header, data=data)
             if add_attribute_info:
                 info = cls.add_attribute_info_csv(header=header, data=data,
-                                                  instantiated_objects=instantiated_attributes)
+                                                  instantiated_objects=instances)
                 new_file.write(delimiter.join(info) + '\n')
             data = cls.remove_mock_data_csv(data=data, rows_of_examples=dummy_data_rows)
             if tag_deprecated:
                 header = cls.tag_deprecated_csv(header=header, data=data,
-                                                                 instantiated_attributes=instantiated_attributes)
+                                                                 instances=instances)
             new_file.write(delimiter.join(header) + '\n')
             for d in data:
                 new_file.write(delimiter.join(d) + '\n')
@@ -155,7 +155,7 @@ class CsvTemplateCreator:
         return data
 
     @classmethod
-    def tag_deprecated_csv(cls, header, data, instantiated_attributes):
+    def tag_deprecated_csv(cls, header, data, instances):
         found_uri = []
         dotnotation_module = DotnotationHelper()
         uri_index = cls.get_type_uri_index_in_row(header)
@@ -163,7 +163,7 @@ class CsvTemplateCreator:
             if d[uri_index] not in found_uri:
                 found_uri.append(d[uri_index])
         for uri in found_uri:
-            single_object = next(x for x in instantiated_attributes if x.typeURI == uri)
+            single_object = next(x for x in instances if x.typeURI == uri)
             for dotnototation_title in header:
                 if dotnototation_title == 'typeURI':
                     continue

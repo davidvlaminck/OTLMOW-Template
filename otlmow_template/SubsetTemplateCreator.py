@@ -12,6 +12,7 @@ from pathlib import Path
 from openpyxl.reader.excel import load_workbook
 from openpyxl.styles import PatternFill, Alignment
 from openpyxl.utils import get_column_letter
+from openpyxl.workbook import Workbook
 from openpyxl.worksheet.datavalidation import DataValidation
 from openpyxl.worksheet.dimensions import DimensionHolder, ColumnDimension
 from otlmow_converter.DotnotationHelper import DotnotationHelper
@@ -88,23 +89,21 @@ class SubsetTemplateCreator:
                                              split_per_type=split_per_type)
 
         # alter the file if needed
-
-
-
-
-        # TODO split altering and moving the temp file to final location
         extension = template_file_path.suffix.lower()
         if extension == '.xlsx':
             cls.alter_excel_template(template_file_path=template_file_path, generate_choice_list=generate_choice_list,
                                      temporary_path=temporary_path, dummy_data_rows=dummy_data_rows,
-                                     subset_path=subset_path, instantiated_attributes=objects, tag_deprecated=tag_deprecated,
+                                     subset_path=subset_path, instances=objects, tag_deprecated=tag_deprecated,
                                      add_geometry=add_geometry, add_attribute_info=add_attribute_info)
+
         elif extension == '.csv':
             cls.determine_multiplicity_csv(
                 template_file_path=template_file_path, dummy_data_rows=dummy_data_rows, add_geometry=add_geometry,
                 subset_path=subset_path, split_per_type=split_per_type, add_attribute_info=add_attribute_info,
-                instantiated_attributes=objects,
+                instances=objects,
                 temporary_path=temporary_path, tag_deprecated=tag_deprecated)
+
+    # TODO move the file
 
     @classmethod
     async def generate_template_from_subset_async(cls, subset_path: Path, template_file_path: Path,
@@ -116,7 +115,7 @@ class SubsetTemplateCreator:
         test = ntpath.basename(template_file_path)
         temporary_path = Path(tempdir) / test
         await sleep(0)
-        instantiated_attributes = (await cls.generate_basic_template_async(
+        instances = (await cls.generate_basic_template_async(
             subset_path=subset_path, temporary_path=temporary_path, ignore_relations=ignore_relations,
             template_file_path=template_file_path,
             filter_attributes_by_subset=filter_attributes_by_subset, **kwargs))
@@ -126,13 +125,13 @@ class SubsetTemplateCreator:
             await cls.alter_excel_template_async(
                 template_file_path=template_file_path,
                                       temporary_path=temporary_path,
-                                      subset_path=subset_path, instantiated_attributes=instantiated_attributes,
+                                      subset_path=subset_path, instances=instances,
                                       **kwargs)
         elif extension == '.csv':
             await cls.determine_multiplicity_csv_async(
                 template_file_path=template_file_path,
                                             subset_path=subset_path,
-                                            instantiated_attributes=instantiated_attributes,
+                                            instances=instances,
                                             temporary_path=temporary_path,
                                             **kwargs)
 
@@ -177,12 +176,24 @@ class SubsetTemplateCreator:
             if instance is None:
                 continue
 
-            for attribute_object in collector.find_attributes_by_class(oslo_class):
-                attr = get_attribute_by_name(instance, attribute_object.name)
-                attr.fill_with_dummy_data()
+            if filter_attributes_by_subset:
+                for attribute_object in collector.find_attributes_by_class(oslo_class):
+                    attr = get_attribute_by_name(instance, attribute_object.name)
+                    attr.fill_with_dummy_data()
+            else:
+                for attr in instance:
+                    if attr.naam != 'geometry':
+                        attr.fill_with_dummy_data()
             with contextlib.suppress(AttributeError):
-                geo_attr = get_attribute_by_name(instance, 'geometry')
-                geo_attr.fill_with_dummy_data()
+                if add_geometry:
+                    geo_attr = get_attribute_by_name(instance, 'geometry')
+                    if geo_attr is not None:
+                        geo_attr.fill_with_dummy_data()
+
+            asset_versie = get_attribute_by_name(instance, 'assetVersie')
+            if asset_versie is not None:
+                asset_versie.set_waarde(None)
+
             otl_objects.append(instance)
 
             DotnotationHelper.clear_list_of_list_attributes(instance)
@@ -233,38 +244,55 @@ class SubsetTemplateCreator:
         await converter.from_objects_to_file_async(file_path=temporary_path, sequence_of_objects=otl_objects, **kwargs)
         path_is_split = kwargs.get('split_per_type', True)
         extension = os.path.splitext(template_file_path)[-1].lower()
-        instantiated_attributes = []
+        instances = []
         if path_is_split is False or extension == '.xlsx':
-            instantiated_attributes = await converter.from_file_to_objects_async(
+            instances = await converter.from_file_to_objects_async(
                 file_path=temporary_path, subset_path=subset_path)
-        return list(instantiated_attributes)
+        return list(instances)
 
     @classmethod
     def alter_excel_template(cls, template_file_path: Path, subset_path: Path, add_geometry: bool,
-                             instantiated_attributes: list, temporary_path: Path, add_attribute_info: bool,
+                             instances: list, temporary_path: Path, add_attribute_info: bool,
                              generate_choice_list: bool, dummy_data_rows: int, tag_deprecated: bool):
-        original_dummy_data_rows = dummy_data_rows
-        if add_attribute_info and dummy_data_rows == 0:
-            dummy_data_rows = 1
         wb = load_workbook(temporary_path)
         wb.create_sheet('Keuzelijsten')
-        # Volgorde is belangrijk! Eerst rijen verwijderen indien nodig dan choice list toevoegen,
-        # staat namelijk vast op de kolom en niet het attribuut in die kolom
-        if add_geometry is False:
-            cls.remove_geo_artefact_excel(workbook=wb)
-        if generate_choice_list:
-            cls.add_choice_list_excel(workbook=wb, instantiated_attributes=instantiated_attributes,
-                                      subset_path=subset_path, add_attribute_info=add_attribute_info)
-        cls.add_mock_data_excel(workbook=wb, rows_of_examples=dummy_data_rows) # remove dummy rows if needed
 
-        cls.custom_exel_fixes(workbook=wb, instantiated_attributes=instantiated_attributes,
+        # tag_deprecated (loop over attributes by header row) alter header row
+        # add_attribute_info (loop over attributes by header row) collect attribute info and insert first row when done
+        # generate_choice_list (loop over attributes by header row) alter Keuzelijsten sheet (use iter_cols)
+        # type_uri choice_list in Excel (loop over attributes) (use iter_cols)
+
+        # set_fixed_column_width (25)
+
+
+        for sheet in wb:
+            if sheet.title == 'Keuzelijsten':
+                break
+            cls.add_type_uri_choice_list_in_excel(sheet=sheet, instances=instances,
+                                                  add_attribute_info=add_attribute_info)
+            cls.remove_asset_versie(sheet=sheet)
+
+
+
+
+
+        cls.custom_exel_fixes(workbook=wb, instances=instances,
                                     add_attribute_info=add_attribute_info)
         if tag_deprecated:
-            cls.check_for_deprecated_attributes(workbook=wb, instantiated_attributes=instantiated_attributes)
+            cls.check_for_deprecated_attributes(workbook=wb, instances=instances)
         if add_attribute_info:
-            cls.add_attribute_info_excel(workbook=wb, instantiated_attributes=instantiated_attributes)
-        if original_dummy_data_rows == 0 and add_attribute_info:
-            cls.remove_examples_from_excel_again(workbook=wb)
+            cls.add_attribute_info_excel(workbook=wb, instances=instances)
+
+
+        # remove dummy_row if needed
+        if dummy_data_rows == 0:
+            cls.remove_dummy_row_from_excel(workbook=wb, add_attribute_info=add_attribute_info)
+
+        if generate_choice_list:
+            cls.add_choice_list_excel(workbook=wb, instances=instances,
+                                      subset_path=subset_path, add_attribute_info=add_attribute_info)
+
+
         wb.save(template_file_path)
         file_location = os.path.dirname(temporary_path)
         [f.unlink() for f in Path(file_location).glob("*") if f.is_file()]
@@ -272,7 +300,7 @@ class SubsetTemplateCreator:
 
     @classmethod
     async def alter_excel_template_async(cls, template_file_path: Path, subset_path: Path, add_geometry: bool,
-                             instantiated_attributes: list, temporary_path, **kwargs):
+                             instances: list, temporary_path, **kwargs):
         await sleep(0)
         generate_choice_list = kwargs.get('generate_choice_list', False)
         add_attribute_info = kwargs.get('add_attribute_info', False)
@@ -291,20 +319,20 @@ class SubsetTemplateCreator:
             cls.remove_geo_artefact_excel(workbook=wb)
         if generate_choice_list:
             await sleep(0)
-            await cls.add_choice_list_excel_async(workbook=wb, instantiated_attributes=instantiated_attributes,
+            await cls.add_choice_list_excel_async(workbook=wb, instances=instances,
                                       subset_path=subset_path, add_attribute_info=add_attribute_info)
         await sleep(0)
         cls.add_mock_data_excel(workbook=wb, rows_of_examples=dummy_data_rows) # remove dummy rows if needed
 
-        await cls.custom_exel_fixes_async(workbook=wb, instantiated_attributes=instantiated_attributes,
+        await cls.custom_exel_fixes_async(workbook=wb, instances=instances,
                                     add_attribute_info=add_attribute_info)
         await sleep(0)
         if tag_deprecated:
             await sleep(0)
-            cls.check_for_deprecated_attributes(workbook=wb, instantiated_attributes=instantiated_attributes)
+            cls.check_for_deprecated_attributes(workbook=wb, instances=instances)
         if add_attribute_info:
             await sleep(0)
-            await cls.add_attribute_info_excel_async(workbook=wb, instantiated_attributes=instantiated_attributes)
+            await cls.add_attribute_info_excel_async(workbook=wb, instances=instances)
         if original_dummy_data_rows == 0 and add_attribute_info:
             cls.remove_examples_from_excel_again(workbook=wb)
         await sleep(0)
@@ -314,7 +342,7 @@ class SubsetTemplateCreator:
 
     @classmethod
     def determine_multiplicity_csv(cls, template_file_path: Path, subset_path: Path,
-                                   instantiated_attributes: list, temporary_path: Path, **kwargs):
+                                   instances: list, temporary_path: Path, **kwargs):
         path_is_split = kwargs.get('split_per_type', True)
         if path_is_split is False:
             cls.alter_csv_template(template_file_path=template_file_path,
@@ -323,14 +351,14 @@ class SubsetTemplateCreator:
             cls.multiple_csv_template(
                 template_file_path=template_file_path,
                                        temporary_path=temporary_path,
-                                       subset_path=subset_path, instantiated_attributes=instantiated_attributes,
+                                       subset_path=subset_path, instances=instances,
                                        **kwargs)
         file_location = os.path.dirname(temporary_path)
         [f.unlink() for f in Path(file_location).glob("*") if f.is_file()]
 
     @classmethod
     async def determine_multiplicity_csv_async(cls, template_file_path: Path, subset_path: Path,
-                                   instantiated_attributes: list, temporary_path: Path, **kwargs):
+                                   instances: list, temporary_path: Path, **kwargs):
         path_is_split = kwargs.get('split_per_type', True)
         await sleep(0)
         if path_is_split is False:
@@ -340,7 +368,7 @@ class SubsetTemplateCreator:
             await cls.multiple_csv_template_async(
                 template_file_path=template_file_path,
                                        temporary_path=temporary_path,
-                                       subset_path=subset_path, instantiated_attributes=instantiated_attributes,
+                                       subset_path=subset_path, instances=instances,
                                        **kwargs)
         file_location = os.path.dirname(temporary_path)
         [f.unlink() for f in Path(file_location).glob("*") if f.is_file()]
@@ -358,7 +386,7 @@ class SubsetTemplateCreator:
         return converter_path / 'settings_otlmow_converter.json'
 
     @classmethod
-    def add_type_uri_choice_list_in_excel(cls, sheet, instantiated_attributes, add_attribute_info: bool):
+    def add_type_uri_choice_list_in_excel(cls, sheet, instances, add_attribute_info: bool):
         starting_row = '3' if add_attribute_info else '2'
         if sheet.title == 'Keuzelijsten':
             return
@@ -381,7 +409,7 @@ class SubsetTemplateCreator:
             split_name = sheet_name.split("#")
             subclass_name = split_name[1]
 
-            possible_classes = [x for x in instantiated_attributes if x.typeURI.endswith(subclass_name)]
+            possible_classes = [x for x in instances if x.typeURI.endswith(subclass_name)]
             if len(possible_classes) == 1:
                 type_uri = possible_classes[0].typeURI
 
@@ -396,7 +424,7 @@ class SubsetTemplateCreator:
                 data_validation.add(f'{get_column_letter(column)}{starting_row}:{get_column_letter(column)}1000')
 
     @classmethod
-    async def add_type_uri_choice_list_in_excel_async(cls, sheet, instantiated_attributes, add_attribute_info: bool):
+    async def add_type_uri_choice_list_in_excel_async(cls, sheet, instances, add_attribute_info: bool):
         starting_row = '3' if add_attribute_info else '2'
         await sleep(0)
         if sheet.title == 'Keuzelijsten':
@@ -421,7 +449,7 @@ class SubsetTemplateCreator:
             split_name = sheet_name.split("#")
             subclass_name = split_name[1]
 
-            possible_classes = [x for x in instantiated_attributes if x.typeURI.endswith(subclass_name)]
+            possible_classes = [x for x in instances if x.typeURI.endswith(subclass_name)]
             if len(possible_classes) == 1:
                 type_uri = possible_classes[0].typeURI
 
@@ -438,20 +466,20 @@ class SubsetTemplateCreator:
                 data_validation.add(f'{get_column_letter(column)}{starting_row}:{get_column_letter(column)}1000')
 
     @classmethod
-    def custom_exel_fixes(cls, workbook, instantiated_attributes, add_attribute_info: bool):
+    def custom_exel_fixes(cls, workbook, instances, add_attribute_info: bool):
         for sheet in workbook:
             cls.set_fixed_column_width(sheet=sheet, width=25)
-            cls.add_type_uri_choice_list_in_excel(sheet=sheet, instantiated_attributes=instantiated_attributes,
+            cls.add_type_uri_choice_list_in_excel(sheet=sheet, instances=instances,
                                                         add_attribute_info=add_attribute_info)
             cls.remove_asset_versie(sheet=sheet)
 
     @classmethod
-    async def custom_exel_fixes_async(cls, workbook, instantiated_attributes, add_attribute_info: bool):
+    async def custom_exel_fixes_async(cls, workbook, instances, add_attribute_info: bool):
         for sheet in workbook:
             await sleep(0)
             await cls.set_fixed_column_width_async(sheet=sheet, width=25)
             await cls.add_type_uri_choice_list_in_excel_async(sheet=sheet,
-                                                            instantiated_attributes=instantiated_attributes,
+                                                            instances=instances,
                                                         add_attribute_info=add_attribute_info)
             await cls.remove_asset_versie_async(sheet=sheet)
 
@@ -493,13 +521,13 @@ class SubsetTemplateCreator:
         sheet.column_dimensions = dim_holder
 
     @classmethod
-    def add_attribute_info_excel(cls, workbook, instantiated_attributes: list):
+    def add_attribute_info_excel(cls, workbook, instances: list):
         dotnotation_module = DotnotationHelper()
         for sheet in workbook:
             if sheet == workbook['Keuzelijsten']:
                 break
             filter_uri = SubsetTemplateCreator.find_uri_in_sheet(sheet)
-            single_attribute = next(x for x in instantiated_attributes if x.typeURI == filter_uri)
+            single_attribute = next(x for x in instances if x.typeURI == filter_uri)
             sheet.insert_rows(1)
             for rows in sheet.iter_rows(min_row=2, max_row=2, min_col=1):
                 for cell in rows:
@@ -520,14 +548,14 @@ class SubsetTemplateCreator:
                                                fill_type="solid")
 
     @classmethod
-    async def add_attribute_info_excel_async(cls, workbook, instantiated_attributes: list):
+    async def add_attribute_info_excel_async(cls, workbook, instances: list):
         dotnotation_module = DotnotationHelper()
         for sheet in workbook:
             if sheet == workbook['Keuzelijsten']:
                 break
             filter_uri = SubsetTemplateCreator.find_uri_in_sheet(sheet)
             await sleep(0)
-            single_attribute = next(x for x in instantiated_attributes if x.typeURI == filter_uri)
+            single_attribute = next(x for x in instances if x.typeURI == filter_uri)
             sheet.insert_rows(1)
             for rows in sheet.iter_rows(min_row=2, max_row=2, min_col=1):
                 for cell in rows:
@@ -549,13 +577,13 @@ class SubsetTemplateCreator:
                                                fill_type="solid")
 
     @classmethod
-    def check_for_deprecated_attributes(cls, workbook, instantiated_attributes: list):
+    def check_for_deprecated_attributes(cls, workbook, instances: list):
         dotnotation_module = DotnotationHelper()
         for sheet in workbook:
             if sheet == workbook['Keuzelijsten']:
                 break
             filter_uri = SubsetTemplateCreator.find_uri_in_sheet(sheet)
-            single_attribute = next(x for x in instantiated_attributes if x.typeURI == filter_uri)
+            single_attribute = next(x for x in instances if x.typeURI == filter_uri)
             for rows in sheet.iter_rows(min_row=1, max_row=1, min_col=2):
                 for cell in rows:
                     is_deprecated = False
@@ -594,7 +622,7 @@ class SubsetTemplateCreator:
                         sheet.delete_cols(cell.column)
 
     @classmethod
-    def add_choice_list_excel(cls, workbook, instantiated_attributes: list, subset_path: Path,
+    def add_choice_list_excel(cls, workbook, instances: list, subset_path: Path,
                                     add_attribute_info: bool=False):
         choice_list_dict = {}
         starting_row = '3' if add_attribute_info else '2'
@@ -603,7 +631,7 @@ class SubsetTemplateCreator:
             if sheet == workbook['Keuzelijsten']:
                 break
             filter_uri = SubsetTemplateCreator.find_uri_in_sheet(sheet)
-            single_attribute = next(x for x in instantiated_attributes if x.typeURI == filter_uri)
+            single_attribute = next(x for x in instances if x.typeURI == filter_uri)
             for rows in sheet.iter_rows(min_row=1, max_row=1, min_col=2):
                 for cell in rows:
                     if cell.value.find('[DEPRECATED]') != -1:
@@ -637,7 +665,7 @@ class SubsetTemplateCreator:
                                             f'{get_column_letter(column)}1000')
 
     @classmethod
-    async def add_choice_list_excel_async(cls, workbook, instantiated_attributes: list, subset_path: Path,
+    async def add_choice_list_excel_async(cls, workbook, instances: list, subset_path: Path,
                                     add_attribute_info: bool = False):
         choice_list_dict = {}
         starting_row = '3' if add_attribute_info else '2'
@@ -647,7 +675,7 @@ class SubsetTemplateCreator:
             if sheet == workbook['Keuzelijsten']:
                 break
             filter_uri = SubsetTemplateCreator.find_uri_in_sheet(sheet)
-            single_attribute = next(x for x in instantiated_attributes if x.typeURI == filter_uri)
+            single_attribute = next(x for x in instances if x.typeURI == filter_uri)
             for rows in sheet.iter_rows(min_row=1, max_row=1, min_col=2):
                 for cell in rows:
                     await sleep(0)
@@ -685,14 +713,12 @@ class SubsetTemplateCreator:
 
 
     @classmethod
-    def add_mock_data_excel(cls, workbook, rows_of_examples: int):
+    def remove_dummy_row_from_excel(cls, workbook: Workbook, add_attribute_info: bool):
+        row_nr = 3 if add_attribute_info else 2
         for sheet in workbook:
             if sheet == workbook["Keuzelijsten"]:
                 break
-            if rows_of_examples == 0:
-                for rows in sheet.iter_rows(min_row=2, max_row=2):
-                    for cell in rows:
-                        cell.value = ''
+            sheet.delete_rows(row_nr, 1)
 
     @classmethod
     def remove_geo_artefact_csv(cls, header, data):
@@ -705,7 +731,7 @@ class SubsetTemplateCreator:
 
     @classmethod
     def multiple_csv_template(cls, template_file_path, subset_path, temporary_path,
-                              instantiated_attributes, **kwargs):
+                              instances, **kwargs):
         file_location = os.path.dirname(template_file_path)
         tempdir = Path(tempfile.gettempdir()) / 'temp-otlmow'
         logging.debug(file_location)
@@ -721,7 +747,7 @@ class SubsetTemplateCreator:
 
     @classmethod
     async def multiple_csv_template_async(cls, template_file_path, subset_path, temporary_path,
-                              instantiated_attributes, **kwargs):
+                              instances, **kwargs):
         file_location = os.path.dirname(template_file_path)
         tempdir = Path(tempfile.gettempdir()) / 'temp-otlmow'
         logging.debug(file_location)
@@ -741,7 +767,7 @@ class SubsetTemplateCreator:
     def alter_csv_template(cls, template_file_path, subset_path, temporary_path,
                            **kwargs):
         converter = OtlmowConverter()
-        instantiated_attributes = converter.from_file_to_objects(file_path=temporary_path,
+        instances = converter.from_file_to_objects(file_path=temporary_path,
                                                                  subset_path=subset_path)
         header = []
         data = []
@@ -763,12 +789,12 @@ class SubsetTemplateCreator:
                     [header, data] = cls.remove_geo_artefact_csv(header=header, data=data)
                 if add_attribute_info:
                     [info, header] = cls.add_attribute_info_csv(header=header, data=data,
-                                                                instantiated_attributes=instantiated_attributes)
+                                                                instances=instances)
                     new_file.write(delimiter.join(info) + '\n')
                 data = cls.add_mock_data_csv(header=header, data=data, rows_of_examples=dummy_data_rows)
                 if tag_deprecated:
                     header = cls.tag_deprecated_csv(header=header, data=data,
-                                                                     instantiated_attributes=instantiated_attributes)
+                                                                     instances=instances)
                 new_file.write(delimiter.join(header) + '\n')
                 for d in data:
                     new_file.write(delimiter.join(d) + '\n')
@@ -777,7 +803,7 @@ class SubsetTemplateCreator:
     async def alter_csv_template_async(cls, template_file_path, subset_path, temporary_path,
                            **kwargs):
         converter = OtlmowConverter()
-        instantiated_attributes = await converter.from_file_to_objects_async(
+        instances = await converter.from_file_to_objects_async(
             file_path=temporary_path, subset_path=subset_path)
         header = []
         data = []
@@ -800,18 +826,18 @@ class SubsetTemplateCreator:
                     [header, data] = cls.remove_geo_artefact_csv(header=header, data=data)
                 if add_attribute_info:
                     [info, header] = cls.add_attribute_info_csv(header=header, data=data,
-                                                                instantiated_attributes=instantiated_attributes)
+                                                                instances=instances)
                     new_file.write(delimiter.join(info) + '\n')
                 data = cls.add_mock_data_csv(header=header, data=data, rows_of_examples=dummy_data_rows)
                 if tag_deprecated:
                     header = cls.tag_deprecated_csv(header=header, data=data,
-                                                                     instantiated_attributes=instantiated_attributes)
+                                                                     instances=instances)
                 new_file.write(delimiter.join(header) + '\n')
                 for d in data:
                     new_file.write(delimiter.join(d) + '\n')
 
     @classmethod
-    def add_attribute_info_csv(cls, header, data, instantiated_attributes):
+    def add_attribute_info_csv(cls, header, data, instances):
         info_data = []
         info_data.extend(header)
         found_uri = []
@@ -821,7 +847,7 @@ class SubsetTemplateCreator:
             if d[uri_index] not in found_uri:
                 found_uri.append(d[uri_index])
         for uri in found_uri:
-            single_object = next(x for x in instantiated_attributes if x.typeURI == uri)
+            single_object = next(x for x in instances if x.typeURI == uri)
             for dotnototation_title in info_data:
                 if dotnototation_title == 'typeURI':
                     index = info_data.index(dotnototation_title)
@@ -843,7 +869,7 @@ class SubsetTemplateCreator:
         return data
 
     @classmethod
-    def tag_deprecated_csv(cls, header, data, instantiated_attributes):
+    def tag_deprecated_csv(cls, header, data, instances):
         found_uri = []
         dotnotation_module = DotnotationHelper()
         uri_index = cls.find_uri_in_csv(header)
@@ -851,7 +877,7 @@ class SubsetTemplateCreator:
             if d[uri_index] not in found_uri:
                 found_uri.append(d[uri_index])
         for uri in found_uri:
-            single_object = next(x for x in instantiated_attributes if x.typeURI == uri)
+            single_object = next(x for x in instances if x.typeURI == uri)
             for dotnototation_title in header:
                 if dotnototation_title == 'typeURI':
                     continue

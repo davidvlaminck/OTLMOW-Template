@@ -15,7 +15,7 @@ from otlmow_model.OtlmowModel.BaseClasses.KeuzelijstField import KeuzelijstField
 class ExcelTemplateCreator:
 
     @classmethod
-    def alter_excel_template(cls, template_file_path: Path, instantiated_attributes: List,
+    def alter_excel_template(cls, template_file_path: Path, instances: List,
                              temporary_path: Path, **kwargs):
         generate_choice_list = kwargs.get('generate_choice_list', False)
         add_geometry = kwargs.get('add_geometry', False)
@@ -29,25 +29,25 @@ class ExcelTemplateCreator:
         if add_geometry is False:
             cls.remove_geo_artefact_excel(workbook=wb)
         if generate_choice_list:
-            cls.add_choice_list_excel(workbook=wb, instantiated_attributes=instantiated_attributes)
+            cls.add_choice_list_excel(workbook=wb, instances=instances)
         cls.add_mock_data_excel(workbook=wb, rows_of_examples=dummy_data_rows)
         if tag_deprecated:
-            cls.check_for_deprecated_attributes_excel(workbook=wb, instantiated_attributes=instantiated_attributes)
+            cls.check_for_deprecated_attributes_excel(workbook=wb, instances=instances)
         if add_attribute_info:
-            cls.add_attribute_info_excel(workbook=wb, instantiated_attributes=instantiated_attributes)
+            cls.add_attribute_info_excel(workbook=wb, instances=instances)
         cls.design_workbook_excel(workbook=wb)
         wb.save(template_file_path)
         file_location = os.path.dirname(temporary_path)
         [f.unlink() for f in Path(file_location).glob("*") if f.is_file()]
 
     @classmethod
-    def add_attribute_info_excel(cls, workbook, instantiated_attributes: List):
+    def add_attribute_info_excel(cls, workbook, instances: List):
         dotnotation_module = DotnotationHelper()
         for sheet in workbook:
             if sheet == workbook['Keuzelijsten']:
                 break
             filter_uri = cls.find_uri_in_sheet(sheet)
-            single_attribute = next(x for x in instantiated_attributes if x.typeURI == filter_uri)
+            single_attribute = next(x for x in instances if x.typeURI == filter_uri)
             sheet.insert_rows(1)
             for rows in sheet.iter_rows(min_row=2, max_row=2, min_col=1):
                 for cell in rows:
@@ -68,13 +68,13 @@ class ExcelTemplateCreator:
                                                                              fill_type="solid")
 
     @classmethod
-    def check_for_deprecated_attributes_excel(cls, workbook, instantiated_attributes: List):
+    def check_for_deprecated_attributes_excel(cls, workbook, instances: List):
         dotnotation_module = DotnotationHelper()
         for sheet in workbook:
             if sheet == workbook['Keuzelijsten']:
                 break
             filter_uri = cls.find_uri_in_sheet(sheet)
-            single_attribute = next(x for x in instantiated_attributes if x.typeURI == filter_uri)
+            single_attribute = next(x for x in instances if x.typeURI == filter_uri)
             for rows in sheet.iter_rows(min_row=1, max_row=1, min_col=2):
                 for cell in rows:
                     is_deprecated = False
@@ -113,14 +113,14 @@ class ExcelTemplateCreator:
                         sheet.delete_cols(cell.column)
 
     @classmethod
-    def add_choice_list_excel(cls, workbook, instantiated_attributes: List):
+    def add_choice_list_excel(cls, workbook, instances: List):
         choice_list_dict = {}
         dotnotation_module = DotnotationHelper()
         for sheet in workbook:
             if sheet == workbook['Keuzelijsten']:
                 break
             filter_uri = cls.find_uri_in_sheet(sheet)
-            single_attribute = next(x for x in instantiated_attributes if x.typeURI == filter_uri)
+            single_attribute = next(x for x in instances if x.typeURI == filter_uri)
             for rows in sheet.iter_rows(min_row=1, max_row=1, min_col=2):
                 for cell in rows:
                     if cell.value.find('[DEPRECATED]') != -1:
