@@ -273,41 +273,64 @@ class SubsetTemplateCreator:
 
         # set_fixed_column_width (25)
 
-
-
-
+        choice_list_dict = {}
         for sheet in wb:
             if sheet.title == 'Keuzelijsten':
                 break
 
             type_uri = cls.get_uri_from_sheet_name(sheet.title)
-
             instance = next(x for x in instances if x.typeURI == type_uri)
 
-            cls.add_type_uri_choice_list_in_excel(sheet=sheet, instances=instances,
-                                                  add_attribute_info=add_attribute_info)
-            cls.remove_asset_versie(sheet=sheet)
+            boolean_validation = DataValidation(type="list", formula1=f'"{type_uri}"', allow_blank=True)
+            sheet.add_data_validation(boolean_validation)
 
+            collected_attribute_info = []
+            header_row_nr = 2 if add_attribute_info else 1
 
+            header_row = next(sheet.iter_rows(min_row=header_row_nr, max_row=header_row_nr))
+            for index, header_cell in enumerate(header_row):
+                header = header_cell.value
+                if header is None or header == '':
+                    continue
 
+                # add type_uri
+                if header == 'typeURI':
+                    data_validation = DataValidation(type="list", formula1=f'"{type_uri}"', allow_blank=True)
+                    sheet.add_data_validation(data_validation)
+                    data_validation.add(f'{header_cell.column_letter}{(header_row_nr + 1)}:'
+                                        f'{header_cell.column_letter}1000')
+                    continue
 
+                attribute = DotnotationHelper.get_attribute_by_dotnotation(instance, header)
 
-        cls.custom_exel_fixes(workbook=wb, instances=instances,
-                                    add_attribute_info=add_attribute_info)
-        if tag_deprecated:
-            cls.check_for_deprecated_attributes(workbook=wb, instances=instances)
-        if add_attribute_info:
-            cls.add_attribute_info_excel(workbook=wb, instances=instances)
+                if add_attribute_info:
+                    collected_attribute_info.append(attribute.definition)
 
+                if tag_deprecated and attribute.deprecated_version:
+                    sheet.cell(row=header_row_nr, column=index + 1, value=f'[DEPRECATED] {header}')
 
-        # remove dummy_row if needed
-        if dummy_data_rows == 0:
-            cls.remove_dummy_row_from_excel(workbook=wb, add_attribute_info=add_attribute_info)
+                if generate_choice_list:
+                    if issubclass(attribute.field, BooleanField):
+                        boolean_validation.add(f'{header_cell.column_letter}{(header_row_nr + 1)}:'
+                                            f'{header_cell.column_letter}1000')
+                        continue
 
-        if generate_choice_list:
-            cls.add_choice_list_excel(workbook=wb, instances=instances,
-                                      subset_path=subset_path, add_attribute_info=add_attribute_info)
+                    if issubclass(attribute.field, KeuzelijstField):
+                        choice_list_values = [cv for cv in attribute.field.options.values()
+                                              if cv.status != 'verwijderd']
+                        if attribute.field.naam not in choice_list_dict:
+                            # add choice_list to sheet Keuzelijsten and save its column
+                            cls.add_choice_list_to_sheet(workbook=wb, name=attribute.field.naam,
+                                                         options=choice_list_values, choice_list_dict=choice_list_dict)
 
+                        column_in_choice_sheet = choice_list_dict[attribute.field.naam]
+                        start_range = f"${column_in_choice_sheet}$2"
+                        end_range = f"${column_in_choice_sheet}${len(choice_list_values) + 1}"
+                        data_val = DataValidation(type="list", formula1=f"Keuzelijsten!{start_range}:{end_range}",
+                                                  allowBlank=True)
+                        sheet.add_data_validation(data_val)
+                        data_val.add(f'{get_column_letter(header_cell.column)}{header_row_nr + 1}:'
+                                     f'{get_column_letter(header_cell.column)}1000')
 
         wb.save(template_file_path)
         file_location = os.path.dirname(temporary_path)
