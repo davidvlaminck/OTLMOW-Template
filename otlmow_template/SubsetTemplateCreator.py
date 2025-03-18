@@ -5,6 +5,7 @@ import ntpath
 import os
 import site
 import tempfile
+import time
 from asyncio import sleep
 from pathlib import Path
 
@@ -104,6 +105,7 @@ class SubsetTemplateCreator:
                                      temporary_path=temporary_path, dummy_data_rows=dummy_data_rows,
                                      subset_path=subset_path, instances=objects, tag_deprecated=tag_deprecated,
                                      add_geometry=add_geometry, add_attribute_info=add_attribute_info)
+            temporary_path.rename(template_file_path)
 
         elif extension == '.csv':
             cls.determine_multiplicity_csv(
@@ -281,7 +283,7 @@ class SubsetTemplateCreator:
             type_uri = cls.get_uri_from_sheet_name(sheet.title)
             instance = next(x for x in instances if x.typeURI == type_uri)
 
-            boolean_validation = DataValidation(type="list", formula1=f'"{type_uri}"', allow_blank=True)
+            boolean_validation = DataValidation(type="list", formula1='"TRUE,FALSE,"', allow_blank=True)
             sheet.add_data_validation(boolean_validation)
 
             collected_attribute_info = []
@@ -333,9 +335,9 @@ class SubsetTemplateCreator:
                                      f'{get_column_letter(header_cell.column)}1000')
 
         wb.save(template_file_path)
-        file_location = os.path.dirname(temporary_path)
-        [f.unlink() for f in Path(file_location).glob("*") if f.is_file()]
+        wb.close()
 
+        os.remove(temporary_path)
 
     @classmethod
     async def alter_excel_template_async(cls, template_file_path: Path, subset_path: Path, add_geometry: bool,
