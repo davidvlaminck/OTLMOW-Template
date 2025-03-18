@@ -263,7 +263,7 @@ class SubsetTemplateCreator:
     def alter_excel_template(cls, template_file_path: Path, subset_path: Path, add_geometry: bool,
                              instances: list, temporary_path: Path, add_attribute_info: bool,
                              generate_choice_list: bool, dummy_data_rows: int, tag_deprecated: bool):
-        wb = load_workbook(temporary_path)
+        wb = load_workbook(temporary_path, read_only=False)
         wb.create_sheet('Keuzelijsten')
 
         # tag_deprecated (loop over attributes by header row) alter header row
@@ -949,18 +949,17 @@ class SubsetTemplateCreator:
     @classmethod
     def add_choice_list_to_sheet(cls, workbook, name, options, choice_list_dict):
         active_sheet = workbook['Keuzelijsten']
-        row_nr = 2
-        for rows in active_sheet.iter_rows(min_row=1, max_row=1, min_col=1, max_col=700):
-            for cell in rows:
-                if cell.value is None:
-                    cell.value = name
-                    column_nr = cell.column
-                    for option in options:
-                        active_sheet.cell(row=row_nr, column=column_nr, value=option)
-                        row_nr += 1
-                    choice_list_dict[name] = get_column_letter(column_nr)
-                    break
-        return choice_list_dict
+        column_nr = choice_list_dict.keys().__len__() + 1
+        row_nr = 1
+        new_header = active_sheet.cell(row=row_nr, column=column_nr)
+        if new_header.value is not None:
+            raise ValueError(f'Header already exists at column {column_nr}: {new_header.value}')
+        new_header.value = name
+        for index, option in enumerate(options, start=1):
+            cell = active_sheet.cell(row=row_nr + index, column=column_nr)
+            cell.value = option
+
+        choice_list_dict[name] = new_header.column_letter
 
     @classmethod
     def remove_examples_from_excel_again(cls, workbook):
