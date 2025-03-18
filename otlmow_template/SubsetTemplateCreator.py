@@ -957,7 +957,7 @@ class SubsetTemplateCreator:
         new_header.value = name
         for index, option in enumerate(options, start=1):
             cell = active_sheet.cell(row=row_nr + index, column=column_nr)
-            cell.value = option
+            cell.value = option.invulwaarde
 
         choice_list_dict[name] = new_header.column_letter
 
