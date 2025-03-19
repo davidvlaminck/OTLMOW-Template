@@ -1,24 +1,18 @@
 import contextlib
 import csv
-import logging
-import ntpath
 import os
 import shutil
-import site
 import tempfile
-import time
 from asyncio import sleep
 from collections import defaultdict
 from pathlib import Path
 
-import otlmow_model.OtlmowModel.Helpers.GenericHelper
 from openpyxl.reader.excel import load_workbook
 from openpyxl.styles import PatternFill, Alignment
 from openpyxl.utils import get_column_letter
 from openpyxl.workbook import Workbook
 from openpyxl.worksheet.datavalidation import DataValidation
 from openpyxl.worksheet.dimensions import DimensionHolder, ColumnDimension
-from openpyxl.worksheet.views import SheetView
 from openpyxl.worksheet.worksheet import Worksheet
 from otlmow_converter.DotnotationHelper import DotnotationHelper
 from otlmow_converter.OtlmowConverter import OtlmowConverter
@@ -165,7 +159,8 @@ class SubsetTemplateCreator:
         # write the file
         temporary_path = Path(tempdir) / template_file_path.name
         OtlmowConverter.from_objects_to_file(
-            file_path=temporary_path, sequence_of_objects=objects, split_per_type=split_per_type)
+            file_path=temporary_path, sequence_of_objects=objects, split_per_type=split_per_type,
+            model_directory=model_directory)
 
         # alter the file if needed
         extension = template_file_path.suffix.lower()

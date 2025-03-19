@@ -1,10 +1,10 @@
-import csv
 from itertools import product
 from pathlib import Path
 
 import openpyxl
 import pytest
 
+from UnitTests.TestModel.OtlmowModel.Exceptions.AttributeDeprecationWarning import AttributeDeprecationWarning
 from otlmow_template.SubsetTemplateCreator import SubsetTemplateCreator
 
 current_dir = Path(__file__).parent
