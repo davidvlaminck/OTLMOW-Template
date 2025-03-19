@@ -8,9 +8,10 @@ import site
 import tempfile
 import time
 from asyncio import sleep
+from collections import defaultdict
 from pathlib import Path
 
-
+import otlmow_model.OtlmowModel.Helpers.GenericHelper
 from openpyxl.reader.excel import load_workbook
 from openpyxl.styles import PatternFill, Alignment
 from openpyxl.utils import get_column_letter
@@ -26,6 +27,7 @@ from otlmow_model.OtlmowModel.BaseClasses.KeuzelijstField import KeuzelijstField
 from otlmow_model.OtlmowModel.BaseClasses.OTLObject import dynamic_create_instance_from_uri, OTLObject, \
     get_attribute_by_name
 from otlmow_model.OtlmowModel.Helpers.generated_lists import get_hardcoded_relation_dict
+from otlmow_modelbuilder.HelperFunctions import get_ns_and_name_from_uri
 from otlmow_modelbuilder.OSLOCollector import OSLOCollector
 from otlmow_modelbuilder.SQLDataClasses.OSLOClass import OSLOClass
 
@@ -70,13 +72,14 @@ class SubsetTemplateCreator:
             split_per_type: bool = True,
             model_directory: Path = None):
         """
-        Generate a template from a subset file
+        Generate a template from a subset file, async version.
+        Await this function!
+
         :param subset_path: Path to the subset file
         :param template_file_path: Path to where the template file should be created
         :param ignore_relations: Whether to ignore relations when creating the template, defaults to True
         :param filter_attributes_by_subset: Whether to filter by the attributes in the subset, defaults to True
-        :param class_uris_filter: List of class URIs to filter by. If not None, only classes with these URIs will be
-        included, defaults to None
+        :param class_uris_filter: List of class URIs to filter by. If not None, only classes with these URIs will be included, defaults to None
         :param dummy_data_rows: Amount of dummy data rows to add to the template, defaults to 1
         :param add_geometry: Whether to include the geometry attribute in the template, defaults to True
         :param add_attribute_info: Whether to add attribute information to the template (colored grey in Excel), defaults to False
@@ -84,7 +87,8 @@ class SubsetTemplateCreator:
         :param generate_choice_list: Whether to generate a choice list in the template (only for Excel), defaults to True
         :param split_per_type: Whether to split the template into a file per type (only for CSV), defaults to True
         :param model_directory: Path to the model directory, defaults to None
-        :return:
+
+        :return: None
         """
         tempdir = Path(tempfile.gettempdir()) / 'temp-otlmow'
         if not tempdir.exists():
@@ -98,8 +102,8 @@ class SubsetTemplateCreator:
 
         # write the file
         temporary_path = Path(tempdir) / template_file_path.name
-        await OtlmowConverter.from_objects_to_file_async(file_path=temporary_path, sequence_of_objects=objects,
-                                             split_per_type=split_per_type)
+        await OtlmowConverter.from_objects_to_file_async(
+            file_path=temporary_path, sequence_of_objects=objects, split_per_type=split_per_type)
 
         # alter the file if needed
         extension = template_file_path.suffix.lower()
@@ -110,11 +114,10 @@ class SubsetTemplateCreator:
             shutil.move(temporary_path, template_file_path)
 
         elif extension == '.csv':
-            await cls.determine_multiplicity_csv_async(
-                template_file_path=template_file_path, dummy_data_rows=dummy_data_rows, add_geometry=add_geometry,
-                subset_path=subset_path, split_per_type=split_per_type, add_attribute_info=add_attribute_info,
-                instances=objects,
-                temporary_path=temporary_path, tag_deprecated=tag_deprecated)
+            await cls.alter_csv_template_async(
+                split_per_type=split_per_type, file_path=template_file_path, temp_file_path=temporary_path,
+                dummy_data_rows=dummy_data_rows, instances=objects, tag_deprecated=tag_deprecated,
+                add_attribute_info=add_attribute_info)
 
     @classmethod
     def generate_template_from_subset(
@@ -132,22 +135,23 @@ class SubsetTemplateCreator:
             split_per_type: bool = True,
             model_directory: Path = None):
         """
-        Generate a template from a subset file
-        :param subset_path: Path to the subset file
-        :param template_file_path: Path to where the template file should be created
-        :param ignore_relations: Whether to ignore relations when creating the template, defaults to True
-        :param filter_attributes_by_subset: Whether to filter by the attributes in the subset, defaults to True
-        :param class_uris_filter: List of class URIs to filter by. If not None, only classes with these URIs will be
-        included, defaults to None
-        :param dummy_data_rows: Amount of dummy data rows to add to the template, defaults to 1
-        :param add_geometry: Whether to include the geometry attribute in the template, defaults to True
-        :param add_attribute_info: Whether to add attribute information to the template (colored grey in Excel), defaults to False
-        :param tag_deprecated: Whether to tag deprecated attributes in the template, defaults to False
-        :param generate_choice_list: Whether to generate a choice list in the template (only for Excel), defaults to True
-        :param split_per_type: Whether to split the template into a file per type (only for CSV), defaults to True
-        :param model_directory: Path to the model directory, defaults to None
-        :return:
-        """
+         Generate a template from a subset file.
+
+         :param subset_path: Path to the subset file
+         :param template_file_path: Path to where the template file should be created
+         :param ignore_relations: Whether to ignore relations when creating the template, defaults to True
+         :param filter_attributes_by_subset: Whether to filter by the attributes in the subset, defaults to True
+         :param class_uris_filter: List of class URIs to filter by. If not None, only classes with these URIs will be included, defaults to None
+         :param dummy_data_rows: Amount of dummy data rows to add to the template, defaults to 1
+         :param add_geometry: Whether to include the geometry attribute in the template, defaults to True
+         :param add_attribute_info: Whether to add attribute information to the template (colored grey in Excel), defaults to False
+         :param tag_deprecated: Whether to tag deprecated attributes in the template, defaults to False
+         :param generate_choice_list: Whether to generate a choice list in the template (only for Excel), defaults to True
+         :param split_per_type: Whether to split the template into a file per type (only for CSV), defaults to True
+         :param model_directory: Path to the model directory, defaults to None
+
+         :return: None
+         """
         tempdir = Path(tempfile.gettempdir()) / 'temp-otlmow'
         if not tempdir.exists():
             os.makedirs(tempdir)
@@ -160,8 +164,8 @@ class SubsetTemplateCreator:
 
         # write the file
         temporary_path = Path(tempdir) / template_file_path.name
-        OtlmowConverter.from_objects_to_file(file_path=temporary_path, sequence_of_objects=objects,
-                                             split_per_type=split_per_type)
+        OtlmowConverter.from_objects_to_file(
+            file_path=temporary_path, sequence_of_objects=objects, split_per_type=split_per_type)
 
         # alter the file if needed
         extension = template_file_path.suffix.lower()
@@ -170,14 +174,11 @@ class SubsetTemplateCreator:
                 generate_choice_list=generate_choice_list, file_path=temporary_path, dummy_data_rows=dummy_data_rows,
                 instances=objects, tag_deprecated=tag_deprecated, add_attribute_info=add_attribute_info)
             shutil.move(temporary_path, template_file_path)
-
-
         elif extension == '.csv':
-            cls.determine_multiplicity_csv(
-                template_file_path=template_file_path, dummy_data_rows=dummy_data_rows, add_geometry=add_geometry,
-                subset_path=subset_path, split_per_type=split_per_type, add_attribute_info=add_attribute_info,
-                instances=objects,
-                temporary_path=temporary_path, tag_deprecated=tag_deprecated)
+            cls.alter_csv_template(
+                split_per_type=split_per_type, file_path=template_file_path, temp_file_path=temporary_path,
+                dummy_data_rows=dummy_data_rows, instances=objects, tag_deprecated=tag_deprecated,
+                add_attribute_info=add_attribute_info)
 
 
     @classmethod
@@ -246,11 +247,8 @@ class SubsetTemplateCreator:
             cls, oslo_class: OSLOClass, add_geometry: bool,
             filter_attributes_by_subset: bool, collector: OSLOCollector, model_directory: Path = None) -> [OTLObject]:
         """
-        Generate a number of objects from a given OSLO class
+        Generate an object from a given OSLO class
         """
-        otl_objects = []
-
-
         instance = dynamic_create_instance_from_uri(oslo_class.objectUri, model_directory=model_directory)
         if instance is None:
             return
@@ -294,6 +292,91 @@ class SubsetTemplateCreator:
 
         wb.save(file_path)
         wb.close()
+
+    @classmethod
+    def fill_class_dict(cls, instances: list) -> dict:
+        class_dict = defaultdict(list)
+        for instance in instances:
+            class_dict[instance.typeURI].append(instance)
+        return class_dict
+
+
+    @classmethod
+    def alter_csv_template(cls, instances: list, file_path: Path, temp_file_path: Path, add_attribute_info: bool,
+                             split_per_type: bool, dummy_data_rows: int, tag_deprecated: bool):
+        classes_dict = cls.fill_class_dict(instances)
+        if split_per_type:
+            for type_uri, typed_instances in classes_dict.items():
+                ns, name = get_ns_and_name_from_uri(type_uri)
+                class_file_path = temp_file_path.parent / f'{temp_file_path.stem}_{ns}_{name}.csv'
+                cls.alter_csv_file(add_attribute_info=add_attribute_info, generate_choice_list=split_per_type,
+                                   dummy_data_rows=dummy_data_rows, instances=typed_instances, tag_deprecated=tag_deprecated,
+                                   file_path=file_path, temp_file_path=class_file_path)
+        else:
+            cls.alter_csv_file(add_attribute_info=add_attribute_info, generate_choice_list=split_per_type,
+                               dummy_data_rows=dummy_data_rows, instances=instances, tag_deprecated=tag_deprecated,
+                               file_path=file_path, temp_file_path=temp_file_path)
+    
+    @classmethod
+    async def alter_csv_template_async(cls, instances: list, file_path: Path, temp_file_path: Path, 
+                                       add_attribute_info: bool, split_per_type: bool, dummy_data_rows: int, 
+                                       tag_deprecated: bool):
+        classes_dict = cls.fill_class_dict(instances)
+        if split_per_type:
+            for type_uri, typed_instances in classes_dict.items():
+                await sleep(0)
+                ns, name = get_ns_and_name_from_uri(type_uri)
+                class_file_path = temp_file_path.parent / f'{temp_file_path.stem}_{ns}_{name}.csv'
+                cls.alter_csv_file(add_attribute_info=add_attribute_info, generate_choice_list=split_per_type,
+                                   dummy_data_rows=dummy_data_rows, instances=typed_instances, tag_deprecated=tag_deprecated,
+                                   file_path=file_path, temp_file_path=class_file_path)
+        else:
+            await sleep(0)
+            cls.alter_csv_file(add_attribute_info=add_attribute_info, generate_choice_list=split_per_type,
+                               dummy_data_rows=dummy_data_rows, instances=instances, tag_deprecated=tag_deprecated,
+                               file_path=file_path, temp_file_path=temp_file_path)
+
+    @classmethod
+    def alter_csv_file(cls, add_attribute_info: bool, generate_choice_list: bool,
+                          instances: [OTLObject], tag_deprecated: bool, file_path: Path,
+                          dummy_data_rows: int, temp_file_path: Path):
+        collected_attribute_info = []
+        instance = instances[0]
+        quote_char = '"'
+
+        with open(temp_file_path, encoding='utf-8') as file:
+            csv_reader = csv.reader(file, delimiter=';', quotechar=quote_char)
+            header_row = next(csv_reader)
+            csv_data = list(csv_reader)
+
+        for index, header in enumerate(header_row):
+            if header is None or header == '':
+                continue
+
+            if header == 'typeURI':
+                if add_attribute_info:
+                    collected_attribute_info.append(
+                        'De URI van het object volgens https://www.w3.org/2001/XMLSchema#anyURI .')
+                continue
+
+            attribute = DotnotationHelper.get_attribute_by_dotnotation(instance, header)
+
+            if add_attribute_info:
+                collected_attribute_info.append(attribute.definition)
+
+            if tag_deprecated and attribute.deprecated_version:
+                header_row[index] = f'[DEPRECATED] {header}'
+
+        with open(temp_file_path, 'w') as file:
+            csv_writer = csv.writer(file, delimiter=';', quotechar=quote_char, quoting=csv.QUOTE_MINIMAL)
+            if add_attribute_info:
+                csv_writer.writerow(collected_attribute_info)
+            csv_writer.writerow(header_row)
+            if dummy_data_rows != 0:
+                for line in csv_data:
+                    csv_writer.writerow(line)
+
+        shutil.move(temp_file_path, file_path.parent / temp_file_path.name)
 
     @classmethod
     async def alter_excel_template_async(cls, instances: list, file_path: Path, add_attribute_info: bool,

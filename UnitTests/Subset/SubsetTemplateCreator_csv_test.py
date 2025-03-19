@@ -1,4 +1,5 @@
 import csv
+from itertools import product
 from pathlib import Path
 
 import pytest
@@ -10,43 +11,23 @@ model_directory_path = Path(__file__).parent.parent / 'TestModel'
 
 
 @pytest.mark.parametrize(
-    "index, dummy_data_rows, add_geometry, add_attribute_info, add_deprecated_info",
+    "index, dummy_data_rows, add_geometry, add_attribute_info, add_deprecated_info, split",
     [
-        (i, amount, geo, attr, dep) for i, (amount, geo, attr, dep) in enumerate(
-        [
-            (0, True, True, True),
-            (0, True, True, False),
-            (0, True, False, True),
-            (0, True, False, False),
-            (0, False, True, True),
-            (0, False, True, False),
-            (0, False, False, True),
-            (0, False, False, False),
-            (1, True, True, True),
-            (1, True, True, False),
-            (1, True, False, True),
-            (1, True, False, False),
-            (1, False, True, True),
-            (1, False, True, False),
-            (1, False, False, True),
-            (1, False, False, False),
-            (2, True, True, True),
-            (2, True, True, False),
-            (2, True, False, True),
-            (2, True, False, False),
-            (2, False, True, True),
-            (2, False, True, False),
-            (2, False, False, True),
-            (2, False, False, False),
-        ]
+        (i, amount, geo, attr, dep, split) for i, (amount, geo, attr, dep, split) in enumerate(
+            product(
+                [0, 1, 2],
+                [True, False],
+                [True, False],
+                [True, False],
+                [True, False])
     )
     ]
 )
 def test_generate_csv_template(index, dummy_data_rows, add_geometry, add_attribute_info,
-                               add_deprecated_info):
+                               add_deprecated_info, split):
     # Arrange
     subset_path = current_dir / 'OTL_AllCasesTestClass.db'
-    path_to_template_file = current_dir / f'OTL_AllCasesTestClass_{index}.csv'
+    path_to_template_file = current_dir / f'OTL_all_cases_{index}.csv'
     kwargs = {
         'dummy_data_rows': dummy_data_rows,
         'add_geometry': add_geometry,
@@ -57,12 +38,15 @@ def test_generate_csv_template(index, dummy_data_rows, add_geometry, add_attribu
     # Act
     subset_tool = SubsetTemplateCreator()
     subset_tool.generate_template_from_subset(
-        subset_path=subset_path, template_file_path=path_to_template_file, split_per_type=False,
-        list_of_otl_objectUri=["https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#AnotherTestClass"],
+        subset_path=subset_path, template_file_path=path_to_template_file, split_per_type=split,
+        class_uris_filter=["https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#AnotherTestClass"],
         model_directory=model_directory_path, **kwargs)
 
-    # Assert
     # sourcery skip: no-conditionals-in-tests
+    if split:
+        path_to_template_file = current_dir / f'OTL_all_cases_{index}_onderdeel_AnotherTestClass.csv'
+
+    # Assert
     with open(path_to_template_file, newline='') as output_file:
         output_reader = csv.reader(output_file, delimiter=';')
         output_rows = list(output_reader)
@@ -104,44 +88,24 @@ def test_generate_csv_template(index, dummy_data_rows, add_geometry, add_attribu
 
 
 @pytest.mark.parametrize(
-    "index, dummy_data_rows, add_geometry, add_attribute_info, add_deprecated_info",
+    "index, dummy_data_rows, add_geometry, add_attribute_info, add_deprecated_info, split",
     [
-        (i, amount, geo, attr, dep) for i, (amount, geo, attr, dep) in enumerate(
-        [
-            (0, True, True, True),
-            (0, True, True, False),
-            (0, True, False, True),
-            (0, True, False, False),
-            (0, False, True, True),
-            (0, False, True, False),
-            (0, False, False, True),
-            (0, False, False, False),
-            (1, True, True, True),
-            (1, True, True, False),
-            (1, True, False, True),
-            (1, True, False, False),
-            (1, False, True, True),
-            (1, False, True, False),
-            (1, False, False, True),
-            (1, False, False, False),
-            (2, True, True, True),
-            (2, True, True, False),
-            (2, True, False, True),
-            (2, True, False, False),
-            (2, False, True, True),
-            (2, False, True, False),
-            (2, False, False, True),
-            (2, False, False, False),
-        ]
+        (i, amount, geo, attr, dep, split) for i, (amount, geo, attr, dep, split) in enumerate(
+        product(
+            [0, 1, 2],
+            [True, False],
+            [True, False],
+            [True, False],
+            [True, False])
     )
     ]
 )
 @pytest.mark.asyncio
 async def test_generate_csv_template_async(index, dummy_data_rows, add_geometry, add_attribute_info,
-                               add_deprecated_info):
+                               add_deprecated_info, split):
     # Arrange
     subset_path = current_dir / 'OTL_AllCasesTestClass.db'
-    path_to_template_file = current_dir / f'OTL_AllCasesTestClass_async_{index}.csv'
+    path_to_template_file = current_dir / f'OTL_all_cases_async_{index}.csv'
     kwargs = {
         'dummy_data_rows': dummy_data_rows,
         'add_geometry': add_geometry,
@@ -152,12 +116,15 @@ async def test_generate_csv_template_async(index, dummy_data_rows, add_geometry,
     # Act
     subset_tool = SubsetTemplateCreator()
     await subset_tool.generate_template_from_subset_async(
-        subset_path=subset_path, template_file_path=path_to_template_file, split_per_type=False,
-        list_of_otl_objectUri=["https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#AnotherTestClass"],
+        subset_path=subset_path, template_file_path=path_to_template_file, split_per_type=split,
+        class_uris_filter=["https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#AnotherTestClass"],
         model_directory=model_directory_path, **kwargs)
 
-    # Assert
     # sourcery skip: no-conditionals-in-tests
+    if split:
+        path_to_template_file = current_dir / f'OTL_all_cases_async_{index}_onderdeel_AnotherTestClass.csv'
+
+    # Assert
     with open(path_to_template_file, newline='') as output_file:
         output_reader = csv.reader(output_file, delimiter=';')
         output_rows = list(output_reader)
