@@ -199,10 +199,12 @@ class SubsetTemplateCreator:
             if ignore_relations and oslo_class.objectUri in relation_dict:
                 continue
 
-            otl_objects.extend(cls.generate_objects_from_oslo_class(
-                oslo_class=oslo_class, amount_objects_to_create=amount_objects_to_create, add_geometry=add_geometry,
-                filter_attributes_by_subset=filter_attributes_by_subset, collector=collector,
-                model_directory=model_directory))
+            for _ in range(amount_objects_to_create):
+                otl_object = cls.generate_object_from_oslo_class(
+                    oslo_class=oslo_class, add_geometry=add_geometry, collector=collector,
+                    filter_attributes_by_subset=filter_attributes_by_subset, model_directory=model_directory)
+                if otl_object is not None:
+                    otl_objects.append(otl_object)
 
         return otl_objects
 
