@@ -1,4 +1,5 @@
 import csv
+from itertools import product
 from pathlib import Path
 
 import openpyxl
@@ -23,56 +24,12 @@ model_directory_path = Path(__file__).parent.parent / 'TestModel'
     "index, dummy_data_rows, add_geometry, add_attribute_info, add_deprecated_info, generate_choice_list",
     [
         (i, amount, geo, attr, dep, choice) for i, (amount, geo, attr, dep, choice) in enumerate(
-        [
-            (0, True, True, True, True),
-            (0, True, True, True, False),
-            (0, True, True, False, True),
-            (0, True, True, False, False),
-            (0, True, False, True, True),
-            (0, True, False, True, False),
-            (0, True, False, False, True),
-            (0, True, False, False, False),
-            (0, False, True, True, True),
-            (0, False, True, True, False),
-            (0, False, True, False, True),
-            (0, False, True, False, False),
-            (0, False, False, True, True),
-            (0, False, False, True, False),
-            (0, False, False, False, True),
-            (0, False, False, False, False),
-            (1, True, True, True, True),
-            (1, True, True, True, False),
-            (1, True, True, False, True),
-            (1, True, True, False, False),
-            (1, True, False, True, True),
-            (1, True, False, True, False),
-            (1, True, False, False, True),
-            (1, True, False, False, False),
-            (1, False, True, True, True),
-            (1, False, True, True, False),
-            (1, False, True, False, True),
-            (1, False, True, False, False),
-            (1, False, False, True, True),
-            (1, False, False, True, False),
-            (1, False, False, False, True),
-            (1, False, False, False, False),
-            (2, True, True, True, True),
-            (2, True, True, True, False),
-            (2, True, True, False, True),
-            (2, True, True, False, False),
-            (2, True, False, True, True),
-            (2, True, False, True, False),
-            (2, True, False, False, True),
-            (2, True, False, False, False),
-            (2, False, True, True, True),
-            (2, False, True, True, False),
-            (2, False, True, False, True),
-            (2, False, True, False, False),
-            (2, False, False, True, True),
-            (2, False, False, True, False),
-            (2, False, False, False, True),
-            (2, False, False, False, False),
-        ]
+        product(
+            [0, 1, 2],
+            [True, False],
+            [True, False],
+            [True, False],
+            [True, False])
     )
     ]
 )
@@ -93,7 +50,7 @@ def test_generate_excel_template(index, dummy_data_rows, add_geometry, add_attri
     subset_tool = SubsetTemplateCreator()
     subset_tool.generate_template_from_subset(
         subset_path=subset_path, template_file_path=path_to_template_file,
-        list_of_otl_objectUri=["https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#AnotherTestClass"],
+        class_uris_filter=["https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#AnotherTestClass"],
         model_directory=model_directory_path, **kwargs)
 
     # Assert
@@ -161,56 +118,12 @@ def test_generate_excel_template(index, dummy_data_rows, add_geometry, add_attri
     "index, dummy_data_rows, add_geometry, add_attribute_info, add_deprecated_info, generate_choice_list",
     [
         (i, amount, geo, attr, dep, choice) for i, (amount, geo, attr, dep, choice) in enumerate(
-        [
-            (0, True, True, True, True),
-            (0, True, True, True, False),
-            (0, True, True, False, True),
-            (0, True, True, False, False),
-            (0, True, False, True, True),
-            (0, True, False, True, False),
-            (0, True, False, False, True),
-            (0, True, False, False, False),
-            (0, False, True, True, True),
-            (0, False, True, True, False),
-            (0, False, True, False, True),
-            (0, False, True, False, False),
-            (0, False, False, True, True),
-            (0, False, False, True, False),
-            (0, False, False, False, True),
-            (0, False, False, False, False),
-            (1, True, True, True, True),
-            (1, True, True, True, False),
-            (1, True, True, False, True),
-            (1, True, True, False, False),
-            (1, True, False, True, True),
-            (1, True, False, True, False),
-            (1, True, False, False, True),
-            (1, True, False, False, False),
-            (1, False, True, True, True),
-            (1, False, True, True, False),
-            (1, False, True, False, True),
-            (1, False, True, False, False),
-            (1, False, False, True, True),
-            (1, False, False, True, False),
-            (1, False, False, False, True),
-            (1, False, False, False, False),
-            (2, True, True, True, True),
-            (2, True, True, True, False),
-            (2, True, True, False, True),
-            (2, True, True, False, False),
-            (2, True, False, True, True),
-            (2, True, False, True, False),
-            (2, True, False, False, True),
-            (2, True, False, False, False),
-            (2, False, True, True, True),
-            (2, False, True, True, False),
-            (2, False, True, False, True),
-            (2, False, True, False, False),
-            (2, False, False, True, True),
-            (2, False, False, True, False),
-            (2, False, False, False, True),
-            (2, False, False, False, False),
-        ]
+        product(
+            [0, 1, 2],
+            [True, False],
+            [True, False],
+            [True, False],
+            [True, False])
     )
     ]
 )
@@ -232,7 +145,7 @@ async def test_generate_excel_template_async(index, dummy_data_rows, add_geometr
     subset_tool = SubsetTemplateCreator()
     await subset_tool.generate_template_from_subset_async(
         subset_path=subset_path, template_file_path=path_to_template_file,
-        list_of_otl_objectUri=["https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#AnotherTestClass"],
+        class_uris_filter=["https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#AnotherTestClass"],
         model_directory=model_directory_path, **kwargs)
 
     # Assert
