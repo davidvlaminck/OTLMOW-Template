@@ -62,9 +62,8 @@ async def test_subset_with_AllCasesTestClass_excel_generic_async():
     subset_tool = SubsetTemplateCreator()
     excel_path = current_dir / 'async_OTL_AllCasesTestClass.xlsx'
     await subset_tool.generate_template_from_subset_async(subset_path=current_dir / 'OTL_AllCasesTestClass.db',
-                                              template_file_path=excel_path, dummy_data_rows=1,
-                                              split_per_type=True, model_directory=model_directory_path,
-                                              add_geometry=True)
+                                                          template_file_path=excel_path,
+                                                          model_directory=model_directory_path)
     assert excel_path.exists()
 
     book = openpyxl.load_workbook(excel_path, data_only=True, read_only=True)
@@ -168,9 +167,8 @@ async def test_subset_with_AllCasesTestClass_generic_csv_async():
     subset_tool = SubsetTemplateCreator()
     csv_path = current_dir / 'generic_OTL_AllCasesTestClass.csv'
     await subset_tool.generate_template_from_subset_async(subset_path=current_dir / 'OTL_AllCasesTestClass.db',
-                                              template_file_path=csv_path, dummy_data_rows=1,
-                                              split_per_type=True, model_directory=model_directory_path,
-                                              add_geometry=True)
+                                                          template_file_path=csv_path,
+                                                          model_directory=model_directory_path)
 
     csv_allcases_path = csv_path.parent / csv_path.name.replace('.csv', '_onderdeel_AllCasesTestClass.csv')
     csv_another_path = csv_path.parent / csv_path.name.replace('.csv', '_onderdeel_AnotherTestClass.csv')
@@ -216,4 +214,3 @@ async def test_subset_with_AllCasesTestClass_generic_csv_async():
     csv_allcases_path.unlink()
     csv_another_path.unlink()
     csv_deprecated_path.unlink()
-
