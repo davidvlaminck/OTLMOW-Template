@@ -1,5 +1,6 @@
 import contextlib
 import csv
+import logging
 import os
 import shutil
 import tempfile
@@ -40,6 +41,11 @@ short_to_long_ns = {
     'installatie': 'https://wegenenverkeer.data.vlaanderen.be/ns/installatie#',
     'imp': 'https://wegenenverkeer.data.vlaanderen.be/ns/implementatieelement#',
     'implementatieelement': 'https://wegenenverkeer.data.vlaanderen.be/ns/implementatieelement#',
+    'proefenmeting': 'https://wegenenverkeer.data.vlaanderen.be/ns/proefenmeting#',
+    'pro': 'https://wegenenverkeer.data.vlaanderen.be/ns/proefenmeting#',
+    'lev': 'https://wegenenverkeer.data.vlaanderen.be/ns/levenscyclus#',
+    'levenscyclus': 'https://wegenenverkeer.data.vlaanderen.be/ns/levenscyclus#',
+
 }
 
 
@@ -203,7 +209,8 @@ class SubsetTemplateCreator:
                     if otl_object is not None:
                         otl_objects.append(otl_object)
             created = len(otl_objects)
-            unique_ids = len({obj.assetId.identificator for obj in otl_objects})
+            unique_ids = len({obj.assetId.identificator if hasattr(obj, 'assetId') else obj.agentId.identificator
+                              for obj in otl_objects})
             if created == unique_ids:
                 break
             otl_objects = []
@@ -257,7 +264,10 @@ class SubsetTemplateCreator:
         if filter_attributes_by_subset:
             for attribute_object in collector.find_attributes_by_class(oslo_class):
                 attr = get_attribute_by_name(instance, attribute_object.name)
-                attr.fill_with_dummy_data()
+                if attr is not None:
+                    attr.fill_with_dummy_data()
+                else:
+                    logging.warning(f'Attribute {attribute_object.name} not found in class {oslo_class.objectUri}')
         else:
             for attr in instance:
                 if attr.naam != 'geometry':
@@ -404,6 +414,7 @@ class SubsetTemplateCreator:
                           dummy_data_rows: int):
         type_uri = cls.get_uri_from_sheet_name(sheet.title)
         instance = next(x for x in instances if x.typeURI == type_uri)
+
         boolean_validation = DataValidation(type="list", formula1='"TRUE,FALSE,"', allow_blank=True)
         sheet.add_data_validation(boolean_validation)
         collected_attribute_info = []
@@ -419,6 +430,9 @@ class SubsetTemplateCreator:
                 data_validation.add(f'{header_cell.column_letter}2:{header_cell.column_letter}1000')
                 if add_attribute_info:
                     collected_attribute_info.append('De URI van het object volgens https://www.w3.org/2001/XMLSchema#anyURI .')
+                continue
+
+            if type_uri == 'http://purl.org/dc/terms/Agent' and header.startswith('assetId.'):
                 continue
 
             attribute = DotnotationHelper.get_attribute_by_dotnotation(instance, header)
