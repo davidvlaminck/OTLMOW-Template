@@ -191,16 +191,22 @@ class SubsetTemplateCreator:
         amount_objects_to_create = max(1, dummy_data_rows)
         otl_objects = []
 
-        for oslo_class in [cl for cl in filtered_class_list if cl.abstract == 0]:
-            if ignore_relations and oslo_class.objectUri in relation_dict:
-                continue
+        while True:
+            for oslo_class in [cl for cl in filtered_class_list if cl.abstract == 0]:
+                if ignore_relations and oslo_class.objectUri in relation_dict:
+                    continue
 
-            for _ in range(amount_objects_to_create):
-                otl_object = cls.generate_object_from_oslo_class(
-                    oslo_class=oslo_class, add_geometry=add_geometry, collector=collector,
-                    filter_attributes_by_subset=filter_attributes_by_subset, model_directory=model_directory)
-                if otl_object is not None:
-                    otl_objects.append(otl_object)
+                for _ in range(amount_objects_to_create):
+                    otl_object = cls.generate_object_from_oslo_class(
+                        oslo_class=oslo_class, add_geometry=add_geometry, collector=collector,
+                        filter_attributes_by_subset=filter_attributes_by_subset, model_directory=model_directory)
+                    if otl_object is not None:
+                        otl_objects.append(otl_object)
+            created = len(otl_objects)
+            unique_ids = len({obj.assetId.identificator for obj in otl_objects})
+            if created == unique_ids:
+                break
+            otl_objects = []
 
         return otl_objects
 
