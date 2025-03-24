@@ -120,7 +120,6 @@ def test_subset_with_AllCasesTestClass_generic_csv():
     csv_another_path = csv_path.parent / csv_path.name.replace('.csv', '_onderdeel_AnotherTestClass.csv')
     csv_deprecated_path = csv_path.parent / csv_path.name.replace('.csv', '_onderdeel_DeprecatedTestClass.csv')
 
-
     assert csv_allcases_path.exists()
 
     with open(csv_allcases_path, 'r') as f:

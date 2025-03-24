@@ -90,10 +90,6 @@ class SubsetTemplateCreator:
 
         :return: None
         """
-        tempdir = Path(tempfile.gettempdir()) / 'temp-otlmow'
-        if not tempdir.exists():
-            os.makedirs(tempdir)
-
         # generate objects to write to file
         objects = await cls.generate_objects_for_template_async(
             subset_path=subset_path, ignore_relations=ignore_relations, class_uris_filter=class_uris_filter,
@@ -101,23 +97,20 @@ class SubsetTemplateCreator:
             dummy_data_rows=dummy_data_rows, model_directory=model_directory)
 
         # write the file
-        temporary_path = Path(tempdir) / template_file_path.name
         await OtlmowConverter.from_objects_to_file_async(
-            file_path=temporary_path, sequence_of_objects=objects, split_per_type=split_per_type)
+            file_path=template_file_path, sequence_of_objects=objects, split_per_type=split_per_type)
 
         # alter the file if needed
         extension = template_file_path.suffix.lower()
         if extension == '.xlsx':
             await cls.alter_excel_template_async(
-                generate_choice_list=generate_choice_list, file_path=temporary_path, dummy_data_rows=dummy_data_rows,
+                generate_choice_list=generate_choice_list, file_path=template_file_path, dummy_data_rows=dummy_data_rows,
                 instances=objects, tag_deprecated=tag_deprecated, add_attribute_info=add_attribute_info)
-            shutil.move(temporary_path, template_file_path)
 
         elif extension == '.csv':
             await cls.alter_csv_template_async(
-                split_per_type=split_per_type, file_path=template_file_path, temp_file_path=temporary_path,
-                dummy_data_rows=dummy_data_rows, instances=objects, tag_deprecated=tag_deprecated,
-                add_attribute_info=add_attribute_info)
+                split_per_type=split_per_type, file_path=template_file_path, dummy_data_rows=dummy_data_rows,
+                instances=objects, tag_deprecated=tag_deprecated, add_attribute_info=add_attribute_info)
 
     @classmethod
     def generate_template_from_subset(
@@ -152,10 +145,6 @@ class SubsetTemplateCreator:
 
          :return: None
          """
-        tempdir = Path(tempfile.gettempdir()) / 'temp-otlmow'
-        if not tempdir.exists():
-            os.makedirs(tempdir)
-
         # generate objects to write to file
         objects = cls.generate_objects_for_template(
             subset_path=subset_path, ignore_relations=ignore_relations, class_uris_filter=class_uris_filter,
@@ -163,24 +152,20 @@ class SubsetTemplateCreator:
             dummy_data_rows=dummy_data_rows, model_directory=model_directory)
 
         # write the file
-        temporary_path = Path(tempdir) / template_file_path.name
         OtlmowConverter.from_objects_to_file(
-            file_path=temporary_path, sequence_of_objects=objects, split_per_type=split_per_type,
+            file_path=template_file_path, sequence_of_objects=objects, split_per_type=split_per_type,
             model_directory=model_directory)
 
         # alter the file if needed
         extension = template_file_path.suffix.lower()
         if extension == '.xlsx':
             cls.alter_excel_template(
-                generate_choice_list=generate_choice_list, file_path=temporary_path, dummy_data_rows=dummy_data_rows,
+                generate_choice_list=generate_choice_list, file_path=template_file_path, dummy_data_rows=dummy_data_rows,
                 instances=objects, tag_deprecated=tag_deprecated, add_attribute_info=add_attribute_info)
-            shutil.move(temporary_path, template_file_path)
         elif extension == '.csv':
             cls.alter_csv_template(
-                split_per_type=split_per_type, file_path=template_file_path, temp_file_path=temporary_path,
-                dummy_data_rows=dummy_data_rows, instances=objects, tag_deprecated=tag_deprecated,
-                add_attribute_info=add_attribute_info)
-
+                split_per_type=split_per_type, file_path=template_file_path, dummy_data_rows=dummy_data_rows,
+                instances=objects, tag_deprecated=tag_deprecated, add_attribute_info=add_attribute_info)
 
     @classmethod
     def generate_objects_for_template(
@@ -313,49 +298,45 @@ class SubsetTemplateCreator:
 
 
     @classmethod
-    def alter_csv_template(cls, instances: list, file_path: Path, temp_file_path: Path, add_attribute_info: bool,
+    def alter_csv_template(cls, instances: list, file_path: Path, add_attribute_info: bool,
                              split_per_type: bool, dummy_data_rows: int, tag_deprecated: bool):
         classes_dict = cls.fill_class_dict(instances)
         if split_per_type:
             for type_uri, typed_instances in classes_dict.items():
                 ns, name = get_ns_and_name_from_uri(type_uri)
-                class_file_path = temp_file_path.parent / f'{temp_file_path.stem}_{ns}_{name}.csv'
-                cls.alter_csv_file(add_attribute_info=add_attribute_info, generate_choice_list=split_per_type,
-                                   dummy_data_rows=dummy_data_rows, instances=typed_instances, tag_deprecated=tag_deprecated,
-                                   file_path=file_path, temp_file_path=class_file_path)
+                class_file_path = file_path.parent / f'{file_path.stem}_{ns}_{name}.csv'
+                cls.alter_csv_file(add_attribute_info=add_attribute_info, tag_deprecated=tag_deprecated,
+                                   dummy_data_rows=dummy_data_rows, instances=typed_instances, file_path=class_file_path)
         else:
-            cls.alter_csv_file(add_attribute_info=add_attribute_info, generate_choice_list=split_per_type,
-                               dummy_data_rows=dummy_data_rows, instances=instances, tag_deprecated=tag_deprecated,
-                               file_path=file_path, temp_file_path=temp_file_path)
+            cls.alter_csv_file(add_attribute_info=add_attribute_info, tag_deprecated=tag_deprecated,
+                               dummy_data_rows=dummy_data_rows, instances=instances, file_path=file_path)
     
     @classmethod
-    async def alter_csv_template_async(cls, instances: list, file_path: Path, temp_file_path: Path, 
-                                       add_attribute_info: bool, split_per_type: bool, dummy_data_rows: int, 
-                                       tag_deprecated: bool):
+    async def alter_csv_template_async(cls, instances: list, file_path: Path, tag_deprecated: bool,
+                                       add_attribute_info: bool, split_per_type: bool, dummy_data_rows: int):
         classes_dict = cls.fill_class_dict(instances)
         if split_per_type:
             for type_uri, typed_instances in classes_dict.items():
                 await sleep(0)
                 ns, name = get_ns_and_name_from_uri(type_uri)
-                class_file_path = temp_file_path.parent / f'{temp_file_path.stem}_{ns}_{name}.csv'
-                cls.alter_csv_file(add_attribute_info=add_attribute_info, generate_choice_list=split_per_type,
+                class_file_path = file_path.parent / f'{file_path.stem}_{ns}_{name}.csv'
+                cls.alter_csv_file(add_attribute_info=add_attribute_info,
                                    dummy_data_rows=dummy_data_rows, instances=typed_instances, tag_deprecated=tag_deprecated,
-                                   file_path=file_path, temp_file_path=class_file_path)
+                                   file_path=class_file_path)
         else:
             await sleep(0)
-            cls.alter_csv_file(add_attribute_info=add_attribute_info, generate_choice_list=split_per_type,
+            cls.alter_csv_file(add_attribute_info=add_attribute_info,
                                dummy_data_rows=dummy_data_rows, instances=instances, tag_deprecated=tag_deprecated,
-                               file_path=file_path, temp_file_path=temp_file_path)
+                               file_path=file_path)
 
     @classmethod
-    def alter_csv_file(cls, add_attribute_info: bool, generate_choice_list: bool,
-                          instances: [OTLObject], tag_deprecated: bool, file_path: Path,
-                          dummy_data_rows: int, temp_file_path: Path):
+    def alter_csv_file(cls, add_attribute_info: bool, instances: [OTLObject], tag_deprecated: bool, file_path: Path,
+                       dummy_data_rows: int):
         collected_attribute_info = []
         instance = instances[0]
         quote_char = '"'
 
-        with open(temp_file_path, encoding='utf-8') as file:
+        with open(file_path, encoding='utf-8') as file:
             csv_reader = csv.reader(file, delimiter=';', quotechar=quote_char)
             header_row = next(csv_reader)
             csv_data = list(csv_reader)
@@ -378,7 +359,7 @@ class SubsetTemplateCreator:
             if tag_deprecated and attribute.deprecated_version:
                 header_row[index] = f'[DEPRECATED] {header}'
 
-        with open(temp_file_path, 'w') as file:
+        with open(file_path, 'w') as file:
             csv_writer = csv.writer(file, delimiter=';', quotechar=quote_char, quoting=csv.QUOTE_MINIMAL)
             if add_attribute_info:
                 csv_writer.writerow(collected_attribute_info)
@@ -386,8 +367,6 @@ class SubsetTemplateCreator:
             if dummy_data_rows != 0:
                 for line in csv_data:
                     csv_writer.writerow(line)
-
-        shutil.move(temp_file_path, file_path.parent / temp_file_path.name)
 
     @classmethod
     async def alter_excel_template_async(cls, instances: list, file_path: Path, add_attribute_info: bool,
