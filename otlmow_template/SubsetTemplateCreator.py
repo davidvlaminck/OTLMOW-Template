@@ -455,10 +455,10 @@ class SubsetTemplateCreator:
     def add_deprecated_row_to_sheet(cls, deprecated_attributes_row, sheet):
         sheet.insert_rows(idx=1)
         for index, depr_info in enumerate(deprecated_attributes_row, start=1):
-            cell = sheet.cell(row=1, column=index)
-            cell.value = depr_info
-            cell.alignment = Alignment(wrapText=True, vertical='top')
-            cell.fill = PatternFill(start_color="FF7276", end_color="FF7276", fill_type="solid")
+            if depr_info != '':
+                cell = sheet.cell(row=1, column=index)
+                cell.value = depr_info
+                cell.fill = PatternFill(start_color="FF7276", end_color="FF7276", fill_type="solid")
 
     @classmethod
     def add_attribute_info_to_sheet(cls, collected_attribute_info, sheet):
