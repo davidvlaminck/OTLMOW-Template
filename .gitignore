@@ -2,3 +2,4 @@
 /venv/
 /UnitTests/.coverage
 *.pyc
+__pycache__/
