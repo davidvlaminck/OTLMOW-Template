@@ -1,3 +1,4 @@
+import gc
 from pathlib import Path
 
 import openpyxl
@@ -54,13 +55,15 @@ def test_subset_with_AllCasesTestClass_excel_generic():
     assert union_headers[0].startswith('testUnionType.')
     assert union_headers[1].startswith('testUnionTypeMetKard[].')
 
+    gc.collect()
+
     excel_path.unlink()
 
 
 @pytest.mark.asyncio
 async def test_subset_with_AllCasesTestClass_excel_generic_async():
     subset_tool = SubsetTemplateCreator()
-    excel_path = current_dir / 'async_OTL_AllCasesTestClass.xlsx'
+    excel_path = current_dir / 'async_OTL_AllCasesTestClass_async.xlsx'
     await subset_tool.generate_template_from_subset_async(subset_path=current_dir / 'OTL_AllCasesTestClass.db',
                                                           template_file_path=excel_path,
                                                           model_directory=model_directory_path)
@@ -106,6 +109,8 @@ async def test_subset_with_AllCasesTestClass_excel_generic_async():
 
     assert union_headers[0].startswith('testUnionType.')
     assert union_headers[1].startswith('testUnionTypeMetKard[].')
+
+    gc.collect()
 
     excel_path.unlink()
 
@@ -164,7 +169,7 @@ def test_subset_with_AllCasesTestClass_generic_csv():
 @pytest.mark.asyncio
 async def test_subset_with_AllCasesTestClass_generic_csv_async():
     subset_tool = SubsetTemplateCreator()
-    csv_path = current_dir / 'generic_OTL_AllCasesTestClass.csv'
+    csv_path = current_dir / 'generic_OTL_AllCasesTestClass_async.csv'
     await subset_tool.generate_template_from_subset_async(subset_path=current_dir / 'OTL_AllCasesTestClass.db',
                                                           template_file_path=csv_path,
                                                           model_directory=model_directory_path)

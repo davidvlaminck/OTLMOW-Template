@@ -47,7 +47,7 @@ def test_generate_csv_template(index, dummy_data_rows, add_geometry, add_attribu
         path_to_template_file = current_dir / f'OTL_all_cases_{index}_onderdeel_AnotherTestClass.csv'
 
     # Assert
-    with open(path_to_template_file, encoding='utf-8') as output_file:
+    with open(path_to_template_file, encoding='utf-8', newline='\n') as output_file:
         output_reader = csv.reader(output_file, delimiter=';')
         output_rows = list(output_reader)
 
@@ -125,7 +125,7 @@ async def test_generate_csv_template_async(index, dummy_data_rows, add_geometry,
         path_to_template_file = current_dir / f'OTL_all_cases_async_{index}_onderdeel_AnotherTestClass.csv'
 
     # Assert
-    with open(path_to_template_file, encoding='utf-8') as output_file:
+    with open(path_to_template_file, encoding='utf-8', newline='\n') as output_file:
         output_reader = csv.reader(output_file, delimiter=';')
         output_rows = list(output_reader)
 
