@@ -67,7 +67,7 @@ class SubsetTemplateCreator:
             dummy_data_rows: int = 1,
             add_geometry: bool = True,
             add_attribute_info: bool = False,
-            tag_deprecated: bool = False,
+            add_deprecated: bool = False,
             generate_choice_list: bool = True,
             split_per_type: bool = True,
             model_directory: Path = None):
@@ -83,7 +83,7 @@ class SubsetTemplateCreator:
         :param dummy_data_rows: Amount of dummy data rows to add to the template, defaults to 1
         :param add_geometry: Whether to include the geometry attribute in the template, defaults to True
         :param add_attribute_info: Whether to add attribute information to the template (colored grey in Excel), defaults to False
-        :param tag_deprecated: Whether to tag deprecated attributes in the template, defaults to False
+        :param add_deprecated: Whether to add a deprecated row to the template (colored red in Excel), defaults to False
         :param generate_choice_list: Whether to generate a choice list in the template (only for Excel), defaults to True
         :param split_per_type: Whether to split the template into a file per type (only for CSV), defaults to True
         :param model_directory: Path to the model directory, defaults to None
@@ -105,12 +105,12 @@ class SubsetTemplateCreator:
         if extension == '.xlsx':
             await cls.alter_excel_template_async(
                 generate_choice_list=generate_choice_list, file_path=template_file_path, dummy_data_rows=dummy_data_rows,
-                instances=objects, tag_deprecated=tag_deprecated, add_attribute_info=add_attribute_info)
+                instances=objects, add_deprecated=add_deprecated, add_attribute_info=add_attribute_info)
 
         elif extension == '.csv':
             await cls.alter_csv_template_async(
                 split_per_type=split_per_type, file_path=template_file_path, dummy_data_rows=dummy_data_rows,
-                instances=objects, tag_deprecated=tag_deprecated, add_attribute_info=add_attribute_info)
+                instances=objects, add_deprecated=add_deprecated, add_attribute_info=add_attribute_info)
 
     @classmethod
     def generate_template_from_subset(
@@ -123,7 +123,7 @@ class SubsetTemplateCreator:
             dummy_data_rows: int = 1,
             add_geometry: bool = True,
             add_attribute_info: bool = False,
-            tag_deprecated: bool = False,
+            add_deprecated: bool = False,
             generate_choice_list: bool = True,
             split_per_type: bool = True,
             model_directory: Path = None):
@@ -138,7 +138,7 @@ class SubsetTemplateCreator:
          :param dummy_data_rows: Amount of dummy data rows to add to the template, defaults to 1
          :param add_geometry: Whether to include the geometry attribute in the template, defaults to True
          :param add_attribute_info: Whether to add attribute information to the template (colored grey in Excel), defaults to False
-         :param tag_deprecated: Whether to tag deprecated attributes in the template, defaults to False
+         :param add_deprecated: Whether to tag deprecated attributes in the template, defaults to False
          :param generate_choice_list: Whether to generate a choice list in the template (only for Excel), defaults to True
          :param split_per_type: Whether to split the template into a file per type (only for CSV), defaults to True
          :param model_directory: Path to the model directory, defaults to None
@@ -161,11 +161,11 @@ class SubsetTemplateCreator:
         if extension == '.xlsx':
             cls.alter_excel_template(
                 generate_choice_list=generate_choice_list, file_path=template_file_path, dummy_data_rows=dummy_data_rows,
-                instances=objects, tag_deprecated=tag_deprecated, add_attribute_info=add_attribute_info)
+                instances=objects, add_deprecated=add_deprecated, add_attribute_info=add_attribute_info)
         elif extension == '.csv':
             cls.alter_csv_template(
                 split_per_type=split_per_type, file_path=template_file_path, dummy_data_rows=dummy_data_rows,
-                instances=objects, tag_deprecated=tag_deprecated, add_attribute_info=add_attribute_info)
+                instances=objects, add_deprecated=add_deprecated, add_attribute_info=add_attribute_info)
 
     @classmethod
     def generate_objects_for_template(
@@ -273,7 +273,7 @@ class SubsetTemplateCreator:
 
     @classmethod
     def alter_excel_template(cls, instances: list, file_path: Path, add_attribute_info: bool,
-                             generate_choice_list: bool, dummy_data_rows: int, tag_deprecated: bool):
+                             generate_choice_list: bool, dummy_data_rows: int, add_deprecated: bool):
         wb = load_workbook(file_path)
         wb.create_sheet('Keuzelijsten')
 
@@ -284,7 +284,7 @@ class SubsetTemplateCreator:
 
             cls.alter_excel_sheet(add_attribute_info=add_attribute_info, choice_list_dict=choice_list_dict,
                                   generate_choice_list=generate_choice_list, dummy_data_rows=dummy_data_rows,
-                                  instances=instances, sheet=sheet, tag_deprecated=tag_deprecated, workbook=wb)
+                                  instances=instances, sheet=sheet, add_deprecated=add_deprecated, workbook=wb)
 
         wb.save(file_path)
         wb.close()
@@ -299,20 +299,20 @@ class SubsetTemplateCreator:
 
     @classmethod
     def alter_csv_template(cls, instances: list, file_path: Path, add_attribute_info: bool,
-                             split_per_type: bool, dummy_data_rows: int, tag_deprecated: bool):
+                             split_per_type: bool, dummy_data_rows: int, add_deprecated: bool):
         classes_dict = cls.fill_class_dict(instances)
         if split_per_type:
             for type_uri, typed_instances in classes_dict.items():
                 ns, name = get_ns_and_name_from_uri(type_uri)
                 class_file_path = file_path.parent / f'{file_path.stem}_{ns}_{name}.csv'
-                cls.alter_csv_file(add_attribute_info=add_attribute_info, tag_deprecated=tag_deprecated,
+                cls.alter_csv_file(add_attribute_info=add_attribute_info, add_deprecated=add_deprecated,
                                    dummy_data_rows=dummy_data_rows, instances=typed_instances, file_path=class_file_path)
         else:
-            cls.alter_csv_file(add_attribute_info=add_attribute_info, tag_deprecated=tag_deprecated,
+            cls.alter_csv_file(add_attribute_info=add_attribute_info, add_deprecated=add_deprecated,
                                dummy_data_rows=dummy_data_rows, instances=instances, file_path=file_path)
     
     @classmethod
-    async def alter_csv_template_async(cls, instances: list, file_path: Path, tag_deprecated: bool,
+    async def alter_csv_template_async(cls, instances: list, file_path: Path, add_deprecated: bool,
                                        add_attribute_info: bool, split_per_type: bool, dummy_data_rows: int):
         classes_dict = cls.fill_class_dict(instances)
         if split_per_type:
@@ -321,18 +321,19 @@ class SubsetTemplateCreator:
                 ns, name = get_ns_and_name_from_uri(type_uri)
                 class_file_path = file_path.parent / f'{file_path.stem}_{ns}_{name}.csv'
                 cls.alter_csv_file(add_attribute_info=add_attribute_info,
-                                   dummy_data_rows=dummy_data_rows, instances=typed_instances, tag_deprecated=tag_deprecated,
+                                   dummy_data_rows=dummy_data_rows, instances=typed_instances, add_deprecated=add_deprecated,
                                    file_path=class_file_path)
         else:
             await sleep(0)
             cls.alter_csv_file(add_attribute_info=add_attribute_info,
-                               dummy_data_rows=dummy_data_rows, instances=instances, tag_deprecated=tag_deprecated,
+                               dummy_data_rows=dummy_data_rows, instances=instances, add_deprecated=add_deprecated,
                                file_path=file_path)
 
     @classmethod
-    def alter_csv_file(cls, add_attribute_info: bool, instances: [OTLObject], tag_deprecated: bool, file_path: Path,
+    def alter_csv_file(cls, add_attribute_info: bool, instances: [OTLObject], add_deprecated: bool, file_path: Path,
                        dummy_data_rows: int):
-        collected_attribute_info = []
+        collected_attribute_info_row = []
+        deprecated_attributes_row = []
         instance = instances[0]
         quote_char = '"'
 
@@ -347,22 +348,26 @@ class SubsetTemplateCreator:
 
             if header == 'typeURI':
                 if add_attribute_info:
-                    collected_attribute_info.append(
+                    collected_attribute_info_row.append(
                         'De URI van het object volgens https://www.w3.org/2001/XMLSchema#anyURI .')
+                if add_deprecated:
+                    deprecated_attributes_row.append('')
                 continue
 
             attribute = DotnotationHelper.get_attribute_by_dotnotation(instance, header)
 
             if add_attribute_info:
-                collected_attribute_info.append(attribute.definition)
+                collected_attribute_info_row.append(attribute.definition)
 
-            if tag_deprecated and attribute.deprecated_version:
-                header_row[index] = f'[DEPRECATED] {header}'
+            if add_deprecated:
+                deprecated_attributes_row.append('DEPRECATED' if attribute.deprecated_version else '')
 
         with open(file_path, 'w') as file:
             csv_writer = csv.writer(file, delimiter=';', quotechar=quote_char, quoting=csv.QUOTE_MINIMAL)
             if add_attribute_info:
-                csv_writer.writerow(collected_attribute_info)
+                csv_writer.writerow(collected_attribute_info_row)
+            if add_deprecated:
+                csv_writer.writerow(deprecated_attributes_row)
             csv_writer.writerow(header_row)
             if dummy_data_rows != 0:
                 for line in csv_data:
@@ -370,7 +375,7 @@ class SubsetTemplateCreator:
 
     @classmethod
     async def alter_excel_template_async(cls, instances: list, file_path: Path, add_attribute_info: bool,
-                             generate_choice_list: bool, dummy_data_rows: int, tag_deprecated: bool):
+                             generate_choice_list: bool, dummy_data_rows: int, add_deprecated: bool):
         wb = load_workbook(file_path)
         wb.create_sheet('Keuzelijsten')
 
@@ -381,7 +386,7 @@ class SubsetTemplateCreator:
 
             cls.alter_excel_sheet(add_attribute_info=add_attribute_info, choice_list_dict=choice_list_dict,
                                   generate_choice_list=generate_choice_list, dummy_data_rows=dummy_data_rows,
-                                  instances=instances, sheet=sheet, tag_deprecated=tag_deprecated, workbook=wb)
+                                  instances=instances, sheet=sheet, add_deprecated=add_deprecated, workbook=wb)
             await sleep(0)
 
         wb.save(file_path)
@@ -389,7 +394,7 @@ class SubsetTemplateCreator:
 
     @classmethod
     def alter_excel_sheet(cls, add_attribute_info: bool, choice_list_dict: dict, generate_choice_list: bool,
-                          instances: [OTLObject], sheet: Worksheet, tag_deprecated: bool, workbook: Workbook,
+                          instances: [OTLObject], sheet: Worksheet, add_deprecated: bool, workbook: Workbook,
                           dummy_data_rows: int):
         type_uri = cls.get_uri_from_sheet_name(sheet.title)
         instance = next(x for x in instances if x.typeURI == type_uri)
@@ -397,6 +402,7 @@ class SubsetTemplateCreator:
         boolean_validation = DataValidation(type="list", formula1='"TRUE,FALSE,"', allow_blank=True)
         sheet.add_data_validation(boolean_validation)
         collected_attribute_info = []
+        deprecated_attributes_row = []
         header_row = next(sheet.iter_rows(min_row=1, max_row=1))
         for index, header_cell in enumerate(header_row):
             header = header_cell.value
@@ -409,6 +415,8 @@ class SubsetTemplateCreator:
                 data_validation.add(f'{header_cell.column_letter}2:{header_cell.column_letter}1000')
                 if add_attribute_info:
                     collected_attribute_info.append('De URI van het object volgens https://www.w3.org/2001/XMLSchema#anyURI .')
+                if add_deprecated:
+                    deprecated_attributes_row.append('')
                 continue
 
             if type_uri == 'http://purl.org/dc/terms/Agent' and header.startswith('assetId.'):
@@ -419,8 +427,8 @@ class SubsetTemplateCreator:
             if add_attribute_info:
                 collected_attribute_info.append(attribute.definition)
 
-            if tag_deprecated and attribute.deprecated_version:
-                sheet.cell(row=1, column=index + 1, value=f'[DEPRECATED] {header}')
+            if add_deprecated:
+                deprecated_attributes_row.append('DEPRECATED' if attribute.deprecated_version else '')
 
             if generate_choice_list:
                 if issubclass(attribute.field, BooleanField):
@@ -435,10 +443,22 @@ class SubsetTemplateCreator:
         if dummy_data_rows == 0:
             sheet.delete_rows(idx=2)
 
+        if add_deprecated:
+            cls.add_deprecated_row_to_sheet(deprecated_attributes_row, sheet)
+
         if add_attribute_info:
             cls.add_attribute_info_to_sheet(collected_attribute_info, sheet)
 
         cls.set_fixed_column_width(sheet=sheet, width=25)
+
+    @classmethod
+    def add_deprecated_row_to_sheet(cls, deprecated_attributes_row, sheet):
+        sheet.insert_rows(idx=1)
+        for index, depr_info in enumerate(deprecated_attributes_row, start=1):
+            cell = sheet.cell(row=1, column=index)
+            cell.value = depr_info
+            cell.alignment = Alignment(wrapText=True, vertical='top')
+            cell.fill = PatternFill(start_color="FF7276", end_color="FF7276", fill_type="solid")
 
     @classmethod
     def add_attribute_info_to_sheet(cls, collected_attribute_info, sheet):

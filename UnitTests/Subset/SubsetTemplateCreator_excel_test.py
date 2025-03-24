@@ -15,12 +15,12 @@ model_directory_path = Path(__file__).parent.parent / 'TestModel'
 # dummy_data_rows: 0, 1, 2
 # add_geometry: True, False
 # add_attribute_info: True, False
-# add_deprecated_info: True, False
+# add_deprecated: True, False
 # generate_choice_list: True, False
 
 
 @pytest.mark.parametrize(
-    "index, dummy_data_rows, add_geometry, add_attribute_info, add_deprecated_info, generate_choice_list",
+    "index, dummy_data_rows, add_geometry, add_attribute_info, add_deprecated, generate_choice_list",
     [
         (i, amount, geo, attr, dep, choice) for i, (amount, geo, attr, dep, choice) in enumerate(
         product(
@@ -33,7 +33,7 @@ model_directory_path = Path(__file__).parent.parent / 'TestModel'
     ]
 )
 def test_generate_excel_template(index, dummy_data_rows, add_geometry, add_attribute_info,
-                               add_deprecated_info, generate_choice_list):
+                               add_deprecated, generate_choice_list):
     # Arrange
     subset_path = current_dir / 'OTL_AllCasesTestClass.db'
     path_to_template_file = current_dir / f'OTL_AllCasesTestClass_{index}.xlsx'
@@ -41,7 +41,7 @@ def test_generate_excel_template(index, dummy_data_rows, add_geometry, add_attri
         'dummy_data_rows': dummy_data_rows,
         'add_geometry': add_geometry,
         'add_attribute_info': add_attribute_info,
-        'tag_deprecated': add_deprecated_info,
+        'add_deprecated': add_deprecated,
         'generate_choice_list': generate_choice_list,
     }
 
@@ -87,22 +87,31 @@ def test_generate_excel_template(index, dummy_data_rows, add_geometry, add_attri
     expected_header_row = ['typeURI', 'assetId.identificator', 'assetId.toegekendDoor', 'bestekPostNummer[]',
                            'datumOprichtingObject', 'deprecatedString', 'isActief', 'notitie',
                            'standaardBestekPostNummer[]', 'theoretischeLevensduur', 'toestand']
+    expected_deprecated_header_row = [None, None, None, None, None, 'DEPRECATED', None, None, None, None, None]
 
     expected_row_count = dummy_data_rows + 1
+
+    expected_column_count = 11
 
     if add_geometry:
         expected_header_row.insert(6, 'geometry')
         expected_attribute_info_row.insert(6, 'geometry voor DAVIE')
+        expected_deprecated_header_row.insert(6, None)
+        expected_column_count += 1
 
-    if add_deprecated_info:
-        expected_header_row.insert(5, f'[DEPRECATED] {expected_header_row.pop(5)}')
+    header_index = 0
+    deprecated_index = 0
 
     if add_attribute_info:
         assert output_rows[0] == expected_attribute_info_row
-        assert output_rows[1] == expected_header_row
+        header_index += 1
         expected_row_count += 1
-    else:
-        assert output_rows[0] == expected_header_row
+        deprecated_index += 1
+
+    if add_deprecated:
+        assert output_rows[deprecated_index] == expected_deprecated_header_row
+        header_index += 1
+        expected_row_count += 1
 
     assert len(output_rows) == expected_row_count
 
@@ -114,7 +123,7 @@ def test_generate_excel_template(index, dummy_data_rows, add_geometry, add_attri
 
 
 @pytest.mark.parametrize(
-    "index, dummy_data_rows, add_geometry, add_attribute_info, add_deprecated_info, generate_choice_list",
+    "index, dummy_data_rows, add_geometry, add_attribute_info, add_deprecated, generate_choice_list",
     [
         (i, amount, geo, attr, dep, choice) for i, (amount, geo, attr, dep, choice) in enumerate(
         product(
@@ -128,7 +137,7 @@ def test_generate_excel_template(index, dummy_data_rows, add_geometry, add_attri
 )
 @pytest.mark.asyncio
 async def test_generate_excel_template_async(index, dummy_data_rows, add_geometry, add_attribute_info,
-                               add_deprecated_info, generate_choice_list):
+                               add_deprecated, generate_choice_list):
     # Arrange
     subset_path = current_dir / 'OTL_AllCasesTestClass.db'
     path_to_template_file = current_dir / f'OTL_AllCasesTestClass_{index}.xlsx'
@@ -136,7 +145,7 @@ async def test_generate_excel_template_async(index, dummy_data_rows, add_geometr
         'dummy_data_rows': dummy_data_rows,
         'add_geometry': add_geometry,
         'add_attribute_info': add_attribute_info,
-        'tag_deprecated': add_deprecated_info,
+        'add_deprecated': add_deprecated,
         'generate_choice_list': generate_choice_list,
     }
 
@@ -182,22 +191,31 @@ async def test_generate_excel_template_async(index, dummy_data_rows, add_geometr
     expected_header_row = ['typeURI', 'assetId.identificator', 'assetId.toegekendDoor', 'bestekPostNummer[]',
                            'datumOprichtingObject', 'deprecatedString', 'isActief', 'notitie',
                            'standaardBestekPostNummer[]', 'theoretischeLevensduur', 'toestand']
+    expected_deprecated_header_row = [None, None, None, None, None, 'DEPRECATED', None, None, None, None, None]
 
     expected_row_count = dummy_data_rows + 1
+
+    expected_column_count = 11
 
     if add_geometry:
         expected_header_row.insert(6, 'geometry')
         expected_attribute_info_row.insert(6, 'geometry voor DAVIE')
+        expected_deprecated_header_row.insert(6, None)
+        expected_column_count += 1
 
-    if add_deprecated_info:
-        expected_header_row.insert(5, f'[DEPRECATED] {expected_header_row.pop(5)}')
+    header_index = 0
+    deprecated_index = 0
 
     if add_attribute_info:
         assert output_rows[0] == expected_attribute_info_row
-        assert output_rows[1] == expected_header_row
+        header_index += 1
         expected_row_count += 1
-    else:
-        assert output_rows[0] == expected_header_row
+        deprecated_index += 1
+
+    if add_deprecated:
+        assert output_rows[deprecated_index] == expected_deprecated_header_row
+        header_index += 1
+        expected_row_count += 1
 
     assert len(output_rows) == expected_row_count
 
