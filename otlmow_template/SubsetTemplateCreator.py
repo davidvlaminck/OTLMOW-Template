@@ -366,7 +366,7 @@ class SubsetTemplateCreator:
             csv_writer = csv.writer(file, delimiter=';', quotechar=quote_char, quoting=csv.QUOTE_MINIMAL)
             if add_attribute_info:
                 csv_writer.writerow(collected_attribute_info_row)
-            if add_deprecated:
+            if add_deprecated and any(deprecated_attributes_row):
                 csv_writer.writerow(deprecated_attributes_row)
             csv_writer.writerow(header_row)
             if dummy_data_rows != 0:
@@ -443,7 +443,7 @@ class SubsetTemplateCreator:
         if dummy_data_rows == 0:
             sheet.delete_rows(idx=2)
 
-        if add_deprecated:
+        if add_deprecated and any(deprecated_attributes_row):
             cls.add_deprecated_row_to_sheet(deprecated_attributes_row, sheet)
 
         if add_attribute_info:
