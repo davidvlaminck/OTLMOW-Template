@@ -1,23 +1,28 @@
+import contextlib
 import csv
 import logging
-import ntpath
 import os
-import site
+import shutil
 import tempfile
+from asyncio import sleep
+from collections import defaultdict
 from pathlib import Path
-
 
 from openpyxl.reader.excel import load_workbook
 from openpyxl.styles import PatternFill, Alignment
 from openpyxl.utils import get_column_letter
+from openpyxl.workbook import Workbook
 from openpyxl.worksheet.datavalidation import DataValidation
 from openpyxl.worksheet.dimensions import DimensionHolder, ColumnDimension
+from openpyxl.worksheet.worksheet import Worksheet
 from otlmow_converter.DotnotationHelper import DotnotationHelper
 from otlmow_converter.OtlmowConverter import OtlmowConverter
 from otlmow_model.OtlmowModel.BaseClasses.BooleanField import BooleanField
 from otlmow_model.OtlmowModel.BaseClasses.KeuzelijstField import KeuzelijstField
-from otlmow_model.OtlmowModel.BaseClasses.OTLObject import dynamic_create_instance_from_uri
+from otlmow_model.OtlmowModel.BaseClasses.OTLObject import dynamic_create_instance_from_uri, OTLObject, \
+    get_attribute_by_name
 from otlmow_model.OtlmowModel.Helpers.generated_lists import get_hardcoded_relation_dict
+from otlmow_modelbuilder.HelperFunctions import get_ns_and_name_from_uri
 from otlmow_modelbuilder.OSLOCollector import OSLOCollector
 from otlmow_modelbuilder.SQLDataClasses.OSLOClass import OSLOClass
 
@@ -29,439 +34,579 @@ enumeration_validation_rules = {
         "^https://wegenenverkeer.data.vlaanderen.be/ns/.+"]
 }
 
+short_to_long_ns = {
+    'ond': 'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#',
+    'onderdeel': 'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#',
+    'ins': 'https://wegenenverkeer.data.vlaanderen.be/ns/installatie#',
+    'installatie': 'https://wegenenverkeer.data.vlaanderen.be/ns/installatie#',
+    'imp': 'https://wegenenverkeer.data.vlaanderen.be/ns/implementatieelement#',
+    'implementatieelement': 'https://wegenenverkeer.data.vlaanderen.be/ns/implementatieelement#',
+    'proefenmeting': 'https://wegenenverkeer.data.vlaanderen.be/ns/proefenmeting#',
+    'pro': 'https://wegenenverkeer.data.vlaanderen.be/ns/proefenmeting#',
+    'lev': 'https://wegenenverkeer.data.vlaanderen.be/ns/levenscyclus#',
+    'levenscyclus': 'https://wegenenverkeer.data.vlaanderen.be/ns/levenscyclus#',
+
+}
+
 
 class SubsetTemplateCreator:
-    def __init__(self):
-        pass
-
-    @staticmethod
-    def _load_collector_from_subset_path(path_to_subset: Path) -> OSLOCollector:
-        collector = OSLOCollector(path_to_subset)
+    @classmethod
+    def _load_collector_from_subset_path(cls, subset_path: Path) -> OSLOCollector:
+        collector = OSLOCollector(subset_path)
         collector.collect_all(include_abstract=True)
         return collector
 
-    def generate_template_from_subset(self, path_to_subset: Path, path_to_template_file_and_extension: Path,
-                                      ignore_relations: bool = True, filter_attributes_by_subset: bool = True,
-                                      **kwargs):
-        tempdir = Path(tempfile.gettempdir()) / 'temp-otlmow'
-        if not tempdir.exists():
-            os.makedirs(tempdir)
-        test = ntpath.basename(path_to_template_file_and_extension)
-        temporary_path = Path(tempdir) / test
-        instantiated_attributes = (self.generate_basic_template(
-            path_to_subset=path_to_subset, temporary_path=temporary_path, ignore_relations=ignore_relations,
-            path_to_template_file_and_extension=path_to_template_file_and_extension,
-            filter_attributes_by_subset=filter_attributes_by_subset, **kwargs))
-        extension = os.path.splitext(path_to_template_file_and_extension)[-1].lower()
+    @classmethod
+    async def generate_template_from_subset_async(
+            cls,
+            subset_path: Path,
+            template_file_path: Path,
+            ignore_relations: bool = True,
+            filter_attributes_by_subset: bool = True,
+            class_uris_filter: [str] = None,
+            dummy_data_rows: int = 1,
+            add_geometry: bool = True,
+            add_attribute_info: bool = False,
+            add_deprecated: bool = False,
+            generate_choice_list: bool = True,
+            split_per_type: bool = True,
+            model_directory: Path = None):
+        """
+        Generate a template from a subset file, async version.
+        Await this function!
+
+        :param subset_path: Path to the subset file
+        :param template_file_path: Path to where the template file should be created
+        :param ignore_relations: Whether to ignore relations when creating the template, defaults to True
+        :param filter_attributes_by_subset: Whether to filter by the attributes in the subset, defaults to True
+        :param class_uris_filter: List of class URIs to filter by. If not None, only classes with these URIs will be included, defaults to None
+        :param dummy_data_rows: Amount of dummy data rows to add to the template, defaults to 1
+        :param add_geometry: Whether to include the geometry attribute in the template, defaults to True
+        :param add_attribute_info: Whether to add attribute information to the template (colored grey in Excel), defaults to False
+        :param add_deprecated: Whether to add a deprecated row to the template (colored red in Excel), defaults to False
+        :param generate_choice_list: Whether to generate a choice list in the template (only for Excel), defaults to True
+        :param split_per_type: Whether to split the template into a file per type (only for CSV), defaults to True
+        :param model_directory: Path to the model directory, defaults to None
+
+        :return: None
+        """
+        # generate objects to write to file
+        objects = await cls.generate_objects_for_template_async(
+            subset_path=subset_path, ignore_relations=ignore_relations, class_uris_filter=class_uris_filter,
+            add_geometry=add_geometry, filter_attributes_by_subset=filter_attributes_by_subset,
+            dummy_data_rows=dummy_data_rows, model_directory=model_directory)
+
+        # write the file
+        await OtlmowConverter.from_objects_to_file_async(
+            file_path=template_file_path, sequence_of_objects=objects, split_per_type=split_per_type)
+
+        # alter the file if needed
+        extension = template_file_path.suffix.lower()
         if extension == '.xlsx':
-            self.alter_excel_template(path_to_template_file_and_extension=path_to_template_file_and_extension,
-                                      temporary_path=temporary_path,
-                                      path_to_subset=path_to_subset, instantiated_attributes=instantiated_attributes,
-                                      **kwargs)
+            await cls.alter_excel_template_async(
+                generate_choice_list=generate_choice_list, file_path=template_file_path, dummy_data_rows=dummy_data_rows,
+                instances=objects, add_deprecated=add_deprecated, add_attribute_info=add_attribute_info)
+
         elif extension == '.csv':
-            self.determine_multiplicity_csv(path_to_template_file_and_extension=path_to_template_file_and_extension,
-                                            path_to_subset=path_to_subset,
-                                            instantiated_attributes=instantiated_attributes,
-                                            temporary_path=temporary_path,
-                                            **kwargs)
-
-    def generate_basic_template(self, path_to_subset: Path, path_to_template_file_and_extension: Path,
-                                temporary_path: Path, ignore_relations: bool = True, **kwargs):
-        list_of_otl_objectUri = None
-        if kwargs is not None:
-            list_of_otl_objectUri = kwargs.get('list_of_otl_objectUri', None)
-        collector = self._load_collector_from_subset_path(path_to_subset=path_to_subset)
-        filtered_class_list = self.filters_classes_by_subset(
-            collector=collector, list_of_otl_objectUri=list_of_otl_objectUri)
-        otl_objects = []
-        amount_of_examples = kwargs.get('amount_of_examples', 0)
-        model_directory = None
-        if kwargs is not None:
-            model_directory = kwargs.get('model_directory', None)
-        relation_dict = get_hardcoded_relation_dict(model_directory=model_directory)
-
-        generate_dummy_records = 1
-        if amount_of_examples > 1:
-            generate_dummy_records = amount_of_examples
-
-        for class_object in [cl for cl in filtered_class_list if cl.abstract == 0]:
-            if ignore_relations and class_object.objectUri in relation_dict:
-                continue
-            for _ in range(generate_dummy_records):
-                instance = dynamic_create_instance_from_uri(class_object.objectUri, model_directory=model_directory)
-                if instance is None:
-                    continue
-                attributen = collector.find_attributes_by_class(class_object)
-                for attribute_object in attributen:
-                    attr = getattr(instance, '_' + attribute_object.name)
-                    attr.fill_with_dummy_data()
-                try:
-                    geo_attr = getattr(instance, '_geometry')
-                    geo_attr.fill_with_dummy_data()
-                except AttributeError:
-                    pass
-                otl_objects.append(instance)
-
-                DotnotationHelper.clear_list_of_list_attributes(instance)
-
-        converter = OtlmowConverter()
-        converter.from_objects_to_file(file_path=temporary_path,
-                                          sequence_of_objects=otl_objects, **kwargs)
-        path_is_split = kwargs.get('split_per_type', True)
-        extension = os.path.splitext(path_to_template_file_and_extension)[-1].lower()
-        instantiated_attributes = []
-        if path_is_split is False or extension == '.xlsx':
-            instantiated_attributes = converter.from_file_to_objects(file_path=temporary_path,
-                                                                        path_to_subset=path_to_subset)
-        return instantiated_attributes
+            await cls.alter_csv_template_async(
+                split_per_type=split_per_type, file_path=template_file_path, dummy_data_rows=dummy_data_rows,
+                instances=objects, add_deprecated=add_deprecated, add_attribute_info=add_attribute_info)
 
     @classmethod
-    def alter_excel_template(cls, path_to_template_file_and_extension: Path, path_to_subset: Path,
-                             instantiated_attributes: list, temporary_path, **kwargs):
-        generate_choice_list = kwargs.get('generate_choice_list', False)
-        add_geo_artefact = kwargs.get('add_geo_artefact', False)
-        add_attribute_info = kwargs.get('add_attribute_info', False)
-        highlight_deprecated_attributes = kwargs.get('highlight_deprecated_attributes', False)
-        amount_of_examples = kwargs.get('amount_of_examples', 0)
-        if add_attribute_info and amount_of_examples == 0:
-            amount_of_examples = 1
-        wb = load_workbook(temporary_path)
-        wb.create_sheet('Keuzelijsten')
-        # Volgorde is belangrijk! Eerst rijen verwijderen indien nodig dan choice list toevoegen,
-        # staat namelijk vast op de kolom en niet het attribuut in die kolom
-        if add_geo_artefact is False:
-            cls.remove_geo_artefact_excel(workbook=wb)
-        if generate_choice_list:
-            cls.add_choice_list_excel(workbook=wb, instantiated_attributes=instantiated_attributes,
-                                      path_to_subset=path_to_subset)
-        cls.add_mock_data_excel(workbook=wb, rows_of_examples=amount_of_examples)
-        if highlight_deprecated_attributes:
-            cls.check_for_deprecated_attributes(workbook=wb, instantiated_attributes=instantiated_attributes)
-        if add_attribute_info:
-            cls.add_attribute_info_excel(workbook=wb, instantiated_attributes=instantiated_attributes)
-        cls.design_workbook_excel(workbook=wb)
-        wb.save(path_to_template_file_and_extension)
-        file_location = os.path.dirname(temporary_path)
-        [f.unlink() for f in Path(file_location).glob("*") if f.is_file()]
+    def generate_template_from_subset(
+            cls,
+            subset_path: Path,
+            template_file_path: Path,
+            ignore_relations: bool = True,
+            filter_attributes_by_subset: bool = True,
+            class_uris_filter: [str] = None,
+            dummy_data_rows: int = 1,
+            add_geometry: bool = True,
+            add_attribute_info: bool = False,
+            add_deprecated: bool = False,
+            generate_choice_list: bool = True,
+            split_per_type: bool = True,
+            model_directory: Path = None):
+        """
+         Generate a template from a subset file.
 
-    def determine_multiplicity_csv(self, path_to_template_file_and_extension: Path, path_to_subset: Path,
-                                   instantiated_attributes: list, temporary_path: Path, **kwargs):
-        path_is_split = kwargs.get('split_per_type', True)
-        if path_is_split is False:
-            self.alter_csv_template(path_to_template_file_and_extension=path_to_template_file_and_extension,
-                                    temporary_path=temporary_path, path_to_subset=path_to_subset, **kwargs)
+         :param subset_path: Path to the subset file
+         :param template_file_path: Path to where the template file should be created
+         :param ignore_relations: Whether to ignore relations when creating the template, defaults to True
+         :param filter_attributes_by_subset: Whether to filter by the attributes in the subset, defaults to True
+         :param class_uris_filter: List of class URIs to filter by. If not None, only classes with these URIs will be included, defaults to None
+         :param dummy_data_rows: Amount of dummy data rows to add to the template, defaults to 1
+         :param add_geometry: Whether to include the geometry attribute in the template, defaults to True
+         :param add_attribute_info: Whether to add attribute information to the template (colored grey in Excel), defaults to False
+         :param add_deprecated: Whether to tag deprecated attributes in the template, defaults to False
+         :param generate_choice_list: Whether to generate a choice list in the template (only for Excel), defaults to True
+         :param split_per_type: Whether to split the template into a file per type (only for CSV), defaults to True
+         :param model_directory: Path to the model directory, defaults to None
+
+         :return: None
+         """
+        # generate objects to write to file
+        objects = cls.generate_objects_for_template(
+            subset_path=subset_path, ignore_relations=ignore_relations, class_uris_filter=class_uris_filter,
+            add_geometry=add_geometry, filter_attributes_by_subset=filter_attributes_by_subset,
+            dummy_data_rows=dummy_data_rows, model_directory=model_directory)
+
+        # write the file
+        OtlmowConverter.from_objects_to_file(
+            file_path=template_file_path, sequence_of_objects=objects, split_per_type=split_per_type,
+            model_directory=model_directory)
+
+        # alter the file if needed
+        extension = template_file_path.suffix.lower()
+        if extension == '.xlsx':
+            cls.alter_excel_template(
+                generate_choice_list=generate_choice_list, file_path=template_file_path, dummy_data_rows=dummy_data_rows,
+                instances=objects, add_deprecated=add_deprecated, add_attribute_info=add_attribute_info)
+        elif extension == '.csv':
+            cls.alter_csv_template(
+                split_per_type=split_per_type, file_path=template_file_path, dummy_data_rows=dummy_data_rows,
+                instances=objects, add_deprecated=add_deprecated, add_attribute_info=add_attribute_info)
+
+    @classmethod
+    def generate_objects_for_template(
+            cls, subset_path: Path, class_uris_filter: [str], filter_attributes_by_subset: bool,
+            dummy_data_rows: int, add_geometry: bool, ignore_relations: bool, model_directory: Path = None
+    ) -> [OTLObject]:
+        """
+        This method is used to generate objects for the template. It will generate objects based on the subset file
+        """
+        collector = cls._load_collector_from_subset_path(subset_path=subset_path)
+        filtered_class_list = cls.filters_classes_by_subset(collector=collector, class_uris_filter=class_uris_filter)
+        relation_dict = get_hardcoded_relation_dict(model_directory=model_directory)
+
+        amount_objects_to_create = max(1, dummy_data_rows)
+        otl_objects = []
+
+        while True:
+            for oslo_class in [cl for cl in filtered_class_list if cl.abstract == 0]:
+                if ignore_relations and oslo_class.objectUri in relation_dict:
+                    continue
+
+                for _ in range(amount_objects_to_create):
+                    otl_object = cls.generate_object_from_oslo_class(
+                        oslo_class=oslo_class, add_geometry=add_geometry, collector=collector,
+                        filter_attributes_by_subset=filter_attributes_by_subset, model_directory=model_directory)
+                    if otl_object is not None:
+                        otl_objects.append(otl_object)
+            created = len(otl_objects)
+            unique_ids = len({obj.assetId.identificator if hasattr(obj, 'assetId') else obj.agentId.identificator
+                              for obj in otl_objects})
+            if created == unique_ids:
+                break
+            otl_objects = []
+
+        return otl_objects
+
+    @classmethod
+    async def generate_objects_for_template_async(
+            cls, subset_path: Path, class_uris_filter: [str], filter_attributes_by_subset: bool,
+            dummy_data_rows: int, add_geometry: bool, ignore_relations: bool, model_directory: Path = None
+    ) -> [OTLObject]:
+        """
+        This method is used to generate objects for the template. It will generate objects based on the subset file
+        """
+        await sleep(0)
+        collector = cls._load_collector_from_subset_path(subset_path=subset_path)
+        await sleep(0)
+        filtered_class_list = cls.filters_classes_by_subset(collector=collector, class_uris_filter=class_uris_filter)
+        await sleep(0)
+        relation_dict = get_hardcoded_relation_dict(model_directory=model_directory)
+
+        amount_objects_to_create = max(1, dummy_data_rows)
+        otl_objects = []
+
+        for oslo_class in [cl for cl in filtered_class_list if cl.abstract == 0]:
+            await sleep(0)
+            if ignore_relations and oslo_class.objectUri in relation_dict:
+                continue
+
+            for _ in range(amount_objects_to_create):
+                otl_object = cls.generate_object_from_oslo_class(
+                    oslo_class=oslo_class, add_geometry=add_geometry, collector=collector,
+                    filter_attributes_by_subset=filter_attributes_by_subset, model_directory=model_directory)
+                await sleep(0)
+                if otl_object is not None:
+                    otl_objects.append(otl_object)
+
+        return otl_objects
+
+    @classmethod
+    def generate_object_from_oslo_class(
+            cls, oslo_class: OSLOClass, add_geometry: bool,
+            filter_attributes_by_subset: bool, collector: OSLOCollector, model_directory: Path = None) -> [OTLObject]:
+        """
+        Generate an object from a given OSLO class
+        """
+        instance = dynamic_create_instance_from_uri(oslo_class.objectUri, model_directory=model_directory)
+        if instance is None:
+            return
+
+        if filter_attributes_by_subset:
+            for attribute_object in collector.find_attributes_by_class(oslo_class):
+                attr = get_attribute_by_name(instance, attribute_object.name)
+                if attr is not None:
+                    attr.fill_with_dummy_data()
+                else:
+                    logging.warning(f'Attribute {attribute_object.name} not found in class {oslo_class.objectUri}')
         else:
-            self.multiple_csv_template(path_to_template_file_and_extension=path_to_template_file_and_extension,
-                                       temporary_path=temporary_path,
-                                       path_to_subset=path_to_subset, instantiated_attributes=instantiated_attributes,
-                                       **kwargs)
-        file_location = os.path.dirname(temporary_path)
-        [f.unlink() for f in Path(file_location).glob("*") if f.is_file()]
+            for attr in instance:
+                if attr.naam != 'geometry':
+                    attr.fill_with_dummy_data()
+        with contextlib.suppress(AttributeError):
+            if add_geometry:
+                geo_attr = get_attribute_by_name(instance, 'geometry')
+                if geo_attr is not None:
+                    geo_attr.fill_with_dummy_data()
+
+        asset_versie = get_attribute_by_name(instance, 'assetVersie')
+        if asset_versie is not None:
+            asset_versie.set_waarde(None)
+
+        DotnotationHelper.clear_list_of_list_attributes(instance)
+
+        return instance
+
+    @classmethod
+    def alter_excel_template(cls, instances: list, file_path: Path, add_attribute_info: bool,
+                             generate_choice_list: bool, dummy_data_rows: int, add_deprecated: bool):
+        wb = load_workbook(file_path)
+        wb.create_sheet('Keuzelijsten')
+
+        choice_list_dict = {}
+        for sheet in wb:
+            if sheet.title == 'Keuzelijsten':
+                break
+
+            cls.alter_excel_sheet(add_attribute_info=add_attribute_info, choice_list_dict=choice_list_dict,
+                                  generate_choice_list=generate_choice_list, dummy_data_rows=dummy_data_rows,
+                                  instances=instances, sheet=sheet, add_deprecated=add_deprecated, workbook=wb)
+
+        wb.save(file_path)
+        wb.close()
+
+    @classmethod
+    def fill_class_dict(cls, instances: list) -> dict:
+        class_dict = defaultdict(list)
+        for instance in instances:
+            class_dict[instance.typeURI].append(instance)
+        return class_dict
+
+
+    @classmethod
+    def alter_csv_template(cls, instances: list, file_path: Path, add_attribute_info: bool,
+                             split_per_type: bool, dummy_data_rows: int, add_deprecated: bool):
+        classes_dict = cls.fill_class_dict(instances)
+        if split_per_type:
+            for type_uri, typed_instances in classes_dict.items():
+                ns, name = get_ns_and_name_from_uri(type_uri)
+                class_file_path = file_path.parent / f'{file_path.stem}_{ns}_{name}.csv'
+                cls.alter_csv_file(add_attribute_info=add_attribute_info, add_deprecated=add_deprecated,
+                                   dummy_data_rows=dummy_data_rows, instances=typed_instances, file_path=class_file_path)
+        else:
+            cls.alter_csv_file(add_attribute_info=add_attribute_info, add_deprecated=add_deprecated,
+                               dummy_data_rows=dummy_data_rows, instances=instances, file_path=file_path)
+    
+    @classmethod
+    async def alter_csv_template_async(cls, instances: list, file_path: Path, add_deprecated: bool,
+                                       add_attribute_info: bool, split_per_type: bool, dummy_data_rows: int):
+        classes_dict = cls.fill_class_dict(instances)
+        if split_per_type:
+            for type_uri, typed_instances in classes_dict.items():
+                await sleep(0)
+                ns, name = get_ns_and_name_from_uri(type_uri)
+                class_file_path = file_path.parent / f'{file_path.stem}_{ns}_{name}.csv'
+                cls.alter_csv_file(add_attribute_info=add_attribute_info,
+                                   dummy_data_rows=dummy_data_rows, instances=typed_instances, add_deprecated=add_deprecated,
+                                   file_path=class_file_path)
+        else:
+            await sleep(0)
+            cls.alter_csv_file(add_attribute_info=add_attribute_info,
+                               dummy_data_rows=dummy_data_rows, instances=instances, add_deprecated=add_deprecated,
+                               file_path=file_path)
+
+    @classmethod
+    def alter_csv_file(cls, add_attribute_info: bool, instances: [OTLObject], add_deprecated: bool, file_path: Path,
+                       dummy_data_rows: int):
+        collected_attribute_info_row = []
+        deprecated_attributes_row = []
+        instance = instances[0]
+        quote_char = '"'
+
+        with open(file_path, encoding='utf-8') as file:
+            csv_reader = csv.reader(file, delimiter=';', quotechar=quote_char)
+            header_row = next(csv_reader)
+            csv_data = list(csv_reader)
+
+        for index, header in enumerate(header_row):
+            if header is None or header == '':
+                continue
+
+            if header == 'typeURI':
+                if add_attribute_info:
+                    collected_attribute_info_row.append(
+                        'De URI van het object volgens https://www.w3.org/2001/XMLSchema#anyURI .')
+                if add_deprecated:
+                    deprecated_attributes_row.append('')
+                continue
+
+            attribute = DotnotationHelper.get_attribute_by_dotnotation(instance, header)
+
+            if add_attribute_info:
+                collected_attribute_info_row.append(attribute.definition)
+
+            if add_deprecated:
+                deprecated_attributes_row.append('DEPRECATED' if attribute.deprecated_version else '')
+
+        with open(file_path, 'w') as file:
+            csv_writer = csv.writer(file, delimiter=';', quotechar=quote_char, quoting=csv.QUOTE_MINIMAL)
+            if add_attribute_info:
+                csv_writer.writerow(collected_attribute_info_row)
+            if add_deprecated and any(deprecated_attributes_row):
+                csv_writer.writerow(deprecated_attributes_row)
+            csv_writer.writerow(header_row)
+            if dummy_data_rows != 0:
+                for line in csv_data:
+                    csv_writer.writerow(line)
+
+    @classmethod
+    async def alter_excel_template_async(cls, instances: list, file_path: Path, add_attribute_info: bool,
+                             generate_choice_list: bool, dummy_data_rows: int, add_deprecated: bool):
+        wb = load_workbook(file_path)
+        wb.create_sheet('Keuzelijsten')
+
+        choice_list_dict = {}
+        for sheet in wb:
+            if sheet.title == 'Keuzelijsten':
+                break
+
+            cls.alter_excel_sheet(add_attribute_info=add_attribute_info, choice_list_dict=choice_list_dict,
+                                  generate_choice_list=generate_choice_list, dummy_data_rows=dummy_data_rows,
+                                  instances=instances, sheet=sheet, add_deprecated=add_deprecated, workbook=wb)
+            await sleep(0)
+
+        wb.save(file_path)
+        wb.close()
+
+    @classmethod
+    def alter_excel_sheet(cls, add_attribute_info: bool, choice_list_dict: dict, generate_choice_list: bool,
+                          instances: [OTLObject], sheet: Worksheet, add_deprecated: bool, workbook: Workbook,
+                          dummy_data_rows: int):
+        type_uri = cls.get_uri_from_sheet_name(sheet.title)
+        instance = next(x for x in instances if x.typeURI == type_uri)
+
+        boolean_validation = DataValidation(type="list", formula1='"TRUE,FALSE,"', allow_blank=True)
+        sheet.add_data_validation(boolean_validation)
+        collected_attribute_info = []
+        deprecated_attributes_row = []
+        header_row = next(sheet.iter_rows(min_row=1, max_row=1))
+        for index, header_cell in enumerate(header_row):
+            header = header_cell.value
+            if header is None or header == '':
+                continue
+
+            if header == 'typeURI':
+                data_validation = DataValidation(type="list", formula1=f'"{type_uri}"', allow_blank=True)
+                sheet.add_data_validation(data_validation)
+                data_validation.add(f'{header_cell.column_letter}2:{header_cell.column_letter}1000')
+                if add_attribute_info:
+                    collected_attribute_info.append('De URI van het object volgens https://www.w3.org/2001/XMLSchema#anyURI .')
+                if add_deprecated:
+                    deprecated_attributes_row.append('')
+                continue
+
+            if type_uri == 'http://purl.org/dc/terms/Agent' and header.startswith('assetId.'):
+                continue
+
+            attribute = DotnotationHelper.get_attribute_by_dotnotation(instance, header)
+
+            if add_attribute_info:
+                collected_attribute_info.append(attribute.definition)
+
+            if add_deprecated:
+                deprecated_attributes_row.append('DEPRECATED' if attribute.deprecated_version else '')
+
+            if generate_choice_list:
+                if issubclass(attribute.field, BooleanField):
+                    boolean_validation.add(f'{header_cell.column_letter}{2}:{header_cell.column_letter}1000')
+                    continue
+
+                if issubclass(attribute.field, KeuzelijstField):
+                    cls.generate_choice_list_in_excel(
+                        attribute=attribute, choice_list_dict=choice_list_dict, column=header_cell.column,
+                        row_nr=1, sheet=sheet, workbook=workbook)
+
+        if dummy_data_rows == 0:
+            sheet.delete_rows(idx=2)
+
+        if add_deprecated and any(deprecated_attributes_row):
+            cls.add_deprecated_row_to_sheet(deprecated_attributes_row, sheet)
+
+        if add_attribute_info:
+            cls.add_attribute_info_to_sheet(collected_attribute_info, sheet)
+
+        cls.set_fixed_column_width(sheet=sheet, width=25)
+
+    @classmethod
+    def add_deprecated_row_to_sheet(cls, deprecated_attributes_row, sheet):
+        sheet.insert_rows(idx=1)
+        for index, depr_info in enumerate(deprecated_attributes_row, start=1):
+            if depr_info != '':
+                cell = sheet.cell(row=1, column=index)
+                cell.value = depr_info
+                cell.fill = PatternFill(start_color="FF7276", end_color="FF7276", fill_type="solid")
+
+    @classmethod
+    def add_attribute_info_to_sheet(cls, collected_attribute_info, sheet):
+        sheet.insert_rows(idx=1)
+        for index, attr_info in enumerate(collected_attribute_info, start=1):
+            cell = sheet.cell(row=1, column=index)
+            cell.value = attr_info
+            cell.alignment = Alignment(wrapText=True, vertical='top')
+            cell.fill = PatternFill(start_color="808080", end_color="808080", fill_type="solid")
+
+    @classmethod
+    def generate_choice_list_in_excel(cls, attribute, choice_list_dict, column, row_nr, sheet: Worksheet,
+                                      workbook: Workbook):
+        choice_list_values = [cv for cv in attribute.field.options.values()
+                              if cv.status != 'verwijderd']
+        if attribute.field.naam not in choice_list_dict:
+            cls.add_choice_list_to_sheet(workbook=workbook, name=attribute.field.naam,
+                                         options=choice_list_values, choice_list_dict=choice_list_dict)
+        column_in_choice_sheet = choice_list_dict[attribute.field.naam]
+        start_range = f"${column_in_choice_sheet}$2"
+        end_range = f"${column_in_choice_sheet}${len(choice_list_values) + 1}"
+        data_val = DataValidation(type="list", formula1=f"Keuzelijsten!{start_range}:{end_range}",
+                                  allowBlank=True)
+        sheet.add_data_validation(data_val)
+        data_val.add(f'{get_column_letter(column)}{row_nr + 1}:'
+                     f'{get_column_letter(column)}1000')
+
+
+    @classmethod
+    def determine_multiplicity_csv(cls, template_file_path: Path, subset_path: Path,
+                                   instances: list, temporary_path: Path, **kwargs):
+        pass
+
 
     @classmethod
     def filters_classes_by_subset(cls, collector: OSLOCollector,
-                                  list_of_otl_objectUri: [str] = None) -> list[OSLOClass]:
-        if list_of_otl_objectUri is None:
-            list_of_otl_objectUri = []
-
-        if list_of_otl_objectUri == []:
+                                  class_uris_filter: [str] = None) -> list[OSLOClass]:
+        if class_uris_filter is None:
             return collector.classes
-        return [x for x in collector.classes if x.objectUri in list_of_otl_objectUri]
-
-    @staticmethod
-    def _try_getting_settings_of_converter() -> Path:
-        converter_path = Path(site.getsitepackages()[0]) / 'otlmow_converter'
-        return converter_path / 'settings_otlmow_converter.json'
+        return [x for x in collector.classes if x.objectUri in class_uris_filter]
 
     @classmethod
-    def design_workbook_excel(cls, workbook):
-        for sheet in workbook:
-            dim_holder = DimensionHolder(worksheet=sheet)
-            for col in range(sheet.min_column, sheet.max_column + 1):
-                dim_holder[get_column_letter(col)] = ColumnDimension(sheet, min=col, max=col, width=25)
-            sheet.column_dimensions = dim_holder
-
-    @classmethod
-    def add_attribute_info_excel(cls, workbook, instantiated_attributes: list):
-        dotnotation_module = DotnotationHelper()
-        for sheet in workbook:
-            if sheet == workbook['Keuzelijsten']:
-                break
-            filter_uri = SubsetTemplateCreator.find_uri_in_sheet(sheet)
-            single_attribute = next(x for x in instantiated_attributes if x.typeURI == filter_uri)
-            sheet.insert_rows(1)
-            for rows in sheet.iter_rows(min_row=2, max_row=2, min_col=1):
-                for cell in rows:
-                    if cell.value == 'typeURI':
-                        value = 'De URI van het object volgens https://www.w3.org/2001/XMLSchema#anyURI .'
-                    elif cell.value.find('[DEPRECATED]') != -1:
-                        strip = cell.value.split(' ')
-                        dotnotation_attribute = dotnotation_module.get_attribute_by_dotnotation(single_attribute,
-                                                                                                strip[1])
-                        value = dotnotation_attribute.definition
-                    else:
-                        dotnotation_attribute = dotnotation_module.get_attribute_by_dotnotation(single_attribute,
-                                                                                                cell.value)
-                        value = dotnotation_attribute.definition
-                    newcell = sheet.cell(row=1, column=cell.column, value=value)
-                    newcell.alignment = Alignment(wrapText=True, vertical='top')
-                    newcell.fill = PatternFill(start_color="808080", end_color="808080",
-                                               fill_type="solid")
-
-    @classmethod
-    def check_for_deprecated_attributes(cls, workbook, instantiated_attributes: list):
-        dotnotation_module = DotnotationHelper()
-        for sheet in workbook:
-            if sheet == workbook['Keuzelijsten']:
-                break
-            filter_uri = SubsetTemplateCreator.find_uri_in_sheet(sheet)
-            single_attribute = next(x for x in instantiated_attributes if x.typeURI == filter_uri)
-            for rows in sheet.iter_rows(min_row=1, max_row=1, min_col=2):
-                for cell in rows:
-                    is_deprecated = False
-                    if cell.value.count('.') == 1:
-                        dot_split = cell.value.split('.')
-                        attribute = dotnotation_module.get_attribute_by_dotnotation(single_attribute,
-                                                                                    dot_split[0])
-
-                        if len(attribute.deprecated_version) > 0:
-                            is_deprecated = True
-                    dotnotation_attribute = dotnotation_module.get_attribute_by_dotnotation(single_attribute,
-                                                                                            cell.value)
-                    if len(dotnotation_attribute.deprecated_version) > 0:
-                        is_deprecated = True
-
-                    if is_deprecated:
-                        cell.value = f'[DEPRECATED] {cell.value}'
-
-    @classmethod
-    def find_uri_in_sheet(cls, sheet):
-        filter_uri = None
+    def add_type_uri_choice_list_in_excel(cls, sheet, instances, add_attribute_info: bool):
+        starting_row = '3' if add_attribute_info else '2'
+        if sheet.title == 'Keuzelijsten':
+            return
+        type_uri_found = False
         for row in sheet.iter_rows(min_row=1, max_row=1):
             for cell in row:
                 if cell.value == 'typeURI':
-                    row_index = cell.row
-                    column_index = cell.column
-                    filter_uri = sheet.cell(row=row_index + 1, column=column_index).value
-        return filter_uri
-
-    @classmethod
-    def remove_geo_artefact_excel(cls, workbook):
-        for sheet in workbook:
-            for row in sheet.iter_rows(min_row=1, max_row=1):
-                for cell in row:
-                    if cell.value == 'geometry':
-                        sheet.delete_cols(cell.column)
-
-    @classmethod
-    def add_choice_list_excel(cls, workbook, instantiated_attributes: list, path_to_subset: Path):
-        choice_list_dict = {}
-        dotnotation_module = DotnotationHelper()
-        for sheet in workbook:
-            if sheet == workbook['Keuzelijsten']:
+                    type_uri_found = True
+                    break
+            if type_uri_found:
                 break
-            filter_uri = SubsetTemplateCreator.find_uri_in_sheet(sheet)
-            single_attribute = next(x for x in instantiated_attributes if x.typeURI == filter_uri)
-            for rows in sheet.iter_rows(min_row=1, max_row=1, min_col=2):
-                for cell in rows:
-                    if cell.value.find('[DEPRECATED]') != -1:
-                        strip = cell.value.split(' ')
-                        dotnotation_attribute = dotnotation_module.get_attribute_by_dotnotation(single_attribute,
-                                                                                                strip[1])
-                    else:
-                        dotnotation_attribute = dotnotation_module.get_attribute_by_dotnotation(single_attribute,
-                                                                                                cell.value)
+        if not type_uri_found:
+            return
 
-                    if issubclass(dotnotation_attribute.field, KeuzelijstField):
-                        name = dotnotation_attribute.field.naam
-                        valid_options = [v.invulwaarde for k, v in dotnotation_attribute.field.options.items()
-                                         if v.status != 'verwijderd']
-                        if (dotnotation_attribute.field.naam not in choice_list_dict):
-                            choice_list_dict = cls.add_choice_list_to_sheet(
-                                workbook=workbook, name=name,  options=valid_options, choice_list_dict=choice_list_dict)
-                        column = choice_list_dict[dotnotation_attribute.field.naam]
-                        start_range = f"${column}$2"
-                        end_range = f"${column}${len(valid_options) + 1}"
-                        data_val = DataValidation(type="list", formula1=f"Keuzelijsten!{start_range}:{end_range}",
-                                                  allowBlank=True)
-                        sheet.add_data_validation(data_val)
-                        data_val.add(f'{get_column_letter(cell.column)}2:{get_column_letter(cell.column)}1000')
-                    if issubclass(dotnotation_attribute.field, BooleanField):
-                        data_validation = DataValidation(type="list", formula1='"TRUE,FALSE,-"', allow_blank=True)
-                        column = cell.column
-                        sheet.add_data_validation(data_validation)
-                        data_validation.add(f'{get_column_letter(column)}2:{get_column_letter(column)}1000')
-                        sheet.add_data_validation(data_validation)
+        sheet_name = sheet.title
+        type_uri = ''
+        if sheet_name.startswith('http'):
+            type_uri = sheet_name
+        else:
+            split_name = sheet_name.split("#")
+            subclass_name = split_name[1]
+
+            possible_classes = [x for x in instances if x.typeURI.endswith(subclass_name)]
+            if len(possible_classes) == 1:
+                type_uri = possible_classes[0].typeURI
+
+        if type_uri == '':
+            return
+
+        data_validation = DataValidation(type="list", formula1=f'"{type_uri}"', allow_blank=True)
+        for rows in sheet.iter_rows(min_row=1, max_row=1, min_col=1, max_col=1):
+            for cell in rows:
+                column = cell.column
+                sheet.add_data_validation(data_validation)
+                data_validation.add(f'{get_column_letter(column)}{starting_row}:{get_column_letter(column)}1000')
 
     @classmethod
-    def add_mock_data_excel(cls, workbook, rows_of_examples: int):
-        for sheet in workbook:
-            if sheet == workbook["Keuzelijsten"]:
+    async def add_type_uri_choice_list_in_excel_async(cls, sheet, instances, add_attribute_info: bool):
+        starting_row = '3' if add_attribute_info else '2'
+        await sleep(0)
+        if sheet.title == 'Keuzelijsten':
+            return
+        type_uri_found = False
+        for row in sheet.iter_rows(min_row=1, max_row=1):
+            for cell in row:
+                if cell.value == 'typeURI':
+                    type_uri_found = True
+                    break
+            if type_uri_found:
                 break
-            if rows_of_examples == 0:
-                for rows in sheet.iter_rows(min_row=2, max_row=2):
-                    for cell in rows:
-                        cell.value = ''
+        if not type_uri_found:
+            return
+
+        await sleep(0)
+        sheet_name = sheet.title
+        type_uri = ''
+        if sheet_name.startswith('http'):
+            type_uri = sheet_name
+        else:
+            split_name = sheet_name.split("#")
+            subclass_name = split_name[1]
+
+            possible_classes = [x for x in instances if x.typeURI.endswith(subclass_name)]
+            if len(possible_classes) == 1:
+                type_uri = possible_classes[0].typeURI
+
+        if type_uri == '':
+            return
+
+        data_validation = DataValidation(type="list", formula1=f'"{type_uri}"', allow_blank=True)
+        await sleep(0)
+        for rows in sheet.iter_rows(min_row=1, max_row=1, min_col=1, max_col=1):
+            for cell in rows:
+                await sleep(0)
+                column = cell.column
+                sheet.add_data_validation(data_validation)
+                data_validation.add(f'{get_column_letter(column)}{starting_row}:{get_column_letter(column)}1000')
 
     @classmethod
-    def remove_geo_artefact_csv(cls, header, data):
-        if 'geometry' in header:
-            deletion_index = header.index('geometry')
-            header.remove('geometry')
-            for d in data:
-                d.pop(deletion_index)
-        return [header, data]
-
-    @classmethod
-    def multiple_csv_template(cls, path_to_template_file_and_extension, path_to_subset, temporary_path,
-                              instantiated_attributes, **kwargs):
-        file_location = os.path.dirname(path_to_template_file_and_extension)
-        tempdir = Path(tempfile.gettempdir()) / 'temp-otlmow'
-        logging.debug(file_location)
-        file_name = ntpath.basename(path_to_template_file_and_extension)
-        split_file_name = file_name.split('.')
-        things_in_there = os.listdir(tempdir)
-        csv_templates = [x for x in things_in_there if x.startswith(f'{split_file_name[0]}_')]
-        for file in csv_templates:
-            test_template_loc = Path(os.path.dirname(path_to_template_file_and_extension)) / file
-            temp_loc = Path(tempdir) / file
-            cls.alter_csv_template(path_to_template_file_and_extension=test_template_loc, temporary_path=temp_loc,
-                                   path_to_subset=path_to_subset, **kwargs)
-
-    @classmethod
-    def alter_csv_template(cls, path_to_template_file_and_extension, path_to_subset, temporary_path,
-                           **kwargs):
-        converter = OtlmowConverter()
-        instantiated_attributes = converter.from_file_to_objects(file_path=temporary_path,
-                                                                    path_to_subset=path_to_subset)
-        header = []
-        data = []
-        delimiter = ';'
-        add_geo_artefact = kwargs.get('add_geo_artefact', False)
-        add_attribute_info = kwargs.get('add_attribute_info', False)
-        highlight_deprecated_attributes = kwargs.get('highlight_deprecated_attributes', False)
-        amount_of_examples = kwargs.get('amount_of_examples', 0)
-        quote_char = '"'
-        with open(temporary_path, 'r+', encoding='utf-8') as csvfile:
-            with open(path_to_template_file_and_extension, 'w', encoding='utf-8') as new_file:
-                reader = csv.reader(csvfile, delimiter=delimiter, quotechar=quote_char)
-                for row_nr, row in enumerate(reader):
-                    if row_nr == 0:
-                        header = row
-                    else:
-                        data.append(row)
-                if add_geo_artefact is False:
-                    [header, data] = cls.remove_geo_artefact_csv(header=header, data=data)
-                if add_attribute_info:
-                    [info, header] = cls.add_attribute_info_csv(header=header, data=data,
-                                                                instantiated_attributes=instantiated_attributes)
-                    new_file.write(delimiter.join(info) + '\n')
-                data = cls.add_mock_data_csv(header=header, data=data, rows_of_examples=amount_of_examples)
-                if highlight_deprecated_attributes:
-                    header = cls.highlight_deprecated_attributes_csv(header=header, data=data,
-                                                                     instantiated_attributes=instantiated_attributes)
-                new_file.write(delimiter.join(header) + '\n')
-                for d in data:
-                    new_file.write(delimiter.join(d) + '\n')
-
-    @classmethod
-    def add_attribute_info_csv(cls, header, data, instantiated_attributes):
-        info_data = []
-        info_data.extend(header)
-        found_uri = []
-        dotnotation_module = DotnotationHelper()
-        uri_index = cls.find_uri_in_csv(header)
-        for d in data:
-            if d[uri_index] not in found_uri:
-                found_uri.append(d[uri_index])
-        for uri in found_uri:
-            single_object = next(x for x in instantiated_attributes if x.typeURI == uri)
-            for dotnototation_title in info_data:
-                if dotnototation_title == 'typeURI':
-                    index = info_data.index(dotnototation_title)
-                    info_data[index] = 'De URI van het object volgens https://www.w3.org/2001/XMLSchema#anyURI .'
-                else:
-                    index = info_data.index(dotnototation_title)
-                    try:
-                        dotnotation_attribute = dotnotation_module.get_attribute_by_dotnotation(
-                            single_object, dotnototation_title)
-                    except AttributeError as e:
-                        continue
-                    info_data[index] = dotnotation_attribute.definition
-        return [info_data, header]
-
-    @classmethod
-    def add_mock_data_csv(cls, header, data, rows_of_examples):
-        if rows_of_examples == 0:
-            data = []
-        return data
-
-    @classmethod
-    def highlight_deprecated_attributes_csv(cls, header, data, instantiated_attributes):
-        found_uri = []
-        dotnotation_module = DotnotationHelper()
-        uri_index = cls.find_uri_in_csv(header)
-        for d in data:
-            if d[uri_index] not in found_uri:
-                found_uri.append(d[uri_index])
-        for uri in found_uri:
-            single_object = next(x for x in instantiated_attributes if x.typeURI == uri)
-            for dotnototation_title in header:
-                if dotnototation_title == 'typeURI':
-                    continue
-
-                index = header.index(dotnototation_title)
-                value = header[index]
-                try:
-                    is_deprecated = False
-                    if dotnototation_title.count('.') == 1:
-                        dot_split = dotnototation_title.split('.')
-                        attribute = dotnotation_module.get_attribute_by_dotnotation(single_object,
-                                                                                    dot_split[0])
-
-                        if len(attribute.deprecated_version) > 0:
-                            is_deprecated = True
-                    dotnotation_attribute = dotnotation_module.get_attribute_by_dotnotation(single_object,
-                                                                                            dotnototation_title)
-                    if len(dotnotation_attribute.deprecated_version) > 0:
-                        is_deprecated = True
-                except AttributeError:
-                    continue
-                if is_deprecated:
-                    header[index] = f"[DEPRECATED] {value}"
-        return header
-
-    @classmethod
-    def find_uri_in_csv(cls, header):
-        return header.index('typeURI') if 'typeURI' in header else None
+    def set_fixed_column_width(cls, sheet, width: int):
+        dim_holder = DimensionHolder(worksheet=sheet)
+        for col in range(sheet.min_column, sheet.max_column + 1):
+            dim_holder[get_column_letter(col)] = ColumnDimension(sheet, min=col, max=col, width=width)
+        sheet.column_dimensions = dim_holder
 
     @classmethod
     def add_choice_list_to_sheet(cls, workbook, name, options, choice_list_dict):
         active_sheet = workbook['Keuzelijsten']
-        row_nr = 2
-        for rows in active_sheet.iter_rows(min_row=1, max_row=1, min_col=1, max_col=700):
-            for cell in rows:
-                if cell.value is None:
-                    cell.value = name
-                    column_nr = cell.column
-                    for option in options:
-                        active_sheet.cell(row=row_nr, column=column_nr, value=option)
-                        row_nr += 1
-                    choice_list_dict[name] = get_column_letter(column_nr)
-                    break
-        return choice_list_dict
+        column_nr = choice_list_dict.keys().__len__() + 1
+        row_nr = 1
+        new_header = active_sheet.cell(row=row_nr, column=column_nr)
+        if new_header.value is not None:
+            raise ValueError(f'Header already exists at column {column_nr}: {new_header.value}')
+        new_header.value = name
+        for index, option in enumerate(options, start=1):
+            cell = active_sheet.cell(row=row_nr + index, column=column_nr)
+            cell.value = option.invulwaarde
 
+        choice_list_dict[name] = new_header.column_letter
 
-if __name__ == '__main__':
-    subset_tool = SubsetTemplateCreator()
-    subset_location = Path(ROOT_DIR) / 'UnitTests' / 'Subset' / 'Flitspaal_noAgent3.0.db'
-    # directory = Path(ROOT_DIR) / 'UnitTests' / 'TestClasses'
-    # Slash op het einde toevoegen verandert weinig of niks aan het resultaat
-    # directory = os.path.join(directory, '')
-    xls_location = Path(ROOT_DIR) / 'UnitTests' / 'Subset' / 'testFileStorage' / 'template_file.csv'
-    subset_tool.generate_template_from_subset(path_to_subset=subset_location,
-                                              path_to_template_file_and_extension=xls_location, add_attribute_info=True,
-                                              highlight_deprecated_attributes=True,
-                                              amount_of_examples=5,
-                                              generate_choice_list=True,
-                                              split_per_type=False)
+    @classmethod
+    def get_uri_from_sheet_name(cls, title: str) -> str:
+        if title == 'Agent':
+            return 'http://purl.org/dc/terms/Agent'
+        if '#' not in title:
+            raise ValueError('Sheet title does not contain a #')
+        class_ns, class_name = title.split('#', maxsplit=1)
+        return short_to_long_ns.get(class_ns, class_ns) + class_name
