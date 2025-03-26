@@ -65,7 +65,7 @@
             <a id="nextFileLink" class="nav" href="index.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.7.1">coverage.py v7.7.1</a>,
-            created at 2025-03-24 22:35 +0000
+            created at 2025-03-26 15:39 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -152,7 +152,7 @@
     <p class="pln"><span class="n"><a id="t70" href="#t70">70</a></span><span class="t">            <span class="nam">add_deprecated</span><span class="op">:</span> <span class="nam">bool</span> <span class="op">=</span> <span class="key">False</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t71" href="#t71">71</a></span><span class="t">            <span class="nam">generate_choice_list</span><span class="op">:</span> <span class="nam">bool</span> <span class="op">=</span> <span class="key">True</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t72" href="#t72">72</a></span><span class="t">            <span class="nam">split_per_type</span><span class="op">:</span> <span class="nam">bool</span> <span class="op">=</span> <span class="key">True</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t73" href="#t73">73</a></span><span class="t">            <span class="nam">model_directory</span><span class="op">:</span> <span class="nam">Path</span> <span class="op">=</span> <span class="key">None</span><span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t73" href="#t73">73</a></span><span class="t">            <span class="nam">model_directory</span><span class="op">:</span> <span class="nam">Path</span> <span class="op">=</span> <span class="key">None</span><span class="op">,</span> <span class="op">**</span><span class="nam">kwargs</span><span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t74" href="#t74">74</a></span><span class="t">        <span class="str">"""</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t75" href="#t75">75</a></span><span class="t"><span class="str">        Generate a template from a subset file, async version.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t76" href="#t76">76</a></span><span class="t"><span class="str">        Await this function!</span>&nbsp;</span><span class="r"></span></p>
@@ -180,7 +180,7 @@
     <p class="pln"><span class="n"><a id="t98" href="#t98">98</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t99" href="#t99">99</a></span><span class="t">        <span class="com"># write the file</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t100" href="#t100">100</a></span><span class="t">        <span class="key">await</span> <span class="nam">OtlmowConverter</span><span class="op">.</span><span class="nam">from_objects_to_file_async</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t101" href="#t101">101</a></span><span class="t">            <span class="nam">file_path</span><span class="op">=</span><span class="nam">template_file_path</span><span class="op">,</span> <span class="nam">sequence_of_objects</span><span class="op">=</span><span class="nam">objects</span><span class="op">,</span> <span class="nam">split_per_type</span><span class="op">=</span><span class="nam">split_per_type</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t101" href="#t101">101</a></span><span class="t">            <span class="nam">file_path</span><span class="op">=</span><span class="nam">template_file_path</span><span class="op">,</span> <span class="nam">sequence_of_objects</span><span class="op">=</span><span class="nam">objects</span><span class="op">,</span> <span class="nam">split_per_type</span><span class="op">=</span><span class="nam">split_per_type</span><span class="op">,</span> <span class="op">**</span><span class="nam">kwargs</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t102" href="#t102">102</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t103" href="#t103">103</a></span><span class="t">        <span class="com"># alter the file if needed</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t104" href="#t104">104</a></span><span class="t">        <span class="nam">extension</span> <span class="op">=</span> <span class="nam">template_file_path</span><span class="op">.</span><span class="nam">suffix</span><span class="op">.</span><span class="nam">lower</span><span class="op">(</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
@@ -208,7 +208,7 @@
     <p class="pln"><span class="n"><a id="t126" href="#t126">126</a></span><span class="t">            <span class="nam">add_deprecated</span><span class="op">:</span> <span class="nam">bool</span> <span class="op">=</span> <span class="key">False</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t127" href="#t127">127</a></span><span class="t">            <span class="nam">generate_choice_list</span><span class="op">:</span> <span class="nam">bool</span> <span class="op">=</span> <span class="key">True</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t128" href="#t128">128</a></span><span class="t">            <span class="nam">split_per_type</span><span class="op">:</span> <span class="nam">bool</span> <span class="op">=</span> <span class="key">True</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t129" href="#t129">129</a></span><span class="t">            <span class="nam">model_directory</span><span class="op">:</span> <span class="nam">Path</span> <span class="op">=</span> <span class="key">None</span><span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t129" href="#t129">129</a></span><span class="t">            <span class="nam">model_directory</span><span class="op">:</span> <span class="nam">Path</span> <span class="op">=</span> <span class="key">None</span><span class="op">,</span> <span class="op">**</span><span class="nam">kwargs</span><span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t130" href="#t130">130</a></span><span class="t">        <span class="str">"""</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t131" href="#t131">131</a></span><span class="t"><span class="str">         Generate a template from a subset file.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t132" href="#t132">132</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
@@ -236,7 +236,7 @@
     <p class="pln"><span class="n"><a id="t154" href="#t154">154</a></span><span class="t">        <span class="com"># write the file</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t155" href="#t155">155</a></span><span class="t">        <span class="nam">OtlmowConverter</span><span class="op">.</span><span class="nam">from_objects_to_file</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t156" href="#t156">156</a></span><span class="t">            <span class="nam">file_path</span><span class="op">=</span><span class="nam">template_file_path</span><span class="op">,</span> <span class="nam">sequence_of_objects</span><span class="op">=</span><span class="nam">objects</span><span class="op">,</span> <span class="nam">split_per_type</span><span class="op">=</span><span class="nam">split_per_type</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t157" href="#t157">157</a></span><span class="t">            <span class="nam">model_directory</span><span class="op">=</span><span class="nam">model_directory</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t157" href="#t157">157</a></span><span class="t">            <span class="nam">model_directory</span><span class="op">=</span><span class="nam">model_directory</span><span class="op">,</span> <span class="op">**</span><span class="nam">kwargs</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t158" href="#t158">158</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t159" href="#t159">159</a></span><span class="t">        <span class="com"># alter the file if needed</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t160" href="#t160">160</a></span><span class="t">        <span class="nam">extension</span> <span class="op">=</span> <span class="nam">template_file_path</span><span class="op">.</span><span class="nam">suffix</span><span class="op">.</span><span class="nam">lower</span><span class="op">(</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
@@ -701,7 +701,7 @@
             <a class="nav" href="index.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.7.1">coverage.py v7.7.1</a>,
-            created at 2025-03-24 22:35 +0000
+            created at 2025-03-26 15:39 +0000
         </p>
     </div>
 </footer>
