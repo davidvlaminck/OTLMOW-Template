@@ -70,7 +70,7 @@ class SubsetTemplateCreator:
             add_deprecated: bool = False,
             generate_choice_list: bool = True,
             split_per_type: bool = True,
-            model_directory: Path = None):
+            model_directory: Path = None, **kwargs):
         """
         Generate a template from a subset file, async version.
         Await this function!
@@ -98,7 +98,7 @@ class SubsetTemplateCreator:
 
         # write the file
         await OtlmowConverter.from_objects_to_file_async(
-            file_path=template_file_path, sequence_of_objects=objects, split_per_type=split_per_type)
+            file_path=template_file_path, sequence_of_objects=objects, split_per_type=split_per_type, **kwargs)
 
         # alter the file if needed
         extension = template_file_path.suffix.lower()
@@ -126,7 +126,7 @@ class SubsetTemplateCreator:
             add_deprecated: bool = False,
             generate_choice_list: bool = True,
             split_per_type: bool = True,
-            model_directory: Path = None):
+            model_directory: Path = None, **kwargs):
         """
          Generate a template from a subset file.
 
@@ -154,7 +154,7 @@ class SubsetTemplateCreator:
         # write the file
         OtlmowConverter.from_objects_to_file(
             file_path=template_file_path, sequence_of_objects=objects, split_per_type=split_per_type,
-            model_directory=model_directory)
+            model_directory=model_directory, **kwargs)
 
         # alter the file if needed
         extension = template_file_path.suffix.lower()
