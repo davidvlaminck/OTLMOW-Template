@@ -29,8 +29,8 @@ classifiers = [
 ]
 requires-python = ">=3.9"
 dependencies = [
-  'otlmow-converter >= 1.10',
-  'otlmow-modelbuilder >= 0.25'
+  'otlmow-converter >= 1.11',
+  'otlmow-modelbuilder >= 0.27'
 ]
 
 [tool.setuptools.packages.find]
@@ -39,3 +39,11 @@ include = ["otlmow_template*"]
 [project.urls]
 "Homepage" = "https://github.com/davidvlaminck/OTLMOW-Template"
 "Bug Tracker" = "https://github.com/davidvlaminck/OTLMOW-Template/issues"
+
+[project.optional-dependencies]
+test = [
+    "pytest",
+    "pytest-cov",
+    "pytest-subtests",
+    "pytest-timeout"
+]
