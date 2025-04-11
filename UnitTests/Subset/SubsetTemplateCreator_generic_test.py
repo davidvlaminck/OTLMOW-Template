@@ -218,3 +218,39 @@ async def test_subset_with_AllCasesTestClass_generic_csv_async():
     csv_allcases_path.unlink()
     csv_another_path.unlink()
     csv_deprecated_path.unlink()
+
+
+@pytest.mark.asyncio
+async def test_subset_with_AllCasesTestClass_generic_csv_with_relations_async():
+    subset_tool = SubsetTemplateCreator()
+    csv_path = current_dir / 'generic_relations_async.csv'
+    await subset_tool.generate_template_from_subset_async(subset_path=current_dir / 'OTL_AllCasesTestClass.db',
+                                                          template_file_path=csv_path, ignore_relations=False,
+                                                          model_directory=model_directory_path)
+
+    csv_allcases_path = csv_path.parent / csv_path.name.replace('.csv', '_onderdeel_AllCasesTestClass.csv')
+    csv_another_path = csv_path.parent / csv_path.name.replace('.csv', '_onderdeel_AnotherTestClass.csv')
+    csv_deprecated_path = csv_path.parent / csv_path.name.replace('.csv', '_onderdeel_DeprecatedTestClass.csv')
+    csv_bevestiging_path = csv_path.parent / csv_path.name.replace('.csv', '_onderdeel_Bevestiging.csv')
+    csv_voedt_path = csv_path.parent / csv_path.name.replace('.csv', '_onderdeel_Voedt.csv')
+
+
+    assert csv_allcases_path.exists()
+
+    with open(csv_bevestiging_path, 'r') as f:
+        f.readline()
+        data = f.readlines()
+
+    assert len(data) == 1
+
+    with open(csv_voedt_path, 'r') as f:
+        f.readline()
+        data = f.readlines()
+
+    assert len(data) == 1
+
+    csv_allcases_path.unlink()
+    csv_another_path.unlink()
+    csv_deprecated_path.unlink()
+    csv_bevestiging_path.unlink()
+    csv_voedt_path.unlink()

@@ -20,7 +20,8 @@ from otlmow_converter.OtlmowConverter import OtlmowConverter
 from otlmow_model.OtlmowModel.BaseClasses.BooleanField import BooleanField
 from otlmow_model.OtlmowModel.BaseClasses.KeuzelijstField import KeuzelijstField
 from otlmow_model.OtlmowModel.BaseClasses.OTLObject import dynamic_create_instance_from_uri, OTLObject, \
-    get_attribute_by_name
+    get_attribute_by_name, dynamic_create_type_from_uri
+from otlmow_model.OtlmowModel.Helpers.RelationCreator import create_betrokkenerelation, create_relation
 from otlmow_model.OtlmowModel.Helpers.generated_lists import get_hardcoded_relation_dict
 from otlmow_modelbuilder.HelperFunctions import get_ns_and_name_from_uri
 from otlmow_modelbuilder.OSLOCollector import OSLOCollector
@@ -184,7 +185,7 @@ class SubsetTemplateCreator:
 
         while True:
             for oslo_class in [cl for cl in filtered_class_list if cl.abstract == 0]:
-                if ignore_relations and oslo_class.objectUri in relation_dict:
+                if oslo_class.objectUri in relation_dict:
                     continue
 
                 for _ in range(amount_objects_to_create):
@@ -199,6 +200,12 @@ class SubsetTemplateCreator:
             if created == unique_ids:
                 break
             otl_objects = []
+
+        if not ignore_relations:
+            non_relations_class_uris = [cl.objectUri for cl in filtered_class_list
+                                        if cl.abstract == 0 and cl.objectUri not in relation_dict]
+            cls.append_relations_to_objects(otl_objects=otl_objects, collector=collector,
+                                            class_uris_filter=non_relations_class_uris, model_directory=model_directory)
 
         return otl_objects
 
@@ -222,7 +229,7 @@ class SubsetTemplateCreator:
 
         for oslo_class in [cl for cl in filtered_class_list if cl.abstract == 0]:
             await sleep(0)
-            if ignore_relations and oslo_class.objectUri in relation_dict:
+            if oslo_class.objectUri in relation_dict:
                 continue
 
             for _ in range(amount_objects_to_create):
@@ -232,6 +239,12 @@ class SubsetTemplateCreator:
                 await sleep(0)
                 if otl_object is not None:
                     otl_objects.append(otl_object)
+
+        if not ignore_relations:
+            non_relations_class_uris = [cl.objectUri for cl in filtered_class_list
+                                        if cl.abstract == 0 and cl.objectUri not in relation_dict]
+            cls.append_relations_to_objects(otl_objects=otl_objects, collector=collector,
+                                            class_uris_filter=non_relations_class_uris, model_directory=model_directory)
 
         return otl_objects
 
@@ -258,6 +271,9 @@ class SubsetTemplateCreator:
                 if attr.naam != 'geometry':
                     attr.fill_with_dummy_data()
         with contextlib.suppress(AttributeError):
+            assetId_attr = get_attribute_by_name(instance, 'assetId')
+            if assetId_attr is not None:
+                assetId_attr.fill_with_dummy_data()
             if add_geometry:
                 geo_attr = get_attribute_by_name(instance, 'geometry')
                 if geo_attr is not None:
@@ -610,3 +626,28 @@ class SubsetTemplateCreator:
             raise ValueError('Sheet title does not contain a #')
         class_ns, class_name = title.split('#', maxsplit=1)
         return short_to_long_ns.get(class_ns, class_ns) + class_name
+
+    @classmethod
+    def append_relations_to_objects(cls, otl_objects: [OTLObject], collector: OSLOCollector, class_uris_filter: [str],
+                                    model_directory: Path):
+        class_dict = defaultdict(list)
+        for instance in otl_objects:
+            class_dict[instance.typeURI].append(instance)
+
+        for class_uri in class_uris_filter:
+            for relation in collector.find_all_concrete_relations(objectUri=class_uri):
+                if class_uri != relation.bron_uri:
+                    continue
+                for i, bron_instance in enumerate(class_dict[relation.bron_uri]):
+                    doel_instance = class_dict[relation.doel_uri][i]
+                    if relation.objectUri == 'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#HeeftBetrokkene':
+                        relation_instance = create_betrokkenerelation(rol='toezichter', source=bron_instance,
+                                                            target=doel_instance, model_directory=model_directory)
+                    else:
+                        if relation.richting == 'Unspecified' and bron_instance.assetId.identificator > doel_instance.assetId.identificator:
+                            continue
+                        relation_type = dynamic_create_type_from_uri(class_uri=relation.objectUri, model_directory=model_directory)
+                        relation_instance = create_relation(relation_type=relation_type, source=bron_instance,
+                                                            target=doel_instance, model_directory=model_directory)
+
+                    otl_objects.append(relation_instance)
