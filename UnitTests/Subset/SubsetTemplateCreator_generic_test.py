@@ -218,3 +218,31 @@ async def test_subset_with_AllCasesTestClass_generic_csv_async():
     csv_allcases_path.unlink()
     csv_another_path.unlink()
     csv_deprecated_path.unlink()
+
+
+def test_subset_with_long_class_name_excel_generic():
+    subset_tool = SubsetTemplateCreator()
+    excel_path = current_dir / 'OTL_Telecom_appurtenance.xlsx'
+    subset_tool.generate_template_from_subset(subset_path=current_dir / 'telecom_app.db',
+                                              abbreviate_excel_sheettitles=True,
+                                              template_file_path=excel_path)
+    assert excel_path.exists()
+
+    book = openpyxl.load_workbook(excel_path, data_only=True, read_only=True)
+    header_row_list = []
+    for sheet in book.worksheets:
+        sheet_name = sheet.title
+        if sheet_name != 'imp#TelecommunicationsAppurtena':
+            continue
+        for row in sheet.rows:
+            header_row_list = [cell.value for cell in row]
+            break
+    book.close()
+
+    assert header_row_list == ['typeURI','assetId.identificator','assetId.toegekendDoor','appurtenanceType',
+                               'bestekPostNummer[]','datumOprichtingObject','geometry','isActief','notitie',
+                               'opstelhoogte','standaardBestekPostNummer[]','theoretischeLevensduur','toestand']
+
+    gc.collect()
+
+    excel_path.unlink()

@@ -16,6 +16,7 @@ from openpyxl.worksheet.datavalidation import DataValidation
 from openpyxl.worksheet.dimensions import DimensionHolder, ColumnDimension
 from openpyxl.worksheet.worksheet import Worksheet
 from otlmow_converter.DotnotationHelper import DotnotationHelper
+from otlmow_converter.Exceptions.UnknownExcelError import UnknownExcelError
 from otlmow_converter.OtlmowConverter import OtlmowConverter
 from otlmow_model.OtlmowModel.BaseClasses.BooleanField import BooleanField
 from otlmow_model.OtlmowModel.BaseClasses.KeuzelijstField import KeuzelijstField
@@ -397,7 +398,11 @@ class SubsetTemplateCreator:
                           instances: [OTLObject], sheet: Worksheet, add_deprecated: bool, workbook: Workbook,
                           dummy_data_rows: int):
         type_uri = cls.get_uri_from_sheet_name(sheet.title)
-        instance = next(x for x in instances if x.typeURI == type_uri)
+        instance = next((x for x in instances if x.typeURI == type_uri), None)
+        if instance is None:
+            instance = next((x for x in instances if x.typeURI.startswith(type_uri)), None)
+        if instance is None:
+            raise UnknownExcelError(f'When creating a template, no instance could be created for {type_uri}')
 
         boolean_validation = DataValidation(type="list", formula1='"TRUE,FALSE,"', allow_blank=True)
         sheet.add_data_validation(boolean_validation)
