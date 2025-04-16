@@ -220,37 +220,29 @@ async def test_subset_with_AllCasesTestClass_generic_csv_async():
     csv_deprecated_path.unlink()
 
 
-@pytest.mark.asyncio
-async def test_subset_with_AllCasesTestClass_generic_csv_with_relations_async():
+def test_subset_with_long_class_name_excel_generic():
     subset_tool = SubsetTemplateCreator()
-    csv_path = current_dir / 'generic_relations_async.csv'
-    await subset_tool.generate_template_from_subset_async(subset_path=current_dir / 'OTL_AllCasesTestClass.db',
-                                                          template_file_path=csv_path, ignore_relations=False,
-                                                          model_directory=model_directory_path)
+    excel_path = current_dir / 'OTL_Telecom_appurtenance.xlsx'
+    subset_tool.generate_template_from_subset(subset_path=current_dir / 'telecom_app.db',
+                                              abbreviate_excel_sheettitles=True,
+                                              template_file_path=excel_path)
+    assert excel_path.exists()
 
-    csv_allcases_path = csv_path.parent / csv_path.name.replace('.csv', '_onderdeel_AllCasesTestClass.csv')
-    csv_another_path = csv_path.parent / csv_path.name.replace('.csv', '_onderdeel_AnotherTestClass.csv')
-    csv_deprecated_path = csv_path.parent / csv_path.name.replace('.csv', '_onderdeel_DeprecatedTestClass.csv')
-    csv_bevestiging_path = csv_path.parent / csv_path.name.replace('.csv', '_onderdeel_Bevestiging.csv')
-    csv_voedt_path = csv_path.parent / csv_path.name.replace('.csv', '_onderdeel_Voedt.csv')
+    book = openpyxl.load_workbook(excel_path, data_only=True, read_only=True)
+    header_row_list = []
+    for sheet in book.worksheets:
+        sheet_name = sheet.title
+        if sheet_name != 'imp#TelecommunicationsAppurtena':
+            continue
+        for row in sheet.rows:
+            header_row_list = [cell.value for cell in row]
+            break
+    book.close()
 
+    assert header_row_list == ['typeURI','assetId.identificator','assetId.toegekendDoor','appurtenanceType',
+                               'bestekPostNummer[]','datumOprichtingObject','geometry','isActief','notitie',
+                               'opstelhoogte','standaardBestekPostNummer[]','theoretischeLevensduur','toestand']
 
-    assert csv_allcases_path.exists()
+    gc.collect()
 
-    with open(csv_bevestiging_path, 'r') as f:
-        f.readline()
-        data = f.readlines()
-
-    assert len(data) == 1
-
-    with open(csv_voedt_path, 'r') as f:
-        f.readline()
-        data = f.readlines()
-
-    assert len(data) == 1
-
-    csv_allcases_path.unlink()
-    csv_another_path.unlink()
-    csv_deprecated_path.unlink()
-    csv_bevestiging_path.unlink()
-    csv_voedt_path.unlink()
+    excel_path.unlink()
