@@ -196,7 +196,7 @@ class SubsetTemplateCreator:
                     if otl_object is not None:
                         otl_objects.append(otl_object)
             created = len(otl_objects)
-            unique_ids = len({obj.assetId.identificator if hasattr(obj, 'assetId') else obj.agentId.identificator
+            unique_ids = len({obj.assetId.identificator if obj.typeURI != 'http://purl.org/dc/terms/Agent' else obj.agentId.identificator
                               for obj in otl_objects})
             if created == unique_ids:
                 break
