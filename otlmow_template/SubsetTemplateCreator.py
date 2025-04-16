@@ -251,13 +251,19 @@ class SubsetTemplateCreator:
             for attribute_object in collector.find_attributes_by_class(oslo_class):
                 attr = get_attribute_by_name(instance, attribute_object.name)
                 if attr is not None:
-                    attr.fill_with_dummy_data()
+                    if attr.naam == 'isActief':
+                        attr.set_waarde(True)
+                    else:
+                        attr.fill_with_dummy_data()
                 else:
                     logging.warning(f'Attribute {attribute_object.name} not found in class {oslo_class.objectUri}')
         else:
             for attr in instance:
-                if attr.naam != 'geometry':
+                if attr.naam == 'isActief':
+                    attr.set_waarde(True)
+                elif attr.naam != 'geometry':
                     attr.fill_with_dummy_data()
+
         with contextlib.suppress(AttributeError):
             if add_geometry:
                 geo_attr = get_attribute_by_name(instance, 'geometry')
