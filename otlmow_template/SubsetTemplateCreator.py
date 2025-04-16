@@ -2,8 +2,6 @@ import contextlib
 import csv
 import logging
 import os
-import shutil
-import tempfile
 from asyncio import sleep
 from collections import defaultdict
 from pathlib import Path
@@ -500,13 +498,14 @@ class SubsetTemplateCreator:
                 cell.fill = PatternFill(start_color="FF7276", end_color="FF7276", fill_type="solid")
 
     @classmethod
-    def add_attribute_info_to_sheet(cls, collected_attribute_info, sheet):
+    def add_attribute_info_to_sheet(cls, collected_attribute_info: list[str], sheet: Worksheet):
         sheet.insert_rows(idx=1)
+        fill = PatternFill(start_color="808080", fill_type="solid")
+        alignment = Alignment(wrapText=True, vertical='top')
         for index, attr_info in enumerate(collected_attribute_info, start=1):
-            cell = sheet.cell(row=1, column=index)
-            cell.value = attr_info
-            cell.alignment = Alignment(wrapText=True, vertical='top')
-            cell.fill = PatternFill(start_color="808080", end_color="808080", fill_type="solid")
+            cell = sheet.cell(row=1, column=index, value=attr_info)
+            cell.alignment = alignment
+            cell.fill = fill
 
     @classmethod
     def generate_choice_list_in_excel(cls, attribute, choice_list_dict, column, row_nr, sheet: Worksheet,
