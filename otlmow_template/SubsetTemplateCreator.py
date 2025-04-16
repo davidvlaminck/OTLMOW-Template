@@ -263,13 +263,12 @@ class SubsetTemplateCreator:
         if filter_attributes_by_subset:
             for attribute_object in collector.find_attributes_by_class(oslo_class):
                 attr = get_attribute_by_name(instance, attribute_object.name)
-                if attr is not None:
-                    if attr.naam == 'isActief':
-                        attr.set_waarde(True)
-                    else:
-                        attr.fill_with_dummy_data()
-                else:
+                if attr is None:
                     logging.warning(f'Attribute {attribute_object.name} not found in class {oslo_class.objectUri}')
+                elif attr.naam == 'isActief':
+                    attr.set_waarde(True)
+                else:
+                    attr.fill_with_dummy_data()
         else:
             for attr in instance:
                 if attr.naam == 'isActief':
