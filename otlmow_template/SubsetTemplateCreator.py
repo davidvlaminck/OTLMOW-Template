@@ -22,9 +22,9 @@ from otlmow_model.OtlmowModel.BaseClasses.BooleanField import BooleanField
 from otlmow_model.OtlmowModel.BaseClasses.KeuzelijstField import KeuzelijstField
 from otlmow_model.OtlmowModel.BaseClasses.OTLObject import dynamic_create_instance_from_uri, OTLObject, \
     get_attribute_by_name, dynamic_create_type_from_uri
+from otlmow_model.OtlmowModel.Helpers.GenericHelper import get_ns_and_name_from_uri
 from otlmow_model.OtlmowModel.Helpers.RelationCreator import create_betrokkenerelation, create_relation
 from otlmow_model.OtlmowModel.Helpers.generated_lists import get_hardcoded_relation_dict
-from otlmow_modelbuilder.HelperFunctions import get_ns_and_name_from_uri
 from otlmow_modelbuilder.OSLOCollector import OSLOCollector
 from otlmow_modelbuilder.SQLDataClasses.OSLOClass import OSLOClass
 
@@ -326,7 +326,10 @@ class SubsetTemplateCreator:
         if split_per_type:
             for type_uri, typed_instances in classes_dict.items():
                 ns, name = get_ns_and_name_from_uri(type_uri)
-                class_file_path = file_path.parent / f'{file_path.stem}_{ns}_{name}.csv'
+                ns_name = f'{ns}_{name}'
+                if name == 'Agent':
+                    ns_name = 'Agent'
+                class_file_path = file_path.parent / f'{file_path.stem}_{ns_name}.csv'
                 cls.alter_csv_file(add_attribute_info=add_attribute_info, add_deprecated=add_deprecated,
                                    dummy_data_rows=dummy_data_rows, instances=typed_instances, file_path=class_file_path)
         else:
@@ -341,7 +344,10 @@ class SubsetTemplateCreator:
             for type_uri, typed_instances in classes_dict.items():
                 await sleep(0)
                 ns, name = get_ns_and_name_from_uri(type_uri)
-                class_file_path = file_path.parent / f'{file_path.stem}_{ns}_{name}.csv'
+                ns_name = f'{ns}_{name}'
+                if name == 'Agent':
+                    ns_name = 'Agent'
+                class_file_path = file_path.parent / f'{file_path.stem}_{ns_name}.csv'
                 cls.alter_csv_file(add_attribute_info=add_attribute_info,
                                    dummy_data_rows=dummy_data_rows, instances=typed_instances, add_deprecated=add_deprecated,
                                    file_path=class_file_path)
@@ -376,7 +382,14 @@ class SubsetTemplateCreator:
                     deprecated_attributes_row.append('')
                 continue
 
-            attribute = DotnotationHelper.get_attribute_by_dotnotation(instance, header)
+            try:
+                attribute = DotnotationHelper.get_attribute_by_dotnotation(instance, header)
+            except AttributeError:
+                if add_attribute_info:
+                    collected_attribute_info_row.append('')
+                if add_deprecated:
+                    deprecated_attributes_row.append('')
+                continue
 
             if add_attribute_info:
                 collected_attribute_info_row.append(attribute.definition)
@@ -384,7 +397,7 @@ class SubsetTemplateCreator:
             if add_deprecated:
                 deprecated_attributes_row.append('DEPRECATED' if attribute.deprecated_version else '')
 
-        with open(file_path, 'w') as file:
+        with open(file_path, 'w', newline='', encoding='utf-8') as file:
             csv_writer = csv.writer(file, delimiter=';', quotechar=quote_char, quoting=csv.QUOTE_MINIMAL)
             if add_attribute_info:
                 csv_writer.writerow(collected_attribute_info_row)
