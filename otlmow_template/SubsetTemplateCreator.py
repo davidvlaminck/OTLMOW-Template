@@ -1,3 +1,4 @@
+import asyncio
 import concurrent
 import contextlib
 import csv
@@ -5,7 +6,7 @@ import logging
 import os
 from asyncio import sleep
 from collections import defaultdict
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ThreadPoolExecutor, as_completed, ALL_COMPLETED
 from pathlib import Path
 
 from openpyxl.reader.excel import load_workbook
@@ -169,30 +170,6 @@ class SubsetTemplateCreator:
                 split_per_type=split_per_type, file_path=template_file_path, dummy_data_rows=dummy_data_rows,
                 instances=objects, add_deprecated=add_deprecated, add_attribute_info=add_attribute_info)
 
-    # def test(self):
-    #     with concurrent.futures.ThreadPoolExecutor() as executor:
-    #         futures = {executor.submit(OTLModelCreator.create_enumeration, creator=creator, directory=directory,
-    #                                    enumeration=enumeration, environment=environment,
-    #                                    enumeration_validation_rules=enumeration_validation_rules): enumeration for
-    #                    enumeration in oslo_collector.enumerations}
-    #             while futures:
-    #                 new_futures = {}
-    #                 done, pending = concurrent.futures.wait(futures, return_when=FIRST_COMPLETED, timeout=60)
-    #                 for fut in done:
-    #                     if fut.exception():
-    #                         enumeration = futures[fut]
-    #                         new_futures[executor.submit(
-    #                             OTLModelCreator.create_enumeration, creator=creator, directory=directory,
-    #                             enumeration=enumeration, environment=environment,
-    #                             enumeration_validation_rules=enumeration_validation_rules)
-    #                         ] = job
-    #                     else:
-    #                         pbar.update()
-    #                 for fut in pending:
-    #                     job = futures[fut]
-    #                     new_futures[fut] = job
-    #                 futures = new_futures
-
 
     @classmethod
     def create_x_objects(cls, oslo_class, add_geometry, collector, filter_attributes_by_subset, model_directory,
@@ -208,6 +185,17 @@ class SubsetTemplateCreator:
             if otl_object is not None:
                 otl_objects.append(otl_object)
         return otl_objects
+
+    @classmethod
+    def get_number_of_cpus(cls) -> int:
+        import multiprocessing
+        cpu_count = multiprocessing.cpu_count()
+        if cpu_count is None or cpu_count == 0:
+            import os
+            cpu_count = os.cpu_count()
+        if cpu_count is None or cpu_count == 0:
+            cpu_count = 8
+        return cpu_count
 
 
     @classmethod
@@ -226,16 +214,20 @@ class SubsetTemplateCreator:
         otl_objects = []
 
         while True:
-            with ThreadPoolExecutor(max_workers=10) as executor:
+            with ThreadPoolExecutor(max_workers=cls.get_number_of_cpus()) as executor:
                 futures = [
                     executor.submit(cls.create_x_objects, oslo_class, add_geometry, collector,
                                     filter_attributes_by_subset, model_directory, amount_objects_to_create)
                     for oslo_class in [cl for cl in filtered_class_list if cl.abstract == 0]
                 ]
-
-                # Collect the results as they complete
-                for future in as_completed(futures):
-                    otl_objects.extend(future.result())
+                while futures:
+                    done, not_done = concurrent.futures.wait(futures, return_when=ALL_COMPLETED, timeout=60)
+                    for future in as_completed(done):
+                        otl_objects.extend(future.result())
+                    futures = not_done
+                    print(f'when using multiprocessing: {len(done)} done, {len(not_done)} not done')
+                    if len(not_done) > 0:
+                        print('restarting the loop with the not done ones')
 
             created = len(otl_objects)
             unique_ids = len({obj.assetId.identificator if obj.typeURI != 'http://purl.org/dc/terms/Agent' else obj.agentId.identificator
@@ -253,6 +245,24 @@ class SubsetTemplateCreator:
         return otl_objects
 
     @classmethod
+    async def create_x_objects_async(cls, oslo_class, add_geometry, collector, filter_attributes_by_subset,
+                                  model_directory,
+                         amount_objects_to_create):
+        if oslo_class.objectUri in cls.relation_dict:
+            return []
+
+        otl_objects = []
+        for _ in range(amount_objects_to_create):
+            await sleep(0)
+            otl_object = cls.generate_object_from_oslo_class(
+                oslo_class=oslo_class, add_geometry=add_geometry, collector=collector,
+                filter_attributes_by_subset=filter_attributes_by_subset, model_directory=model_directory)
+            if otl_object is not None:
+                otl_objects.append(otl_object)
+        return otl_objects
+
+
+    @classmethod
     async def generate_objects_for_template_async(
             cls, subset_path: Path, class_uris_filter: [str], filter_attributes_by_subset: bool,
             dummy_data_rows: int, add_geometry: bool, ignore_relations: bool, model_directory: Path = None
@@ -265,27 +275,31 @@ class SubsetTemplateCreator:
         await sleep(0)
         filtered_class_list = cls.filters_classes_by_subset(collector=collector, class_uris_filter=class_uris_filter)
         await sleep(0)
-        relation_dict = get_hardcoded_relation_dict(model_directory=model_directory)
+        cls.relation_dict = get_hardcoded_relation_dict(model_directory=model_directory)
 
         amount_objects_to_create = max(1, dummy_data_rows)
         otl_objects = []
 
-        for oslo_class in [cl for cl in filtered_class_list if cl.abstract == 0]:
-            await sleep(0)
-            if oslo_class.objectUri in relation_dict:
-                continue
+        while True:
+            tasks = [
+                cls.create_x_objects_async(oslo_class, add_geometry, collector,
+                                           filter_attributes_by_subset, model_directory, amount_objects_to_create)
+                for oslo_class in [cl for cl in filtered_class_list if cl.abstract == 0]
+            ]
+            results = await asyncio.gather(*tasks)
+            otl_objects.extend([item for sublist in results for item in sublist])
 
-            for _ in range(amount_objects_to_create):
-                otl_object = cls.generate_object_from_oslo_class(
-                    oslo_class=oslo_class, add_geometry=add_geometry, collector=collector,
-                    filter_attributes_by_subset=filter_attributes_by_subset, model_directory=model_directory)
-                await sleep(0)
-                if otl_object is not None:
-                    otl_objects.append(otl_object)
+            created = len(otl_objects)
+            unique_ids = len({
+                                 obj.assetId.identificator if obj.typeURI != 'http://purl.org/dc/terms/Agent' else obj.agentId.identificator
+                                 for obj in otl_objects})
+            if created == unique_ids:
+                break
+            otl_objects = []
 
         if not ignore_relations:
             non_relations_class_uris = [cl.objectUri for cl in filtered_class_list
-                                        if cl.abstract == 0 and cl.objectUri not in relation_dict]
+                                        if cl.abstract == 0 and cl.objectUri not in cls.relation_dict]
             cls.append_relations_to_objects(otl_objects=otl_objects, collector=collector,
                                             class_uris_filter=non_relations_class_uris, model_directory=model_directory)
 
