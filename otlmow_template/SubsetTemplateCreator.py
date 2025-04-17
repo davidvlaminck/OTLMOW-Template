@@ -1,9 +1,11 @@
+import concurrent
 import contextlib
 import csv
 import logging
 import os
 from asyncio import sleep
 from collections import defaultdict
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
 from openpyxl.reader.excel import load_workbook
@@ -167,6 +169,47 @@ class SubsetTemplateCreator:
                 split_per_type=split_per_type, file_path=template_file_path, dummy_data_rows=dummy_data_rows,
                 instances=objects, add_deprecated=add_deprecated, add_attribute_info=add_attribute_info)
 
+    # def test(self):
+    #     with concurrent.futures.ThreadPoolExecutor() as executor:
+    #         futures = {executor.submit(OTLModelCreator.create_enumeration, creator=creator, directory=directory,
+    #                                    enumeration=enumeration, environment=environment,
+    #                                    enumeration_validation_rules=enumeration_validation_rules): enumeration for
+    #                    enumeration in oslo_collector.enumerations}
+    #             while futures:
+    #                 new_futures = {}
+    #                 done, pending = concurrent.futures.wait(futures, return_when=FIRST_COMPLETED, timeout=60)
+    #                 for fut in done:
+    #                     if fut.exception():
+    #                         enumeration = futures[fut]
+    #                         new_futures[executor.submit(
+    #                             OTLModelCreator.create_enumeration, creator=creator, directory=directory,
+    #                             enumeration=enumeration, environment=environment,
+    #                             enumeration_validation_rules=enumeration_validation_rules)
+    #                         ] = job
+    #                     else:
+    #                         pbar.update()
+    #                 for fut in pending:
+    #                     job = futures[fut]
+    #                     new_futures[fut] = job
+    #                 futures = new_futures
+
+
+    @classmethod
+    def create_x_objects(cls, oslo_class, add_geometry, collector, filter_attributes_by_subset, model_directory,
+                         amount_objects_to_create):
+        if oslo_class.objectUri in cls.relation_dict:
+            return []
+
+        otl_objects = []
+        for _ in range(amount_objects_to_create):
+            otl_object = cls.generate_object_from_oslo_class(
+                oslo_class=oslo_class, add_geometry=add_geometry, collector=collector,
+                filter_attributes_by_subset=filter_attributes_by_subset, model_directory=model_directory)
+            if otl_object is not None:
+                otl_objects.append(otl_object)
+        return otl_objects
+
+
     @classmethod
     def generate_objects_for_template(
             cls, subset_path: Path, class_uris_filter: [str], filter_attributes_by_subset: bool,
@@ -177,22 +220,23 @@ class SubsetTemplateCreator:
         """
         collector = cls._load_collector_from_subset_path(subset_path=subset_path)
         filtered_class_list = cls.filters_classes_by_subset(collector=collector, class_uris_filter=class_uris_filter)
-        relation_dict = get_hardcoded_relation_dict(model_directory=model_directory)
+        cls.relation_dict = get_hardcoded_relation_dict(model_directory=model_directory)
 
         amount_objects_to_create = max(1, dummy_data_rows)
         otl_objects = []
 
         while True:
-            for oslo_class in [cl for cl in filtered_class_list if cl.abstract == 0]:
-                if oslo_class.objectUri in relation_dict:
-                    continue
+            with ThreadPoolExecutor(max_workers=10) as executor:
+                futures = [
+                    executor.submit(cls.create_x_objects, oslo_class, add_geometry, collector,
+                                    filter_attributes_by_subset, model_directory, amount_objects_to_create)
+                    for oslo_class in [cl for cl in filtered_class_list if cl.abstract == 0]
+                ]
 
-                for _ in range(amount_objects_to_create):
-                    otl_object = cls.generate_object_from_oslo_class(
-                        oslo_class=oslo_class, add_geometry=add_geometry, collector=collector,
-                        filter_attributes_by_subset=filter_attributes_by_subset, model_directory=model_directory)
-                    if otl_object is not None:
-                        otl_objects.append(otl_object)
+                # Collect the results as they complete
+                for future in as_completed(futures):
+                    otl_objects.extend(future.result())
+
             created = len(otl_objects)
             unique_ids = len({obj.assetId.identificator if obj.typeURI != 'http://purl.org/dc/terms/Agent' else obj.agentId.identificator
                               for obj in otl_objects})
@@ -202,7 +246,7 @@ class SubsetTemplateCreator:
 
         if not ignore_relations:
             non_relations_class_uris = [cl.objectUri for cl in filtered_class_list
-                                        if cl.abstract == 0 and cl.objectUri not in relation_dict]
+                                        if cl.abstract == 0 and cl.objectUri not in cls.relation_dict]
             cls.append_relations_to_objects(otl_objects=otl_objects, collector=collector,
                                             class_uris_filter=non_relations_class_uris, model_directory=model_directory)
 
