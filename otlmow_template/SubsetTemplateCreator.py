@@ -31,11 +31,6 @@ from otlmow_modelbuilder.SQLDataClasses.OSLOClass import OSLOClass
 
 ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 
-enumeration_validation_rules = {
-    "valid_uri_and_types": {},
-    "valid_regexes": [
-        "^https://wegenenverkeer.data.vlaanderen.be/ns/.+"]
-}
 
 short_to_long_ns = {
     'ond': 'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#',
@@ -47,8 +42,7 @@ short_to_long_ns = {
     'proefenmeting': 'https://wegenenverkeer.data.vlaanderen.be/ns/proefenmeting#',
     'pro': 'https://wegenenverkeer.data.vlaanderen.be/ns/proefenmeting#',
     'lev': 'https://wegenenverkeer.data.vlaanderen.be/ns/levenscyclus#',
-    'levenscyclus': 'https://wegenenverkeer.data.vlaanderen.be/ns/levenscyclus#',
-
+    'levenscyclus': 'https://wegenenverkeer.data.vlaanderen.be/ns/levenscyclus#'
 }
 
 
@@ -487,7 +481,7 @@ class SubsetTemplateCreator:
         collected_attribute_info = []
         deprecated_attributes_row = []
         header_row = next(sheet.iter_rows(min_row=1, max_row=1))
-        for index, header_cell in enumerate(header_row):
+        for header_cell in header_row:
             header = header_cell.value
             if header is None or header == '':
                 continue
@@ -570,99 +564,12 @@ class SubsetTemplateCreator:
         data_val.add(f'{get_column_letter(column)}{row_nr + 1}:'
                      f'{get_column_letter(column)}1000')
 
-
-    @classmethod
-    def determine_multiplicity_csv(cls, template_file_path: Path, subset_path: Path,
-                                   instances: list, temporary_path: Path, **kwargs):
-        pass
-
-
     @classmethod
     def filters_classes_by_subset(cls, collector: OSLOCollector,
                                   class_uris_filter: [str] = None) -> list[OSLOClass]:
         if class_uris_filter is None:
             return collector.classes
         return [x for x in collector.classes if x.objectUri in class_uris_filter]
-
-    @classmethod
-    def add_type_uri_choice_list_in_excel(cls, sheet, instances, add_attribute_info: bool):
-        starting_row = '3' if add_attribute_info else '2'
-        if sheet.title == 'Keuzelijsten':
-            return
-        type_uri_found = False
-        for row in sheet.iter_rows(min_row=1, max_row=1):
-            for cell in row:
-                if cell.value == 'typeURI':
-                    type_uri_found = True
-                    break
-            if type_uri_found:
-                break
-        if not type_uri_found:
-            return
-
-        sheet_name = sheet.title
-        type_uri = ''
-        if sheet_name.startswith('http'):
-            type_uri = sheet_name
-        else:
-            split_name = sheet_name.split("#")
-            subclass_name = split_name[1]
-
-            possible_classes = [x for x in instances if x.typeURI.endswith(subclass_name)]
-            if len(possible_classes) == 1:
-                type_uri = possible_classes[0].typeURI
-
-        if type_uri == '':
-            return
-
-        data_validation = DataValidation(type="list", formula1=f'"{type_uri}"', allow_blank=True)
-        for rows in sheet.iter_rows(min_row=1, max_row=1, min_col=1, max_col=1):
-            for cell in rows:
-                column = cell.column
-                sheet.add_data_validation(data_validation)
-                data_validation.add(f'{get_column_letter(column)}{starting_row}:{get_column_letter(column)}1000')
-
-    @classmethod
-    async def add_type_uri_choice_list_in_excel_async(cls, sheet, instances, add_attribute_info: bool):
-        starting_row = '3' if add_attribute_info else '2'
-        await sleep(0)
-        if sheet.title == 'Keuzelijsten':
-            return
-        type_uri_found = False
-        for row in sheet.iter_rows(min_row=1, max_row=1):
-            for cell in row:
-                if cell.value == 'typeURI':
-                    type_uri_found = True
-                    break
-            if type_uri_found:
-                break
-        if not type_uri_found:
-            return
-
-        await sleep(0)
-        sheet_name = sheet.title
-        type_uri = ''
-        if sheet_name.startswith('http'):
-            type_uri = sheet_name
-        else:
-            split_name = sheet_name.split("#")
-            subclass_name = split_name[1]
-
-            possible_classes = [x for x in instances if x.typeURI.endswith(subclass_name)]
-            if len(possible_classes) == 1:
-                type_uri = possible_classes[0].typeURI
-
-        if type_uri == '':
-            return
-
-        data_validation = DataValidation(type="list", formula1=f'"{type_uri}"', allow_blank=True)
-        await sleep(0)
-        for rows in sheet.iter_rows(min_row=1, max_row=1, min_col=1, max_col=1):
-            for cell in rows:
-                await sleep(0)
-                column = cell.column
-                sheet.add_data_validation(data_validation)
-                data_validation.add(f'{get_column_letter(column)}{starting_row}:{get_column_letter(column)}1000')
 
     @classmethod
     def set_fixed_column_width(cls, sheet, width: int):
