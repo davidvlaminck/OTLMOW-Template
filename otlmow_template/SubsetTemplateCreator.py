@@ -187,18 +187,6 @@ class SubsetTemplateCreator:
         return otl_objects
 
     @classmethod
-    def get_number_of_cpus(cls) -> int:
-        import multiprocessing
-        cpu_count = multiprocessing.cpu_count()
-        if cpu_count is None or cpu_count == 0:
-            import os
-            cpu_count = os.cpu_count()
-        if cpu_count is None or cpu_count == 0:
-            cpu_count = 8
-        return cpu_count
-
-
-    @classmethod
     def generate_objects_for_template(
             cls, subset_path: Path, class_uris_filter: [str], filter_attributes_by_subset: bool,
             dummy_data_rows: int, add_geometry: bool, ignore_relations: bool, model_directory: Path = None
@@ -214,7 +202,7 @@ class SubsetTemplateCreator:
         otl_objects = []
 
         while True:
-            with ThreadPoolExecutor(max_workers=cls.get_number_of_cpus()) as executor:
+            with ThreadPoolExecutor() as executor:
                 futures = [
                     executor.submit(cls.create_x_objects, oslo_class, add_geometry, collector,
                                     filter_attributes_by_subset, model_directory, amount_objects_to_create)
