@@ -614,6 +614,8 @@ class SubsetTemplateCreator:
                 if class_uri != relation.bron_uri:
                     continue
                 for i, bron_instance in enumerate(class_dict[relation.bron_uri]):
+                    if relation.doel_uri not in class_dict:
+                        continue
                     doel_instance = class_dict[relation.doel_uri][i]
                     if relation.objectUri == 'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#HeeftBetrokkene':
                         relation_instance = create_betrokkenerelation(rol='toezichter', source=bron_instance,
