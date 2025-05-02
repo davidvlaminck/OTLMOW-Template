@@ -79,30 +79,43 @@ def test_subset_with_AllCasesTestClass_0_records_relations():
 
 
 
-def test_subset_with_camera_steun_0_records_relations():
+def test_subset_slagboom_0_records_relations():
     subset_tool = SubsetTemplateCreator()
-    excel_path = current_dir / 'OTL_camera_steun_relations_1.xlsx'
-    subset_tool.generate_template_from_subset(subset_path=current_dir / 'camera_steun_2.14.db',
-                                              template_file_path=excel_path,
-                                              dummy_data_rows=0, ignore_relations=False)
+    excel_path = current_dir / 'OTL_slagboom_relations_1.xlsx'
+    subset_tool.generate_template_from_subset(subset_path=current_dir / 'voorbeeld-slagboom.db',
+                                              template_file_path=excel_path, add_attribute_info=True,
+                                              add_geo_artefact=True, dummy_data_rows=0, ignore_relations=False)
     assert excel_path.exists()
 
     book = openpyxl.load_workbook(excel_path, data_only=True, read_only=True)
-    header_row_list = []
-    bevestiging_sheet_data = []
+    arm_header_row_list = []
+    arm_data_row_list = []
+    bevestiging_header_row_list = []
+    bevestiging_data_row_list = []
 
     for sheet in book.worksheets:
         sheet_name = sheet.title
-        if sheet_name == 'onderdeel#Camera':
-            for row in sheet.rows:
-                header_row_list = [cell.value for cell in row]
-                break
-        elif sheet_name == 'onderdeel#Bevestiging':
-            for row in sheet.rows:
-                bevestiging_sheet_data.append([cell.value for cell in row])
+        if sheet_name == 'onderdeel#Bevestiging':
+            bevestiging_header_row_list.extend(
+                [cell.value for cell in row]
+                for row in sheet.iter_rows(min_row=2, max_row=2)
+            )
+            bevestiging_data_row_list.extend(
+                [cell.value for cell in row]
+                for row in sheet.iter_rows(min_row=3, max_row=3)
+            )
+        elif sheet_name == 'onderdeel#Slagboomarm':
+            arm_header_row_list.extend(
+                [cell.value for cell in row]
+                for row in sheet.iter_rows(min_row=2, max_row=2)
+            )
+            arm_data_row_list.extend(
+                [cell.value for cell in row]
+                for row in sheet.iter_rows(min_row=3, max_row=3)
+            )
     book.close()
 
-    assert bevestiging_sheet_data == [['typeURI',
+    assert bevestiging_header_row_list == [['typeURI',
       'assetId.identificator',
       'assetId.toegekendDoor',
       'bron.typeURI',
@@ -112,105 +125,92 @@ def test_subset_with_camera_steun_0_records_relations():
       'doelAssetId.identificator',
       'doelAssetId.toegekendDoor']]
 
-    assert header_row_list == ['typeURI',
+    assert bevestiging_data_row_list == []
+
+    assert arm_data_row_list == []
+
+    assert arm_header_row_list == [['typeURI',
         'assetId.identificator',
         'assetId.toegekendDoor',
-        'beeldverwerkingsinstelling[].configBestand.bestandsnaam',
-        'beeldverwerkingsinstelling[].configBestand.mimeType',
-        'beeldverwerkingsinstelling[].configBestand.omschrijving',
-        'beeldverwerkingsinstelling[].configBestand.opmaakdatum',
-        'beeldverwerkingsinstelling[].configBestand.uri',
-        'beeldverwerkingsinstelling[].typeBeeldverwerking',
         'bestekPostNummer[]',
         'datumOprichtingObject',
-        'dnsNaam',
         'geometry',
-        'heeftFlits',
-        'ipAdres',
         'isActief',
-        'isPtz',
-        'merk',
-        'modelnaam',
-        'naam',
+        'lengteBoom',
         'notitie',
-        'opstelhoogte',
-        'opstelwijze',
-        'rijrichting',
-        'serienummer',
-        'spectrum',
         'standaardBestekPostNummer[]',
-        'technischeFiche[].bestandsnaam',
-        'technischeFiche[].mimeType',
-        'technischeFiche[].omschrijving',
-        'technischeFiche[].opmaakdatum',
-        'technischeFiche[].uri',
+        'technischeFiche.bestandsnaam',
+        'technischeFiche.mimeType',
+        'technischeFiche.omschrijving',
+        'technischeFiche.opmaakdatum',
+        'technischeFiche.uri',
         'theoretischeLevensduur',
-        'toestand']
+        'toestand']]
 
     gc.collect()
 
     excel_path.unlink()
 
-def test_subset_with_camera_steun_relations_1_selected_class():
+def test_subset_slagboom_relations_1_selected_class():
     subset_tool = SubsetTemplateCreator()
-    excel_path = current_dir / 'OTL_camera_steun_relations_2.xlsx'
+    excel_path = current_dir / 'OTL_slagboom_relations_2.xlsx'
     subset_tool.generate_template_from_subset(
-        subset_path=current_dir / 'camera_steun_2.14.db', template_file_path=excel_path,
-        class_uris_filter=['https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Camera'],
+        subset_path=current_dir / 'voorbeeld-slagboom.db', add_attribute_info=True, template_file_path=excel_path,
+        class_uris_filter=['https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Slagboomarm'],
         dummy_data_rows=1, ignore_relations=False)
     assert excel_path.exists()
 
     book = openpyxl.load_workbook(excel_path, data_only=True, read_only=True)
-    header_row_list = []
-    bevestiging_sheet_data = []
+    arm_header_row_list = []
+    arm_data_row_list = []
+    bevestiging_header_row_list = []
+    bevestiging_data_row_list = []
 
     for sheet in book.worksheets:
         sheet_name = sheet.title
-        if sheet_name == 'onderdeel#Camera':
-            for row in sheet.rows:
-                header_row_list = [cell.value for cell in row]
-                break
-        elif sheet_name == 'onderdeel#Bevestiging':
-            for row in sheet.rows:
-                bevestiging_sheet_data.append([cell.value for cell in row])
+        if sheet_name == 'onderdeel#Bevestiging':
+            bevestiging_header_row_list.extend(
+                [cell.value for cell in row]
+                for row in sheet.iter_rows(min_row=2, max_row=2)
+            )
+            bevestiging_data_row_list.extend(
+                [cell.value for cell in row]
+                for row in sheet.iter_rows(min_row=3, max_row=3)
+            )
+        elif sheet_name == 'onderdeel#Slagboomarm':
+            arm_header_row_list.extend(
+                [cell.value for cell in row]
+                for row in sheet.iter_rows(min_row=2, max_row=2)
+            )
+            arm_data_row_list.extend(
+                [cell.value for cell in row]
+                for row in sheet.iter_rows(min_row=3, max_row=3)
+            )
     book.close()
 
-    assert bevestiging_sheet_data == []
+    assert bevestiging_header_row_list == []
 
-    assert header_row_list == ['typeURI',
-        'assetId.identificator',
-        'assetId.toegekendDoor',
-        'beeldverwerkingsinstelling[].configBestand.bestandsnaam',
-        'beeldverwerkingsinstelling[].configBestand.mimeType',
-        'beeldverwerkingsinstelling[].configBestand.omschrijving',
-        'beeldverwerkingsinstelling[].configBestand.opmaakdatum',
-        'beeldverwerkingsinstelling[].configBestand.uri',
-        'beeldverwerkingsinstelling[].typeBeeldverwerking',
-        'bestekPostNummer[]',
-        'datumOprichtingObject',
-        'dnsNaam',
-        'geometry',
-        'heeftFlits',
-        'ipAdres',
-        'isActief',
-        'isPtz',
-        'merk',
-        'modelnaam',
-        'naam',
-        'notitie',
-        'opstelhoogte',
-        'opstelwijze',
-        'rijrichting',
-        'serienummer',
-        'spectrum',
-        'standaardBestekPostNummer[]',
-        'technischeFiche[].bestandsnaam',
-        'technischeFiche[].mimeType',
-        'technischeFiche[].omschrijving',
-        'technischeFiche[].opmaakdatum',
-        'technischeFiche[].uri',
-        'theoretischeLevensduur',
-        'toestand']
+    assert bevestiging_data_row_list == []
+
+    assert arm_data_row_list != []
+
+    assert arm_header_row_list == [['typeURI',
+                                    'assetId.identificator',
+                                    'assetId.toegekendDoor',
+                                    'bestekPostNummer[]',
+                                    'datumOprichtingObject',
+                                    'geometry',
+                                    'isActief',
+                                    'lengteBoom',
+                                    'notitie',
+                                    'standaardBestekPostNummer[]',
+                                    'technischeFiche.bestandsnaam',
+                                    'technischeFiche.mimeType',
+                                    'technischeFiche.omschrijving',
+                                    'technischeFiche.opmaakdatum',
+                                    'technischeFiche.uri',
+                                    'theoretischeLevensduur',
+                                    'toestand']]
 
     gc.collect()
 

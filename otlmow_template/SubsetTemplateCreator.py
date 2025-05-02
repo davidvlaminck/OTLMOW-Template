@@ -190,6 +190,8 @@ class SubsetTemplateCreator:
         """
         collector = cls._load_collector_from_subset_path(subset_path=subset_path)
         filtered_class_list = cls.filters_classes_by_subset(collector=collector, class_uris_filter=class_uris_filter)
+        if filtered_class_list == []:
+            raise ValueError('Something went wrong, as the class_uri filter list is empty')
         cls.relation_dict = get_hardcoded_relation_dict(model_directory=model_directory)
 
         amount_objects_to_create = max(1, dummy_data_rows)
@@ -256,6 +258,8 @@ class SubsetTemplateCreator:
         collector = cls._load_collector_from_subset_path(subset_path=subset_path)
         await sleep(0)
         filtered_class_list = cls.filters_classes_by_subset(collector=collector, class_uris_filter=class_uris_filter)
+        if filtered_class_list == []:
+            raise ValueError('Something went wrong, as the class_uri filter list is empty')
         await sleep(0)
         cls.relation_dict = get_hardcoded_relation_dict(model_directory=model_directory)
 
