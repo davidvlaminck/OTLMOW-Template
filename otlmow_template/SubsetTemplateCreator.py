@@ -512,14 +512,22 @@ class SubsetTemplateCreator:
                 deprecated_attributes_row.append('DEPRECATED' if attribute.deprecated_version else '')
 
             if generate_choice_list:
+                green_fill = PatternFill(start_color="90EE90", fill_type="solid")
+                
                 if issubclass(attribute.field, BooleanField):
-                    boolean_validation.add(f'{header_cell.column_letter}{2}:{header_cell.column_letter}1000')
+                    boolean_validation.add(f'{header_cell.column_letter}2:{header_cell.column_letter}1000')
+                    for cell in sheet.iter_rows(min_col=header_cell.column, max_col=header_cell.column,
+                                                min_row=2, max_row=1000):
+                        cell[0].fill = green_fill
                     continue
 
                 if issubclass(attribute.field, KeuzelijstField):
                     cls.generate_choice_list_in_excel(
                         attribute=attribute, choice_list_dict=choice_list_dict, column=header_cell.column,
                         row_nr=1, sheet=sheet, workbook=workbook)
+                    for cell in sheet.iter_rows(min_col=header_cell.column, max_col=header_cell.column,
+                                                min_row=2, max_row=1000):
+                        cell[0].fill = green_fill
 
         if dummy_data_rows == 0:
             sheet.delete_rows(idx=2)
