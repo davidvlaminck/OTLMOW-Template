@@ -59,18 +59,23 @@ def test_generate_excel_template(index, dummy_data_rows, add_geometry, add_attri
     output_rows = []
     choice_list_sheet = False
     choice_list_data = []
+    empty_rows_encountered = 0
 
     for sheet in book.worksheets:
         sheet_name = sheet.title
         if sheet_name == 'Keuzelijsten':
             choice_list_sheet = True
-            for row in sheet.rows:
-                choice_list_data.append([cell.value for cell in row])
+            choice_list_data.extend([cell.value for cell in row] for row in sheet.rows)
             continue
         if sheet_name != 'onderdeel#AnotherTestClass':
             continue
-        for row in sheet.rows:
-            output_rows.append([cell.value for cell in row])
+        for row in sheet.iter_rows(values_only=True):
+            if empty_rows_encountered >= 5:
+                break
+            if not any(row):
+                empty_rows_encountered += 1
+                continue
+            output_rows.append(list(row))
     book.close()
 
     expected_attribute_info_row = [
@@ -163,18 +168,23 @@ async def test_generate_excel_template_async(index, dummy_data_rows, add_geometr
     output_rows = []
     choice_list_sheet = False
     choice_list_data = []
+    empty_rows_encountered = 0
 
     for sheet in book.worksheets:
         sheet_name = sheet.title
         if sheet_name == 'Keuzelijsten':
             choice_list_sheet = True
-            for row in sheet.rows:
-                choice_list_data.append([cell.value for cell in row])
+            choice_list_data.extend([cell.value for cell in row] for row in sheet.rows)
             continue
         if sheet_name != 'onderdeel#AnotherTestClass':
             continue
-        for row in sheet.rows:
-            output_rows.append([cell.value for cell in row])
+        for row in sheet.iter_rows(values_only=True):
+            if empty_rows_encountered >= 5:
+                break
+            if not any(row):
+                empty_rows_encountered += 1
+                continue
+            output_rows.append(list(row))
     book.close()
 
     expected_attribute_info_row = [
