@@ -81,7 +81,7 @@ def test_subset_with_AllCasesTestClass_0_records_relations():
 
 def test_subset_slagboom_0_records_relations():
     subset_tool = SubsetTemplateCreator()
-    excel_path = current_dir / 'OTL_slagboom_relations_1.xlsx'
+    excel_path = current_dir / 'OTL_slagboom_relations_0.xlsx'
     subset_tool.generate_template_from_subset(subset_path=current_dir / 'voorbeeld-slagboom.db',
                                               template_file_path=excel_path, add_attribute_info=True,
                                               add_geo_artefact=True, dummy_data_rows=0, ignore_relations=False)
@@ -102,7 +102,7 @@ def test_subset_slagboom_0_records_relations():
             )
             bevestiging_data_row_list.extend(
                 [cell.value for cell in row]
-                for row in sheet.iter_rows(min_row=3, max_row=3)
+                for row in sheet.iter_rows(min_row=3, max_row=10)
             )
         elif sheet_name == 'onderdeel#Slagboomarm':
             arm_header_row_list.extend(
@@ -111,7 +111,7 @@ def test_subset_slagboom_0_records_relations():
             )
             arm_data_row_list.extend(
                 [cell.value for cell in row]
-                for row in sheet.iter_rows(min_row=3, max_row=3)
+                for row in sheet.iter_rows(min_row=3, max_row=10)
             )
     book.close()
 
@@ -125,9 +125,7 @@ def test_subset_slagboom_0_records_relations():
       'doelAssetId.identificator',
       'doelAssetId.toegekendDoor']]
 
-    assert bevestiging_data_row_list == []
-
-    assert arm_data_row_list == []
+    assert len(bevestiging_data_row_list) == 0
 
     assert arm_header_row_list == [['typeURI',
         'assetId.identificator',
@@ -153,7 +151,7 @@ def test_subset_slagboom_0_records_relations():
 
 def test_subset_slagboom_relations_1_selected_class():
     subset_tool = SubsetTemplateCreator()
-    excel_path = current_dir / 'OTL_slagboom_relations_2.xlsx'
+    excel_path = current_dir / 'OTL_slagboom_relations_1.xlsx'
     subset_tool.generate_template_from_subset(
         subset_path=current_dir / 'voorbeeld-slagboom.db', add_attribute_info=True, template_file_path=excel_path,
         class_uris_filter=['https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Slagboomarm'],
@@ -190,7 +188,7 @@ def test_subset_slagboom_relations_1_selected_class():
 
     assert bevestiging_header_row_list == []
 
-    assert bevestiging_data_row_list == []
+    assert len(bevestiging_data_row_list) == 0
 
     assert arm_data_row_list != []
 
@@ -215,3 +213,140 @@ def test_subset_slagboom_relations_1_selected_class():
     gc.collect()
 
     excel_path.unlink()
+
+
+
+def test_subset_slagboom_relations_2_selected_classes_2_rows():
+    subset_tool = SubsetTemplateCreator()
+    excel_path = current_dir / 'OTL_slagboom_relations_2.xlsx'
+    subset_tool.generate_template_from_subset(
+        subset_path=current_dir / 'voorbeeld-slagboom.db', add_attribute_info=True, template_file_path=excel_path,
+        class_uris_filter=['https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Slagboomarm',
+                           'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#SlagboomarmVerlichting'],
+        dummy_data_rows=2, ignore_relations=False)
+    assert excel_path.exists()
+
+    book = openpyxl.load_workbook(excel_path, data_only=True, read_only=True)
+    arm_header_row_list = []
+    arm_data_row_list = []
+    bevestiging_header_row_list = []
+    bevestiging_data_row_list = []
+
+    for sheet in book.worksheets:
+        sheet_name = sheet.title
+        if sheet_name == 'onderdeel#Bevestiging':
+            bevestiging_header_row_list.extend(
+                [cell.value for cell in row]
+                for row in sheet.iter_rows(min_row=2, max_row=2)
+            )
+            bevestiging_data_row_list.extend(
+                [cell.value for cell in row]
+                for row in sheet.iter_rows(min_row=3, max_row=10)
+            )
+        elif sheet_name == 'onderdeel#Slagboomarm':
+            arm_header_row_list.extend(
+                [cell.value for cell in row]
+                for row in sheet.iter_rows(min_row=2, max_row=2)
+            )
+            arm_data_row_list.extend(
+                [cell.value for cell in row]
+                for row in sheet.iter_rows(min_row=3, max_row=10)
+            )
+    book.close()
+
+    assert bevestiging_header_row_list != []
+
+    assert len(bevestiging_data_row_list) == 2
+
+    assert arm_data_row_list != []
+
+    assert arm_header_row_list == [['typeURI',
+                                    'assetId.identificator',
+                                    'assetId.toegekendDoor',
+                                    'bestekPostNummer[]',
+                                    'datumOprichtingObject',
+                                    'geometry',
+                                    'isActief',
+                                    'lengteBoom',
+                                    'notitie',
+                                    'standaardBestekPostNummer[]',
+                                    'technischeFiche.bestandsnaam',
+                                    'technischeFiche.mimeType',
+                                    'technischeFiche.omschrijving',
+                                    'technischeFiche.opmaakdatum',
+                                    'technischeFiche.uri',
+                                    'theoretischeLevensduur',
+                                    'toestand']]
+
+    gc.collect()
+
+    excel_path.unlink()
+
+
+def test_subset_slagboom_relations_2_non_related_selected_classes_2_rows():
+    subset_tool = SubsetTemplateCreator()
+    excel_path = current_dir / 'OTL_slagboom_relations_3.xlsx'
+    subset_tool.generate_template_from_subset(
+        subset_path=current_dir / 'voorbeeld-slagboom.db', add_attribute_info=True, template_file_path=excel_path,
+        class_uris_filter=['https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Slagboomarm',
+                           'https://wegenenverkeer.data.vlaanderen.be/ns/installatie#Kokerafsluiting'],
+        dummy_data_rows=2, ignore_relations=False)
+    assert excel_path.exists()
+
+    book = openpyxl.load_workbook(excel_path, data_only=True, read_only=True)
+    arm_header_row_list = []
+    arm_data_row_list = []
+    bevestiging_header_row_list = []
+    bevestiging_data_row_list = []
+
+    for sheet in book.worksheets:
+        sheet_name = sheet.title
+        if sheet_name == 'onderdeel#Bevestiging':
+            bevestiging_header_row_list.extend(
+                [cell.value for cell in row]
+                for row in sheet.iter_rows(min_row=2, max_row=2)
+            )
+            bevestiging_data_row_list.extend(
+                [cell.value for cell in row]
+                for row in sheet.iter_rows(min_row=3, max_row=10)
+            )
+        elif sheet_name == 'onderdeel#Slagboomarm':
+            arm_header_row_list.extend(
+                [cell.value for cell in row]
+                for row in sheet.iter_rows(min_row=2, max_row=2)
+            )
+            arm_data_row_list.extend(
+                [cell.value for cell in row]
+                for row in sheet.iter_rows(min_row=3, max_row=10)
+            )
+    book.close()
+
+    assert bevestiging_header_row_list == []
+
+    assert len(bevestiging_data_row_list) == 0
+
+    assert arm_data_row_list != []
+
+    assert arm_header_row_list == [['typeURI',
+                                    'assetId.identificator',
+                                    'assetId.toegekendDoor',
+                                    'bestekPostNummer[]',
+                                    'datumOprichtingObject',
+                                    'geometry',
+                                    'isActief',
+                                    'lengteBoom',
+                                    'notitie',
+                                    'standaardBestekPostNummer[]',
+                                    'technischeFiche.bestandsnaam',
+                                    'technischeFiche.mimeType',
+                                    'technischeFiche.omschrijving',
+                                    'technischeFiche.opmaakdatum',
+                                    'technischeFiche.uri',
+                                    'theoretischeLevensduur',
+                                    'toestand']]
+
+    gc.collect()
+
+    excel_path.unlink()
+
+

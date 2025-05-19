@@ -530,7 +530,8 @@ class SubsetTemplateCreator:
                         cell[0].fill = green_fill
 
         if dummy_data_rows == 0:
-            sheet.delete_rows(idx=2)
+            instance_count = len([x for x in instances if x.typeURI == type_uri])
+            sheet.delete_rows(idx=2, amount=instance_count)
 
         if add_deprecated and any(deprecated_attributes_row):
             cls.add_deprecated_row_to_sheet(deprecated_attributes_row, sheet)
