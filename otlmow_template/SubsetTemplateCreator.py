@@ -9,6 +9,7 @@ from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed, ALL_COMPLETED
 from pathlib import Path
 
+from openpyxl.cell import Cell
 from openpyxl.reader.excel import load_workbook
 from openpyxl.styles import PatternFill, Alignment
 from openpyxl.utils import get_column_letter
@@ -47,6 +48,8 @@ short_to_long_ns = {
 
 
 class SubsetTemplateCreator:
+    green_fill = PatternFill(start_color="90EE90", fill_type="solid")
+
     @classmethod
     def _load_collector_from_subset_path(cls, subset_path: Path) -> OSLOCollector:
         collector = OSLOCollector(subset_path)
@@ -190,6 +193,8 @@ class SubsetTemplateCreator:
         """
         collector = cls._load_collector_from_subset_path(subset_path=subset_path)
         filtered_class_list = cls.filters_classes_by_subset(collector=collector, class_uris_filter=class_uris_filter)
+        if filtered_class_list == []:
+            raise ValueError('Something went wrong, as the class_uri filter list is empty')
         cls.relation_dict = get_hardcoded_relation_dict(model_directory=model_directory)
 
         amount_objects_to_create = max(1, dummy_data_rows)
@@ -256,6 +261,8 @@ class SubsetTemplateCreator:
         collector = cls._load_collector_from_subset_path(subset_path=subset_path)
         await sleep(0)
         filtered_class_list = cls.filters_classes_by_subset(collector=collector, class_uris_filter=class_uris_filter)
+        if filtered_class_list == []:
+            raise ValueError('Something went wrong, as the class_uri filter list is empty')
         await sleep(0)
         cls.relation_dict = get_hardcoded_relation_dict(model_directory=model_directory)
 
@@ -509,16 +516,19 @@ class SubsetTemplateCreator:
 
             if generate_choice_list:
                 if issubclass(attribute.field, BooleanField):
-                    boolean_validation.add(f'{header_cell.column_letter}{2}:{header_cell.column_letter}1000')
-                    continue
+                    boolean_validation.add(f'{header_cell.column_letter}2:{header_cell.column_letter}1000')
+                    cls.color_choice_lists_green(sheet=sheet, header_cell_column=header_cell)
 
-                if issubclass(attribute.field, KeuzelijstField):
+                elif issubclass(attribute.field, KeuzelijstField):
                     cls.generate_choice_list_in_excel(
                         attribute=attribute, choice_list_dict=choice_list_dict, column=header_cell.column,
                         row_nr=1, sheet=sheet, workbook=workbook)
+                    cls.color_choice_lists_green(sheet=sheet, header_cell_column=header_cell)
 
         if dummy_data_rows == 0:
-            sheet.delete_rows(idx=2)
+            instance_count = len([x for x in instances if x.typeURI == type_uri])
+            if instance_count > 0:
+                sheet.delete_rows(idx=2, amount=instance_count)
 
         if add_deprecated and any(deprecated_attributes_row):
             cls.add_deprecated_row_to_sheet(deprecated_attributes_row, sheet)
@@ -527,6 +537,12 @@ class SubsetTemplateCreator:
             cls.add_attribute_info_to_sheet(collected_attribute_info, sheet)
 
         cls.set_fixed_column_width(sheet=sheet, width=25)
+
+    @classmethod
+    def color_choice_lists_green(cls, sheet: Worksheet, header_cell_column: Cell):
+        for cell in sheet.iter_rows(min_col=header_cell_column.column, max_col=header_cell_column.column,
+                                    min_row=2, max_row=1000):
+            cell[0].fill = cls.green_fill
 
     @classmethod
     def add_deprecated_row_to_sheet(cls, deprecated_attributes_row, sheet):
@@ -614,6 +630,8 @@ class SubsetTemplateCreator:
                 if class_uri != relation.bron_uri:
                     continue
                 for i, bron_instance in enumerate(class_dict[relation.bron_uri]):
+                    if relation.doel_uri not in class_dict:
+                        continue
                     doel_instance = class_dict[relation.doel_uri][i]
                     if relation.objectUri == 'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#HeeftBetrokkene':
                         relation_instance = create_betrokkenerelation(rol='toezichter', source=bron_instance,
