@@ -9,6 +9,7 @@ from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed, ALL_COMPLETED
 from pathlib import Path
 
+from openpyxl.cell import Cell
 from openpyxl.reader.excel import load_workbook
 from openpyxl.styles import PatternFill, Alignment
 from openpyxl.utils import get_column_letter
@@ -47,6 +48,8 @@ short_to_long_ns = {
 
 
 class SubsetTemplateCreator:
+    green_fill = PatternFill(start_color="90EE90", fill_type="solid")
+
     @classmethod
     def _load_collector_from_subset_path(cls, subset_path: Path) -> OSLOCollector:
         collector = OSLOCollector(subset_path)
@@ -512,26 +515,20 @@ class SubsetTemplateCreator:
                 deprecated_attributes_row.append('DEPRECATED' if attribute.deprecated_version else '')
 
             if generate_choice_list:
-                green_fill = PatternFill(start_color="90EE90", fill_type="solid")
-                
                 if issubclass(attribute.field, BooleanField):
                     boolean_validation.add(f'{header_cell.column_letter}2:{header_cell.column_letter}1000')
-                    for cell in sheet.iter_rows(min_col=header_cell.column, max_col=header_cell.column,
-                                                min_row=2, max_row=1000):
-                        cell[0].fill = green_fill
-                    continue
+                    cls.color_choice_lists_green(sheet=sheet, header_cell_column=header_cell)
 
-                if issubclass(attribute.field, KeuzelijstField):
+                elif issubclass(attribute.field, KeuzelijstField):
                     cls.generate_choice_list_in_excel(
                         attribute=attribute, choice_list_dict=choice_list_dict, column=header_cell.column,
                         row_nr=1, sheet=sheet, workbook=workbook)
-                    for cell in sheet.iter_rows(min_col=header_cell.column, max_col=header_cell.column,
-                                                min_row=2, max_row=1000):
-                        cell[0].fill = green_fill
+                    cls.color_choice_lists_green(sheet=sheet, header_cell_column=header_cell)
 
         if dummy_data_rows == 0:
             instance_count = len([x for x in instances if x.typeURI == type_uri])
-            sheet.delete_rows(idx=2, amount=instance_count)
+            if instance_count > 0:
+                sheet.delete_rows(idx=2, amount=instance_count)
 
         if add_deprecated and any(deprecated_attributes_row):
             cls.add_deprecated_row_to_sheet(deprecated_attributes_row, sheet)
@@ -540,6 +537,12 @@ class SubsetTemplateCreator:
             cls.add_attribute_info_to_sheet(collected_attribute_info, sheet)
 
         cls.set_fixed_column_width(sheet=sheet, width=25)
+
+    @classmethod
+    def color_choice_lists_green(cls, sheet: Worksheet, header_cell_column: Cell):
+        for cell in sheet.iter_rows(min_col=header_cell_column.column, max_col=header_cell_column.column,
+                                    min_row=2, max_row=1000):
+            cell[0].fill = cls.green_fill
 
     @classmethod
     def add_deprecated_row_to_sheet(cls, deprecated_attributes_row, sheet):

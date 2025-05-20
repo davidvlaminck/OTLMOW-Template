@@ -125,7 +125,7 @@ def test_subset_slagboom_0_records_relations():
       'doelAssetId.identificator',
       'doelAssetId.toegekendDoor']]
 
-    assert len(bevestiging_data_row_list) == 0
+    assert not bevestiging_data_row_list
 
     assert arm_header_row_list == [['typeURI',
         'assetId.identificator',
