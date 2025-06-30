@@ -483,7 +483,7 @@ class SubsetTemplateCreator:
         if instance is None:
             raise UnknownExcelError(f'When creating a template, no instance could be created for {type_uri}')
 
-        boolean_validation = DataValidation(type="list", formula1='"TRUE,FALSE,"', allow_blank=True)
+        boolean_validation = DataValidation(type="list", formula1='"TRUE,FALSE,-"', allow_blank=True)
         sheet.add_data_validation(boolean_validation)
         collected_attribute_info = []
         deprecated_attributes_row = []
@@ -573,7 +573,7 @@ class SubsetTemplateCreator:
                                          options=choice_list_values, choice_list_dict=choice_list_dict)
         column_in_choice_sheet = choice_list_dict[attribute.field.naam]
         start_range = f"${column_in_choice_sheet}$2"
-        end_range = f"${column_in_choice_sheet}${len(choice_list_values) + 1}"
+        end_range = f"${column_in_choice_sheet}${len(choice_list_values) + 2}"
         data_val = DataValidation(type="list", formula1=f"Keuzelijsten!{start_range}:{end_range}",
                                   allowBlank=True)
         sheet.add_data_validation(data_val)
@@ -603,7 +603,9 @@ class SubsetTemplateCreator:
         if new_header.value is not None:
             raise ValueError(f'Header already exists at column {column_nr}: {new_header.value}')
         new_header.value = name
-        for index, option in enumerate(options, start=1):
+        cell = active_sheet.cell(row=row_nr + 1, column=column_nr)
+        cell.value = "-"
+        for index, option in enumerate(options, start=2):
             cell = active_sheet.cell(row=row_nr + index, column=column_nr)
             cell.value = option.invulwaarde
 
