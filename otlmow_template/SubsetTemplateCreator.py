@@ -96,6 +96,11 @@ class SubsetTemplateCreator:
             add_geometry=add_geometry, filter_attributes_by_subset=filter_attributes_by_subset,
             dummy_data_rows=dummy_data_rows, model_directory=model_directory)
 
+        abbreviate_excel_after = False
+        if kwargs.get('abbreviate_excel_sheettitles') == True:
+            kwargs['abbreviate_excel_sheettitles'] = False
+            abbreviate_excel_after = True
+
         # write the file
         await OtlmowConverter.from_objects_to_file_async(
             file_path=template_file_path, sequence_of_objects=objects, split_per_type=split_per_type, **kwargs)
@@ -105,7 +110,8 @@ class SubsetTemplateCreator:
         if extension == '.xlsx':
             await cls.alter_excel_template_async(
                 generate_choice_list=generate_choice_list, file_path=template_file_path, dummy_data_rows=dummy_data_rows,
-                instances=objects, add_deprecated=add_deprecated, add_attribute_info=add_attribute_info)
+                instances=objects, add_deprecated=add_deprecated, add_attribute_info=add_attribute_info,
+                abbreviate_excel_sheettitles=abbreviate_excel_after)
 
         elif extension == '.csv':
             await cls.alter_csv_template_async(
@@ -151,6 +157,11 @@ class SubsetTemplateCreator:
             add_geometry=add_geometry, filter_attributes_by_subset=filter_attributes_by_subset,
             dummy_data_rows=dummy_data_rows, model_directory=model_directory)
 
+        abbreviate_excel_after = False
+        if kwargs.get('abbreviate_excel_sheettitles') == True:
+            kwargs['abbreviate_excel_sheettitles'] = False
+            abbreviate_excel_after = True
+
         # write the file
         OtlmowConverter.from_objects_to_file(
             file_path=template_file_path, sequence_of_objects=objects, split_per_type=split_per_type,
@@ -161,7 +172,8 @@ class SubsetTemplateCreator:
         if extension == '.xlsx':
             cls.alter_excel_template(
                 generate_choice_list=generate_choice_list, file_path=template_file_path, dummy_data_rows=dummy_data_rows,
-                instances=objects, add_deprecated=add_deprecated, add_attribute_info=add_attribute_info)
+                instances=objects, add_deprecated=add_deprecated, add_attribute_info=add_attribute_info,
+                abbreviate_excel_sheettitles=abbreviate_excel_after)
         elif extension == '.csv':
             cls.alter_csv_template(
                 split_per_type=split_per_type, file_path=template_file_path, dummy_data_rows=dummy_data_rows,
@@ -340,7 +352,8 @@ class SubsetTemplateCreator:
 
     @classmethod
     def alter_excel_template(cls, instances: list, file_path: Path, add_attribute_info: bool,
-                             generate_choice_list: bool, dummy_data_rows: int, add_deprecated: bool):
+                             generate_choice_list: bool, dummy_data_rows: int, add_deprecated: bool,
+                             abbreviate_excel_sheettitles: bool):
         wb = load_workbook(file_path)
         wb.create_sheet('Keuzelijsten')
 
@@ -351,7 +364,8 @@ class SubsetTemplateCreator:
 
             cls.alter_excel_sheet(add_attribute_info=add_attribute_info, choice_list_dict=choice_list_dict,
                                   generate_choice_list=generate_choice_list, dummy_data_rows=dummy_data_rows,
-                                  instances=instances, sheet=sheet, add_deprecated=add_deprecated, workbook=wb)
+                                  instances=instances, sheet=sheet, add_deprecated=add_deprecated, workbook=wb,
+                                  abbreviate_excel_sheettitle=abbreviate_excel_sheettitles)
 
         wb.save(file_path)
         wb.close()
@@ -455,7 +469,8 @@ class SubsetTemplateCreator:
 
     @classmethod
     async def alter_excel_template_async(cls, instances: list, file_path: Path, add_attribute_info: bool,
-                             generate_choice_list: bool, dummy_data_rows: int, add_deprecated: bool):
+                                         generate_choice_list: bool, dummy_data_rows: int, add_deprecated: bool,
+                                         abbreviate_excel_sheettitles: bool):
         wb = load_workbook(file_path)
         wb.create_sheet('Keuzelijsten')
 
@@ -466,7 +481,8 @@ class SubsetTemplateCreator:
 
             cls.alter_excel_sheet(add_attribute_info=add_attribute_info, choice_list_dict=choice_list_dict,
                                   generate_choice_list=generate_choice_list, dummy_data_rows=dummy_data_rows,
-                                  instances=instances, sheet=sheet, add_deprecated=add_deprecated, workbook=wb)
+                                  instances=instances, sheet=sheet, add_deprecated=add_deprecated, workbook=wb,
+                                  abbreviate_excel_sheettitle=abbreviate_excel_sheettitles)
             await sleep(0)
 
         wb.save(file_path)
@@ -475,7 +491,7 @@ class SubsetTemplateCreator:
     @classmethod
     def alter_excel_sheet(cls, add_attribute_info: bool, choice_list_dict: dict, generate_choice_list: bool,
                           instances: [OTLObject], sheet: Worksheet, add_deprecated: bool, workbook: Workbook,
-                          dummy_data_rows: int):
+                          dummy_data_rows: int, abbreviate_excel_sheettitle: bool = True):
         type_uri = cls.get_uri_from_sheet_name(sheet.title)
         instance = next((x for x in instances if x.typeURI == type_uri), None)
         if instance is None:
@@ -537,6 +553,9 @@ class SubsetTemplateCreator:
             cls.add_attribute_info_to_sheet(collected_attribute_info, sheet)
 
         cls.set_fixed_column_width(sheet=sheet, width=25)
+
+        if abbreviate_excel_sheettitle:
+            cls.abbreviate_excel_sheettitle(sheet=sheet)
 
     @classmethod
     def color_choice_lists_green(cls, sheet: Worksheet, header_cell_column: Cell):
@@ -646,3 +665,13 @@ class SubsetTemplateCreator:
                                                             target=doel_instance, model_directory=model_directory)
 
                     otl_objects.append(relation_instance)
+
+    @classmethod
+    def abbreviate_excel_sheettitle(cls, sheet):
+        class_name = sheet.title
+        # abbreviates the class_name so it doesn't exceed the 31 character limit of sheet titles in excel
+        split_name = class_name.split("#")
+        namespace_name = split_name[0]
+        subclass_name = split_name[1]
+        class_name = f"{namespace_name[:3]}#{subclass_name}"
+        sheet.title = class_name[:31]
