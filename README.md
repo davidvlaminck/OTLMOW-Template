@@ -23,16 +23,18 @@ It is split into different packages to reduce compatibility issues
 - [otlmow_gui](https://github.com/davidvlaminck/OTLMOW-GUI)
 
 ## Installation and requirements
-Currently, you need at least Python version 3.8 to use this library.
-
-To install the OTL MOW project into your Python project, use pip to install it:
+I recommend working with uv. Install this first:
 ``` 
-pip install otlmow_template
+pip install uv
 ```
-To upgrade an existing installation use:
+Then install this package by using the uv pip install command:
 ``` 
-pip install otlmow_template --upgrade
+uv pip install otlmow-template
 ```
+If you are a developer, use this command to install the dependencies, including those needed to run the test suite.
+``` 
+uv pip install -r pyproject.toml --extra test
+``` 
 
 ## Usage
 #TODO
