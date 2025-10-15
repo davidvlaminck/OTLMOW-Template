@@ -215,7 +215,6 @@ def test_subset_slagboom_relations_1_selected_class():
     excel_path.unlink()
 
 
-
 def test_subset_slagboom_relations_2_selected_classes_2_rows():
     subset_tool = SubsetTemplateCreator()
     excel_path = current_dir / 'OTL_slagboom_relations_2.xlsx'
@@ -223,7 +222,7 @@ def test_subset_slagboom_relations_2_selected_classes_2_rows():
         subset_path=current_dir / 'voorbeeld-slagboom.db', add_attribute_info=True, template_file_path=excel_path,
         class_uris_filter=['https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Slagboomarm',
                            'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#SlagboomarmVerlichting'],
-        dummy_data_rows=2, ignore_relations=False)
+        dummy_data_rows=2, ignore_relations=False, abbreviate_excel_sheettitles=True)
     assert excel_path.exists()
 
     book = openpyxl.load_workbook(excel_path, data_only=True, read_only=True)
@@ -348,5 +347,3 @@ def test_subset_slagboom_relations_2_non_related_selected_classes_2_rows():
     gc.collect()
 
     excel_path.unlink()
-
-
