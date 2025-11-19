@@ -233,7 +233,7 @@ def test_subset_slagboom_relations_2_selected_classes_2_rows():
 
     for sheet in book.worksheets:
         sheet_name = sheet.title
-        if sheet_name == 'onderdeel#Bevestiging':
+        if sheet_name == 'ond#Bevestiging':
             bevestiging_header_row_list.extend(
                 [cell.value for cell in row]
                 for row in sheet.iter_rows(min_row=2, max_row=2)
@@ -242,7 +242,7 @@ def test_subset_slagboom_relations_2_selected_classes_2_rows():
                 [cell.value for cell in row]
                 for row in sheet.iter_rows(min_row=3, max_row=10)
             )
-        elif sheet_name == 'onderdeel#Slagboomarm':
+        elif sheet_name == 'ond#Slagboomarm':
             arm_header_row_list.extend(
                 [cell.value for cell in row]
                 for row in sheet.iter_rows(min_row=2, max_row=2)
