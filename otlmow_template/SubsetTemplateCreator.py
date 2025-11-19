@@ -670,6 +670,9 @@ class SubsetTemplateCreator:
     def abbreviate_excel_sheettitle(cls, sheet):
         class_name = sheet.title
         # abbreviates the class_name so it doesn't exceed the 31 character limit of sheet titles in excel
+        if '#' not in class_name:
+            sheet.title = class_name[:31]
+            return
         split_name = class_name.split("#")
         namespace_name = split_name[0]
         subclass_name = split_name[1]
