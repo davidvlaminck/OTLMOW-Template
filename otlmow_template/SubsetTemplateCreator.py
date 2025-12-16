@@ -503,6 +503,7 @@ class SubsetTemplateCreator:
         sheet.add_data_validation(boolean_validation)
         collected_attribute_info = []
         deprecated_attributes_row = []
+
         header_row = next(sheet.iter_rows(min_row=1, max_row=1))
 
         first_data_row = 2 # first row is header, first data row is needed for later adjustments of formatting
@@ -511,7 +512,7 @@ class SubsetTemplateCreator:
         if add_deprecated and any(deprecated_attributes_row):
             first_data_row += 1
 
-        max_row = sheet.max_row
+        max_row = min(sheet.max_row, 1000)  # limit to 1000 as we only add validations up to row 1000
         # Collect string columns to format after header processing
         string_col_indices = []
 
@@ -523,7 +524,7 @@ class SubsetTemplateCreator:
             if header == 'typeURI':
                 data_validation = DataValidation(type="list", formula1=f'"{type_uri}"', allow_blank=True)
                 sheet.add_data_validation(data_validation)
-                data_validation.add(f'{header_cell.column_letter}2:{header_cell.column_letter}1000')
+                data_validation.add(f'{header_cell.column_letter}{first_data_row}:{header_cell.column_letter}{max_row}')
                 if add_attribute_info:
                     collected_attribute_info.append(
                         'De URI van het object volgens https://www.w3.org/2001/XMLSchema#anyURI .')
@@ -544,7 +545,7 @@ class SubsetTemplateCreator:
 
             if generate_choice_list:
                 if issubclass(attribute.field, BooleanField):
-                    boolean_validation.add(f'{header_cell.column_letter}2:{header_cell.column_letter}1000')
+                    boolean_validation.add(f'{header_cell.column_letter}{first_data_row}:{header_cell.column_letter}{max_row}')
                     cls.color_choice_lists_green(sheet=sheet, header_cell_column=header_cell)
                 elif issubclass(attribute.field, KeuzelijstField):
                     cls.generate_choice_list_in_excel(
