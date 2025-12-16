@@ -511,9 +511,13 @@ class SubsetTemplateCreator:
         if add_deprecated and any(deprecated_attributes_row):
             first_data_row += 1
 
+        max_row = sheet.max_row
+        # Collect string columns to format after header processing
+        string_col_indices = []
+
         for header_cell in header_row:
             header = header_cell.value
-            if header is None or header == '':
+            if not header:
                 continue
 
             if header == 'typeURI':
@@ -521,7 +525,8 @@ class SubsetTemplateCreator:
                 sheet.add_data_validation(data_validation)
                 data_validation.add(f'{header_cell.column_letter}2:{header_cell.column_letter}1000')
                 if add_attribute_info:
-                    collected_attribute_info.append('De URI van het object volgens https://www.w3.org/2001/XMLSchema#anyURI .')
+                    collected_attribute_info.append(
+                        'De URI van het object volgens https://www.w3.org/2001/XMLSchema#anyURI .')
                 if add_deprecated:
                     deprecated_attributes_row.append('')
                 continue
@@ -541,7 +546,6 @@ class SubsetTemplateCreator:
                 if issubclass(attribute.field, BooleanField):
                     boolean_validation.add(f'{header_cell.column_letter}2:{header_cell.column_letter}1000')
                     cls.color_choice_lists_green(sheet=sheet, header_cell_column=header_cell)
-
                 elif issubclass(attribute.field, KeuzelijstField):
                     cls.generate_choice_list_in_excel(
                         attribute=attribute, choice_list_dict=choice_list_dict, column=header_cell.column,
@@ -549,10 +553,12 @@ class SubsetTemplateCreator:
                     cls.color_choice_lists_green(sheet=sheet, header_cell_column=header_cell)
 
             if attribute.field.native_type == str:
-                col_idx = header_cell.column
-                for row_idx in range(first_data_row, sheet.max_row + 1):
-                    cell = sheet.cell(row=row_idx, column=col_idx)
-                    cell.number_format = "@"
+                string_col_indices.append(header_cell.column)
+
+        # Efficiently format all string columns in one pass
+        for col_idx in string_col_indices:
+            for row_idx in range(first_data_row, max_row + 1):
+                sheet.cell(row=row_idx, column=col_idx).number_format = "@"
 
         if dummy_data_rows == 0:
             instance_count = len([x for x in instances if x.typeURI == type_uri])
