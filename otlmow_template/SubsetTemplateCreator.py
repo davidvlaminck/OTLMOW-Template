@@ -504,6 +504,13 @@ class SubsetTemplateCreator:
         collected_attribute_info = []
         deprecated_attributes_row = []
         header_row = next(sheet.iter_rows(min_row=1, max_row=1))
+
+        first_data_row = 2 # first row is header, first data row is needed for later adjustments of formatting
+        if add_attribute_info:
+            first_data_row += 1
+        if add_deprecated and any(deprecated_attributes_row):
+            first_data_row += 1
+
         for header_cell in header_row:
             header = header_cell.value
             if header is None or header == '':
@@ -540,6 +547,12 @@ class SubsetTemplateCreator:
                         attribute=attribute, choice_list_dict=choice_list_dict, column=header_cell.column,
                         row_nr=1, sheet=sheet, workbook=workbook)
                     cls.color_choice_lists_green(sheet=sheet, header_cell_column=header_cell)
+
+            if attribute.field.native_type == str:
+                col_idx = header_cell.column
+                for row_idx in range(first_data_row, sheet.max_row + 1):
+                    cell = sheet.cell(row=row_idx, column=col_idx)
+                    cell.number_format = "@"
 
         if dummy_data_rows == 0:
             instance_count = len([x for x in instances if x.typeURI == type_uri])
