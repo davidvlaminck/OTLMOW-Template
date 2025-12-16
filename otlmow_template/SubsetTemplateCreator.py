@@ -509,7 +509,7 @@ class SubsetTemplateCreator:
         first_data_row = 2 # first row is header, first data row is needed for later adjustments of formatting
         if add_attribute_info:
             first_data_row += 1
-        if add_deprecated and any(deprecated_attributes_row):
+        if add_deprecated:
             first_data_row += 1
 
         max_row = min(sheet.max_row, 1000)  # limit to 1000 as we only add validations up to row 1000
