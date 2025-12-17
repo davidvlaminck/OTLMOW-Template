@@ -2,6 +2,7 @@ import asyncio
 import concurrent
 import contextlib
 import csv
+import itertools
 import logging
 import os
 from asyncio import sleep
@@ -514,7 +515,8 @@ class SubsetTemplateCreator:
 
         max_row = min(sheet.max_row, 1000)  # limit to 1000 as we only add validations up to row 1000
         # Collect string columns to format after header processing
-        string_col_indices = []
+        # Store column types for efficient post-processing
+        col_types = {}  # {col_idx: native_type}
 
         for header_cell in header_row:
             header = header_cell.value
@@ -535,7 +537,7 @@ class SubsetTemplateCreator:
             if type_uri == 'http://purl.org/dc/terms/Agent' and header.startswith('assetId.'):
                 continue
 
-            attribute = DotnotationHelper.get_attribute_by_dotnotation(instance, header)
+            attribute = DotnotationHelper.get_attribute_by_dotnotation(instance, header, waarde_shortcut=True)
 
             if add_attribute_info:
                 collected_attribute_info.append(attribute.definition)
@@ -545,7 +547,8 @@ class SubsetTemplateCreator:
 
             if generate_choice_list:
                 if issubclass(attribute.field, BooleanField):
-                    boolean_validation.add(f'{header_cell.column_letter}{first_data_row}:{header_cell.column_letter}{max_row}')
+                    boolean_validation.add(
+                        f'{header_cell.column_letter}{first_data_row}:{header_cell.column_letter}{max_row}')
                     cls.color_choice_lists_green(sheet=sheet, header_cell_column=header_cell)
                 elif issubclass(attribute.field, KeuzelijstField):
                     cls.generate_choice_list_in_excel(
@@ -553,13 +556,43 @@ class SubsetTemplateCreator:
                         row_nr=1, sheet=sheet, workbook=workbook)
                     cls.color_choice_lists_green(sheet=sheet, header_cell_column=header_cell)
 
-            if attribute.field.native_type == str:
-                string_col_indices.append(header_cell.column)
+            # Store the native type for this column
+            col_types[header_cell.column] = attribute.field.native_type
 
-        # Efficiently format all string columns in one pass
-        for col_idx in string_col_indices:
+        # Efficiently post-process columns by type
+        for col_idx, native_type in col_types.items():
             for row_idx in range(first_data_row, max_row + 1):
-                sheet.cell(row=row_idx, column=col_idx).number_format = "@"
+                cell = sheet.cell(row=row_idx, column=col_idx)
+                value = cell.value
+                if value is not None:
+                    try:
+                        if native_type == str:
+                            cell.value = str(value)
+                            cell.number_format = "@"
+                        elif native_type == int:
+                            cell.value = int(value)
+                            cell.number_format = "0"
+                        elif native_type == float:
+                            cell.value = float(value)
+                            cell.number_format = "0.00"
+                        elif native_type.__name__ == "date":
+                            from datetime import datetime, date
+                            if isinstance(value, str):
+                                cell.value = datetime.strptime(value, "%Y-%m-%d").date()
+                            elif isinstance(value, datetime):
+                                cell.value = value.date()
+                            cell.number_format = "YYYY-MM-DD"
+                        elif native_type == bool:
+                            cell.value = bool(value)
+                            cell.number_format = "General"
+                        else:
+                            cell.value = value
+                            cell.number_format = "General"
+                    except Exception:
+                        cell.value = value
+                        cell.number_format = "General"
+                else:
+                    cell.number_format = "General"
 
         if dummy_data_rows == 0:
             instance_count = len([x for x in instances if x.typeURI == type_uri])
