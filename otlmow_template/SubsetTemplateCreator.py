@@ -2,6 +2,7 @@ import asyncio
 import concurrent
 import contextlib
 import csv
+import itertools
 import logging
 import os
 from asyncio import sleep
@@ -503,18 +504,32 @@ class SubsetTemplateCreator:
         sheet.add_data_validation(boolean_validation)
         collected_attribute_info = []
         deprecated_attributes_row = []
+
         header_row = next(sheet.iter_rows(min_row=1, max_row=1))
+
+        first_data_row = 2 # first row is header, first data row is needed for later adjustments of formatting
+        if add_attribute_info:
+            first_data_row += 1
+        if add_deprecated:
+            first_data_row += 1
+
+        max_row = min(sheet.max_row, 1000)  # limit to 1000 as we only add validations up to row 1000
+        # Collect string columns to format after header processing
+        # Store column types for efficient post-processing
+        col_types = {}  # {col_idx: native_type}
+
         for header_cell in header_row:
             header = header_cell.value
-            if header is None or header == '':
+            if not header:
                 continue
 
             if header == 'typeURI':
                 data_validation = DataValidation(type="list", formula1=f'"{type_uri}"', allow_blank=True)
                 sheet.add_data_validation(data_validation)
-                data_validation.add(f'{header_cell.column_letter}2:{header_cell.column_letter}1000')
+                data_validation.add(f'{header_cell.column_letter}{first_data_row}:{header_cell.column_letter}{max_row}')
                 if add_attribute_info:
-                    collected_attribute_info.append('De URI van het object volgens https://www.w3.org/2001/XMLSchema#anyURI .')
+                    collected_attribute_info.append(
+                        'De URI van het object volgens https://www.w3.org/2001/XMLSchema#anyURI .')
                 if add_deprecated:
                     deprecated_attributes_row.append('')
                 continue
@@ -522,7 +537,7 @@ class SubsetTemplateCreator:
             if type_uri == 'http://purl.org/dc/terms/Agent' and header.startswith('assetId.'):
                 continue
 
-            attribute = DotnotationHelper.get_attribute_by_dotnotation(instance, header)
+            attribute = DotnotationHelper.get_attribute_by_dotnotation(instance, header, waarde_shortcut=True)
 
             if add_attribute_info:
                 collected_attribute_info.append(attribute.definition)
@@ -532,14 +547,52 @@ class SubsetTemplateCreator:
 
             if generate_choice_list:
                 if issubclass(attribute.field, BooleanField):
-                    boolean_validation.add(f'{header_cell.column_letter}2:{header_cell.column_letter}1000')
+                    boolean_validation.add(
+                        f'{header_cell.column_letter}{first_data_row}:{header_cell.column_letter}{max_row}')
                     cls.color_choice_lists_green(sheet=sheet, header_cell_column=header_cell)
-
                 elif issubclass(attribute.field, KeuzelijstField):
                     cls.generate_choice_list_in_excel(
                         attribute=attribute, choice_list_dict=choice_list_dict, column=header_cell.column,
                         row_nr=1, sheet=sheet, workbook=workbook)
                     cls.color_choice_lists_green(sheet=sheet, header_cell_column=header_cell)
+
+            # Store the native type for this column
+            col_types[header_cell.column] = attribute.field.native_type
+
+        # Efficiently post-process columns by type
+        for col_idx, native_type in col_types.items():
+            for row_idx in range(first_data_row, max_row + 1):
+                cell = sheet.cell(row=row_idx, column=col_idx)
+                value = cell.value
+                if value is not None:
+                    try:
+                        if native_type == str:
+                            cell.value = str(value)
+                            cell.number_format = "@"
+                        elif native_type == int:
+                            cell.value = int(value)
+                            cell.number_format = "0"
+                        elif native_type == float:
+                            cell.value = float(value)
+                            cell.number_format = "0.00"
+                        elif native_type.__name__ == "date":
+                            from datetime import datetime, date
+                            if isinstance(value, str):
+                                cell.value = datetime.strptime(value, "%Y-%m-%d").date()
+                            elif isinstance(value, datetime):
+                                cell.value = value.date()
+                            cell.number_format = "YYYY-MM-DD"
+                        elif native_type == bool:
+                            cell.value = bool(value)
+                            cell.number_format = "General"
+                        else:
+                            cell.value = value
+                            cell.number_format = "General"
+                    except Exception:
+                        cell.value = value
+                        cell.number_format = "General"
+                else:
+                    cell.number_format = "General"
 
         if dummy_data_rows == 0:
             instance_count = len([x for x in instances if x.typeURI == type_uri])
