@@ -510,7 +510,7 @@ class SubsetTemplateCreator:
         if add_deprecated and any(deprecated_attributes_row):
             first_data_row += 1
 
-        max_row = min(sheet.max_row, 1000)  # limit to 1000 as we only add validations up to row 1000
+        max_row = 1000  # limit to 1000 as we only add validations up to row 1000
         # Collect string columns to format after header processing
         string_col_indices = []
 

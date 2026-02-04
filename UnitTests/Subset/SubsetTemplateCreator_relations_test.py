@@ -30,7 +30,9 @@ def test_subset_with_AllCasesTestClass_0_records_relations():
                 break
         elif sheet_name == 'onderdeel#Bevestiging':
             for row in sheet.rows:
-                bevestiging_sheet_data.append([cell.value for cell in row])
+                row_values = [cell.value for cell in row]
+                if any(v is not None for v in row_values):
+                    bevestiging_sheet_data.append(row_values)
     book.close()
 
     union_headers = [header for header in header_row_list if header.startswith('testUnionType')]
@@ -99,19 +101,23 @@ def test_subset_slagboom_0_records_relations():
             bevestiging_header_row_list.extend(
                 [cell.value for cell in row]
                 for row in sheet.iter_rows(min_row=2, max_row=2)
+                if any(row_cell.value is not None for row_cell in row)
             )
             bevestiging_data_row_list.extend(
                 [cell.value for cell in row]
                 for row in sheet.iter_rows(min_row=3, max_row=10)
+                if any(row_cell.value is not None for row_cell in row)
             )
         elif sheet_name == 'onderdeel#Slagboomarm':
             arm_header_row_list.extend(
                 [cell.value for cell in row]
                 for row in sheet.iter_rows(min_row=2, max_row=2)
+                if any(row_cell.value is not None for row_cell in row)
             )
             arm_data_row_list.extend(
                 [cell.value for cell in row]
                 for row in sheet.iter_rows(min_row=3, max_row=10)
+                if any(row_cell.value is not None for row_cell in row)
             )
     book.close()
 
@@ -237,19 +243,23 @@ def test_subset_slagboom_relations_2_selected_classes_2_rows():
             bevestiging_header_row_list.extend(
                 [cell.value for cell in row]
                 for row in sheet.iter_rows(min_row=2, max_row=2)
+                if any(row_cell.value is not None for row_cell in row)
             )
             bevestiging_data_row_list.extend(
                 [cell.value for cell in row]
                 for row in sheet.iter_rows(min_row=3, max_row=10)
+                if any(row_cell.value is not None for row_cell in row)
             )
         elif sheet_name == 'ond#Slagboomarm':
             arm_header_row_list.extend(
                 [cell.value for cell in row]
                 for row in sheet.iter_rows(min_row=2, max_row=2)
+                if any(row_cell.value is not None for row_cell in row)
             )
             arm_data_row_list.extend(
                 [cell.value for cell in row]
                 for row in sheet.iter_rows(min_row=3, max_row=10)
+                if any(row_cell.value is not None for row_cell in row)
             )
     book.close()
 
