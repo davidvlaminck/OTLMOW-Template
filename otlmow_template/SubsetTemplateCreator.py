@@ -20,8 +20,6 @@ from openpyxl.worksheet.worksheet import Worksheet
 from otlmow_converter.DotnotationHelper import DotnotationHelper
 from otlmow_converter.Exceptions.UnknownExcelError import UnknownExcelError
 from otlmow_converter.OtlmowConverter import OtlmowConverter
-from otlmow_model.OtlmowModel.BaseClasses.BooleanField import BooleanField
-from otlmow_model.OtlmowModel.BaseClasses.KeuzelijstField import KeuzelijstField
 from otlmow_model.OtlmowModel.BaseClasses.OTLObject import dynamic_create_instance_from_uri, OTLObject, \
     get_attribute_by_name, dynamic_create_type_from_uri
 from otlmow_model.OtlmowModel.Helpers.GenericHelper import get_ns_and_name_from_uri
@@ -544,10 +542,10 @@ class SubsetTemplateCreator:
                 deprecated_attributes_row.append('DEPRECATED' if attribute.deprecated_version else '')
 
             if generate_choice_list:
-                if issubclass(attribute.field, BooleanField):
+                if attribute.field.native_type == bool:
                     boolean_validation.add(f'{header_cell.column_letter}{first_data_row}:{header_cell.column_letter}{max_row}')
                     cls.color_choice_lists_green(sheet=sheet, header_cell_column=header_cell)
-                elif issubclass(attribute.field, KeuzelijstField):
+                elif hasattr(attribute.field, 'options') and attribute.field.options is not None:
                     cls.generate_choice_list_in_excel(
                         attribute=attribute, choice_list_dict=choice_list_dict, column=header_cell.column,
                         row_nr=1, sheet=sheet, workbook=workbook)
