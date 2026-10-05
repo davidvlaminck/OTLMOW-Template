@@ -21,7 +21,7 @@ from otlmow_converter.DotnotationHelper import DotnotationHelper
 from otlmow_converter.Exceptions.UnknownExcelError import UnknownExcelError
 from otlmow_converter.OtlmowConverter import OtlmowConverter
 from otlmow_model.OtlmowModel.BaseClasses.OTLObject import dynamic_create_instance_from_uri, OTLObject, \
-    get_attribute_by_name, dynamic_create_type_from_uri
+    get_attribute_by_name, dynamic_create_type_from_uri, OTLAttribuut
 from otlmow_model.OtlmowModel.Helpers.GenericHelper import get_ns_and_name_from_uri
 from otlmow_model.OtlmowModel.Helpers.RelationCreator import create_betrokkenerelation, create_relation
 from otlmow_model.OtlmowModel.Helpers.generated_lists import get_hardcoded_relation_dict
@@ -449,7 +449,8 @@ class SubsetTemplateCreator:
                 continue
 
             if add_attribute_info:
-                collected_attribute_info_row.append(attribute.definition)
+                collected_attribute_info_row.append(
+                    cls.get_attribute_info(instance=instance, header=header, attribute=attribute))
 
             if add_deprecated:
                 deprecated_attributes_row.append('DEPRECATED' if attribute.deprecated_version else '')
@@ -536,7 +537,8 @@ class SubsetTemplateCreator:
             attribute = DotnotationHelper.get_attribute_by_dotnotation(instance, header)
 
             if add_attribute_info:
-                collected_attribute_info.append(attribute.definition)
+                collected_attribute_info.append(
+                    cls.get_attribute_info(instance=instance, header=header, attribute=attribute))
 
             if add_deprecated:
                 deprecated_attributes_row.append('DEPRECATED' if attribute.deprecated_version else '')
@@ -599,6 +601,55 @@ class SubsetTemplateCreator:
             cell = sheet.cell(row=1, column=index, value=attr_info)
             cell.alignment = alignment
             cell.fill = fill
+
+    @classmethod
+    def get_attribute_info(cls, instance: OTLObject, header: str, attribute: OTLAttribuut) -> str:
+        """Returns the definition to show in the attribute info row for a column of a template.
+
+        The definition of the 'waarde' attribute of a quantitative value is always the same and does not explain
+        the attribute itself. For quantitative values the definition of the attribute itself is combined with the
+        standard unit of the datatype.
+        """
+        quantitative_attribute = cls.get_quantitative_attribute(instance=instance, header=header)
+        if quantitative_attribute is None:
+            return attribute.definition
+        standard_unit = cls.get_standard_unit(quantitative_attribute)
+        if standard_unit is None:
+            return attribute.definition
+        definition = quantitative_attribute.definition.strip()
+        if not definition.endswith('.'):
+            definition = f'{definition}.'
+        return f'{definition} Standaard eenheid: {standard_unit}'
+
+    @classmethod
+    def get_quantitative_attribute(cls, instance: OTLObject, header: str) -> OTLAttribuut:
+        """Returns the attribute a column header refers to when it points to the value of a quantitative value,
+        None when the header does not point to a quantitative value."""
+        attribute = DotnotationHelper.get_attribute_by_dotnotation(
+            instance_or_attribute=instance, dotnotation=header, waarde_shortcut=False)
+        if not attribute.field.waarde_shortcut_applicable:
+            return None
+        if not hasattr(attribute.field.waardeObject, 'standaardEenheid'):
+            return None
+        return attribute
+
+    @classmethod
+    def get_standard_unit(cls, attribute: OTLAttribuut) -> str:
+        """Returns the standard unit (ex. 'mo') of a quantitative value attribute,
+        None when the standard unit of the datatype is unknown."""
+        waarde = attribute.waarde
+        if waarde is None:
+            attribute.add_empty_value()
+            waarde = attribute.waarde
+        if isinstance(waarde, list):
+            waarde = next(iter(waarde), None)
+        standaard_eenheid = get_attribute_by_name(waarde, 'standaardEenheid')
+        if standaard_eenheid is None:
+            return None
+        for notation in [standaard_eenheid.usagenote, standaard_eenheid.constraints]:
+            if '"' in notation:
+                return notation.split('"')[1]
+        return None
 
     @classmethod
     def generate_choice_list_in_excel(cls, attribute, choice_list_dict, column, row_nr, sheet: Worksheet,

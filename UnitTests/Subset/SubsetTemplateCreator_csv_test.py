@@ -61,7 +61,8 @@ def test_generate_csv_template(index, dummy_data_rows, add_geometry, add_attribu
         'Geeft aan of het object actief kan gebruikt worden of (zacht) verwijderd is uit het asset beheer systeem.',
         'Extra notitie voor het object.',
         'Een verwijzing naar een postnummer uit het standaardbestek waar het object mee verband houdt. De notatie van het postnummer moet overeenkomen met de notatie die gebruikt is in de catalogi van standaardbestekken, bijvoorbeeld postnummer 0701.20404G.',
-        'Bevat een getal die bij het datatype hoort.', 'Geeft de actuele stand in de levenscyclus van het object.']
+        'De levensduur in aantal maanden die theoretisch mag verwacht worden voor een object. Standaard eenheid: mo',
+        'Geeft de actuele stand in de levenscyclus van het object.']
     expected_header_row = ['typeURI', 'assetId.identificator', 'assetId.toegekendDoor', 'bestekPostNummer[]',
                            'datumOprichtingObject', 'deprecatedString', 'isActief', 'notitie',
                            'standaardBestekPostNummer[]', 'theoretischeLevensduur', 'toestand']
@@ -154,7 +155,8 @@ async def test_generate_csv_template_async(index, dummy_data_rows, add_geometry,
         'Geeft aan of het object actief kan gebruikt worden of (zacht) verwijderd is uit het asset beheer systeem.',
         'Extra notitie voor het object.',
         'Een verwijzing naar een postnummer uit het standaardbestek waar het object mee verband houdt. De notatie van het postnummer moet overeenkomen met de notatie die gebruikt is in de catalogi van standaardbestekken, bijvoorbeeld postnummer 0701.20404G.',
-        'Bevat een getal die bij het datatype hoort.', 'Geeft de actuele stand in de levenscyclus van het object.']
+        'De levensduur in aantal maanden die theoretisch mag verwacht worden voor een object. Standaard eenheid: mo',
+        'Geeft de actuele stand in de levenscyclus van het object.']
     expected_header_row = ['typeURI', 'assetId.identificator', 'assetId.toegekendDoor', 'bestekPostNummer[]',
                            'datumOprichtingObject', 'deprecatedString', 'isActief', 'notitie',
                            'standaardBestekPostNummer[]', 'theoretischeLevensduur', 'toestand']
