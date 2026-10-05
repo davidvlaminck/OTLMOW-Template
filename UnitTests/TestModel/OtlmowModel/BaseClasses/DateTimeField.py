@@ -5,9 +5,9 @@ from datetime import timedelta
 from random import randrange
 from typing import Optional, Any
 
-from otlmow_model.OtlmowModel.Exceptions.CouldNotConvertToCorrectTypeError import CouldNotConvertToCorrectTypeError
-from otlmow_model.OtlmowModel.BaseClasses.OTLField import OTLField
-from otlmow_model.OtlmowModel.warnings.IncorrectTypeWarning import IncorrectTypeWarning
+from ..Exceptions.CouldNotConvertToCorrectTypeError import CouldNotConvertToCorrectTypeError
+from .OTLField import OTLField
+from ..warnings.IncorrectTypeWarning import IncorrectTypeWarning
 
 
 class DateTimeField(OTLField):
@@ -18,6 +18,7 @@ class DateTimeField(OTLField):
     label = 'Datumtijd'
     usagenote = 'https://www.w3.org/TR/xmlschema-2/#dateTime'
     clearing_value = '88888888'
+    native_type = datetime.datetime
 
     @classmethod
     def validate(cls, value: Any, attribuut) -> bool:
@@ -95,9 +96,9 @@ class DateTimeField(OTLField):
             raise TypeError(f'Expecting datetime.datetime in {cls.__name__} and got {type(value)} when trying to '
                             f'parse {value}')
         if value.microsecond > 0:
-            return value.strftime("%Y-%m-%d %H:%M:%S.%f")
+            return value.strftime("%Y-%m-%dT%H:%M:%S.%f")
         else:
-            return value.strftime("%Y-%m-%d %H:%M:%S")
+            return value.strftime("%Y-%m-%dT%H:%M:%S")
 
     def __str__(self) -> str:
         return OTLField.__str__(self)

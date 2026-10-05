@@ -3,9 +3,9 @@ import string
 import warnings
 from typing import Optional, Any
 
-from otlmow_model.OtlmowModel.BaseClasses.OTLField import OTLField
-from otlmow_model.OtlmowModel.Exceptions.CouldNotConvertToCorrectTypeError import CouldNotConvertToCorrectTypeError
-from otlmow_model.OtlmowModel.warnings.IncorrectTypeWarning import IncorrectTypeWarning
+from .OTLField import OTLField
+from ..Exceptions.CouldNotConvertToCorrectTypeError import CouldNotConvertToCorrectTypeError
+from ..warnings.IncorrectTypeWarning import IncorrectTypeWarning
 
 
 class StringField(OTLField):
@@ -16,6 +16,7 @@ class StringField(OTLField):
     label = 'String'
     usagenote = 'https://www.w3.org/TR/xmlschema-2/#string'
     clearing_value = '88888888'
+    native_type = str
 
     @classmethod
     def convert_to_correct_type(cls, value: Any, log_warnings: bool = True) -> Optional[str]:

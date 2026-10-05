@@ -4,17 +4,18 @@ import random
 
 from typing import Dict, Optional, Any
 
-from otlmow_model.OtlmowModel.Exceptions.AttributeDeprecationWarning import AttributeDeprecationWarning
-from otlmow_model.OtlmowModel.Exceptions.InvalidOptionError import InvalidOptionError
-from otlmow_model.OtlmowModel.Exceptions.RemovedOptionError import RemovedOptionError
-from otlmow_model.OtlmowModel.BaseClasses.OTLField import OTLField
-from otlmow_model.OtlmowModel.BaseClasses.KeuzelijstWaarde import KeuzelijstWaarde
+from ..Exceptions.AttributeDeprecationWarning import AttributeDeprecationWarning
+from ..Exceptions.InvalidOptionError import InvalidOptionError
+from ..Exceptions.RemovedOptionError import RemovedOptionError
+from .OTLField import OTLField
+from .KeuzelijstWaarde import KeuzelijstWaarde
 
 
 class KeuzelijstField(OTLField):
     options: Dict[str, KeuzelijstWaarde] = {}
     codelist = ''
     clearing_value = '88888888'
+    native_type = str
 
     @classmethod
     def create_dummy_data_keuzelijst(cls, options) -> Optional[str]:
