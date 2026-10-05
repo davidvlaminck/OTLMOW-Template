@@ -1,15 +1,15 @@
 version = 1
-revision = 3
+revision = 5
 requires-python = ">=3.9"
 resolution-markers = [
     "python_full_version >= '3.14' and sys_platform == 'win32'",
     "python_full_version >= '3.14' and sys_platform == 'emscripten'",
     "python_full_version >= '3.14' and sys_platform != 'emscripten' and sys_platform != 'win32'",
     "python_full_version >= '3.12' and python_full_version < '3.14' and sys_platform == 'win32'",
-    "python_full_version == '3.11.*' and sys_platform == 'win32'",
     "python_full_version >= '3.12' and python_full_version < '3.14' and sys_platform == 'emscripten'",
-    "python_full_version == '3.11.*' and sys_platform == 'emscripten'",
     "python_full_version >= '3.12' and python_full_version < '3.14' and sys_platform != 'emscripten' and sys_platform != 'win32'",
+    "python_full_version == '3.11.*' and sys_platform == 'win32'",
+    "python_full_version == '3.11.*' and sys_platform == 'emscripten'",
     "python_full_version == '3.11.*' and sys_platform != 'emscripten' and sys_platform != 'win32'",
     "python_full_version == '3.10.*'",
     "python_full_version < '3.10'",
@@ -170,10 +170,10 @@ resolution-markers = [
     "python_full_version >= '3.14' and sys_platform == 'emscripten'",
     "python_full_version >= '3.14' and sys_platform != 'emscripten' and sys_platform != 'win32'",
     "python_full_version >= '3.12' and python_full_version < '3.14' and sys_platform == 'win32'",
-    "python_full_version == '3.11.*' and sys_platform == 'win32'",
     "python_full_version >= '3.12' and python_full_version < '3.14' and sys_platform == 'emscripten'",
-    "python_full_version == '3.11.*' and sys_platform == 'emscripten'",
     "python_full_version >= '3.12' and python_full_version < '3.14' and sys_platform != 'emscripten' and sys_platform != 'win32'",
+    "python_full_version == '3.11.*' and sys_platform == 'win32'",
+    "python_full_version == '3.11.*' and sys_platform == 'emscripten'",
     "python_full_version == '3.11.*' and sys_platform != 'emscripten' and sys_platform != 'win32'",
     "python_full_version == '3.10.*'",
 ]
@@ -348,10 +348,10 @@ resolution-markers = [
     "python_full_version >= '3.14' and sys_platform == 'emscripten'",
     "python_full_version >= '3.14' and sys_platform != 'emscripten' and sys_platform != 'win32'",
     "python_full_version >= '3.12' and python_full_version < '3.14' and sys_platform == 'win32'",
-    "python_full_version == '3.11.*' and sys_platform == 'win32'",
     "python_full_version >= '3.12' and python_full_version < '3.14' and sys_platform == 'emscripten'",
-    "python_full_version == '3.11.*' and sys_platform == 'emscripten'",
     "python_full_version >= '3.12' and python_full_version < '3.14' and sys_platform != 'emscripten' and sys_platform != 'win32'",
+    "python_full_version == '3.11.*' and sys_platform == 'win32'",
+    "python_full_version == '3.11.*' and sys_platform == 'emscripten'",
     "python_full_version == '3.11.*' and sys_platform != 'emscripten' and sys_platform != 'win32'",
     "python_full_version == '3.10.*'",
 ]
@@ -381,10 +381,10 @@ resolution-markers = [
     "python_full_version >= '3.14' and sys_platform == 'emscripten'",
     "python_full_version >= '3.14' and sys_platform != 'emscripten' and sys_platform != 'win32'",
     "python_full_version >= '3.12' and python_full_version < '3.14' and sys_platform == 'win32'",
-    "python_full_version == '3.11.*' and sys_platform == 'win32'",
     "python_full_version >= '3.12' and python_full_version < '3.14' and sys_platform == 'emscripten'",
-    "python_full_version == '3.11.*' and sys_platform == 'emscripten'",
     "python_full_version >= '3.12' and python_full_version < '3.14' and sys_platform != 'emscripten' and sys_platform != 'win32'",
+    "python_full_version == '3.11.*' and sys_platform == 'win32'",
+    "python_full_version == '3.11.*' and sys_platform == 'emscripten'",
     "python_full_version == '3.11.*' and sys_platform != 'emscripten' and sys_platform != 'win32'",
     "python_full_version == '3.10.*'",
 ]
@@ -877,7 +877,7 @@ wheels = [
 
 [[package]]
 name = "otlmow-converter"
-version = "1.25"
+version = "1.26"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "geojson", version = "3.2.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
@@ -893,9 +893,9 @@ dependencies = [
     { name = "pyarrow", version = "25.0.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
     { name = "rdflib" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/9d/7f/5258a452cfc5b72564aa00b73a05d4bd0f926f7b0713e639875b6c9d97ce/otlmow_converter-1.25.tar.gz", hash = "sha256:29b7d11c34700ecd6ea11b22665285c2c8654528104f6595cd6cff3c44464af2", size = 79115, upload-time = "2026-06-05T11:13:22.011Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/8d/3e/912d09952e2676fbc3e0cf5b6d7110421df94cba2aa2d314693826f1ce9b/otlmow_converter-1.26.tar.gz", hash = "sha256:1305c8b2449e35a79e977c6a56f9c41ec87a14a38751fb862a64e8892cffa272", size = 79394, upload-time = "2026-09-25T07:35:37.244Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/4e/8d/78fab4c1bdf017d11421ec1973276705ccf7d8e6185077cb6af43465b84c/otlmow_converter-1.25-py3-none-any.whl", hash = "sha256:769e07c068e4e8bafdb4d566c60479eb9f5a2bc16585cd879b994b2e1792178f", size = 86607, upload-time = "2026-06-05T11:13:20.659Z" },
+    { url = "https://files.pythonhosted.org/packages/a6/e8/d2d02a9aded183e999ef5a9d399f44165cfaf1fe84f307fc7aca4e3927df/otlmow_converter-1.26-py3-none-any.whl", hash = "sha256:3bda17433ea63eefaa93ad4ceb657eb353e57ec5492cd732bd0a988f5d7dcc66", size = 86921, upload-time = "2026-09-25T07:35:35.779Z" },
 ]
 
 [[package]]
@@ -909,20 +909,20 @@ wheels = [
 
 [[package]]
 name = "otlmow-modelbuilder"
-version = "0.43"
+version = "0.44"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "rdflib" },
     { name = "tqdm" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/38/62/394dc78f2c7079bda69614a79c59ea2b034877623612e9f52c327ec35494/otlmow_modelbuilder-0.43.tar.gz", hash = "sha256:036192fab4b5a17c142e9466f7eeb2b0761e2614332a9acbc1b2c8cd4b3162ee", size = 76283, upload-time = "2026-09-22T11:55:27.078Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/3d/2d/dfbf9804c2fbe1b262e67523f26c24f4706af2d7460521091b9c8f202048/otlmow_modelbuilder-0.44.tar.gz", hash = "sha256:440b84d58f351959e401b4d0bc92b1f74ef232d07471751942dec5bd632c5bb4", size = 76390, upload-time = "2026-09-25T09:45:42.328Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/45/65/a8718377e3eb0ef9924ac8a19908dcb6461d6849c79c74bc18223841b689/otlmow_modelbuilder-0.43-py3-none-any.whl", hash = "sha256:02291505aa0d131de296a5f961d1d03982e61952a4289a7c58a5084b71a38176", size = 76438, upload-time = "2026-09-22T11:55:25.438Z" },
+    { url = "https://files.pythonhosted.org/packages/25/65/9aaf9f521cf08c3e6776191306f3fb87f76de65c218c0f28734aa06f1cdf/otlmow_modelbuilder-0.44-py3-none-any.whl", hash = "sha256:60502e947f19bc05b62fc2986a5cf905e524f04528dda010afe071cde702c494", size = 76567, upload-time = "2026-09-25T09:45:40.925Z" },
 ]
 
 [[package]]
 name = "otlmow-template"
-version = "1.10"
+version = "1.11"
 source = { editable = "." }
 dependencies = [
     { name = "otlmow-converter" },
@@ -942,8 +942,8 @@ test = [
 
 [package.metadata]
 requires-dist = [
-    { name = "otlmow-converter", specifier = ">=1.14" },
-    { name = "otlmow-modelbuilder", specifier = ">=0.37" },
+    { name = "otlmow-converter", specifier = ">=1.26" },
+    { name = "otlmow-modelbuilder", specifier = ">=0.44" },
     { name = "pytest", marker = "extra == 'test'" },
     { name = "pytest-asyncio", marker = "extra == 'test'" },
     { name = "pytest-cov", marker = "extra == 'test'" },
@@ -1043,10 +1043,10 @@ resolution-markers = [
     "python_full_version >= '3.14' and sys_platform == 'emscripten'",
     "python_full_version >= '3.14' and sys_platform != 'emscripten' and sys_platform != 'win32'",
     "python_full_version >= '3.12' and python_full_version < '3.14' and sys_platform == 'win32'",
-    "python_full_version == '3.11.*' and sys_platform == 'win32'",
     "python_full_version >= '3.12' and python_full_version < '3.14' and sys_platform == 'emscripten'",
-    "python_full_version == '3.11.*' and sys_platform == 'emscripten'",
     "python_full_version >= '3.12' and python_full_version < '3.14' and sys_platform != 'emscripten' and sys_platform != 'win32'",
+    "python_full_version == '3.11.*' and sys_platform == 'win32'",
+    "python_full_version == '3.11.*' and sys_platform == 'emscripten'",
     "python_full_version == '3.11.*' and sys_platform != 'emscripten' and sys_platform != 'win32'",
 ]
 dependencies = [
@@ -1149,10 +1149,10 @@ resolution-markers = [
     "python_full_version >= '3.14' and sys_platform == 'emscripten'",
     "python_full_version >= '3.14' and sys_platform != 'emscripten' and sys_platform != 'win32'",
     "python_full_version >= '3.12' and python_full_version < '3.14' and sys_platform == 'win32'",
-    "python_full_version == '3.11.*' and sys_platform == 'win32'",
     "python_full_version >= '3.12' and python_full_version < '3.14' and sys_platform == 'emscripten'",
-    "python_full_version == '3.11.*' and sys_platform == 'emscripten'",
     "python_full_version >= '3.12' and python_full_version < '3.14' and sys_platform != 'emscripten' and sys_platform != 'win32'",
+    "python_full_version == '3.11.*' and sys_platform == 'win32'",
+    "python_full_version == '3.11.*' and sys_platform == 'emscripten'",
     "python_full_version == '3.11.*' and sys_platform != 'emscripten' and sys_platform != 'win32'",
     "python_full_version == '3.10.*'",
 ]
@@ -1226,10 +1226,10 @@ resolution-markers = [
     "python_full_version >= '3.14' and sys_platform == 'emscripten'",
     "python_full_version >= '3.14' and sys_platform != 'emscripten' and sys_platform != 'win32'",
     "python_full_version >= '3.12' and python_full_version < '3.14' and sys_platform == 'win32'",
-    "python_full_version == '3.11.*' and sys_platform == 'win32'",
     "python_full_version >= '3.12' and python_full_version < '3.14' and sys_platform == 'emscripten'",
-    "python_full_version == '3.11.*' and sys_platform == 'emscripten'",
     "python_full_version >= '3.12' and python_full_version < '3.14' and sys_platform != 'emscripten' and sys_platform != 'win32'",
+    "python_full_version == '3.11.*' and sys_platform == 'win32'",
+    "python_full_version == '3.11.*' and sys_platform == 'emscripten'",
     "python_full_version == '3.11.*' and sys_platform != 'emscripten' and sys_platform != 'win32'",
     "python_full_version == '3.10.*'",
 ]
@@ -1327,10 +1327,10 @@ resolution-markers = [
     "python_full_version >= '3.14' and sys_platform == 'emscripten'",
     "python_full_version >= '3.14' and sys_platform != 'emscripten' and sys_platform != 'win32'",
     "python_full_version >= '3.12' and python_full_version < '3.14' and sys_platform == 'win32'",
-    "python_full_version == '3.11.*' and sys_platform == 'win32'",
     "python_full_version >= '3.12' and python_full_version < '3.14' and sys_platform == 'emscripten'",
-    "python_full_version == '3.11.*' and sys_platform == 'emscripten'",
     "python_full_version >= '3.12' and python_full_version < '3.14' and sys_platform != 'emscripten' and sys_platform != 'win32'",
+    "python_full_version == '3.11.*' and sys_platform == 'win32'",
+    "python_full_version == '3.11.*' and sys_platform == 'emscripten'",
     "python_full_version == '3.11.*' and sys_platform != 'emscripten' and sys_platform != 'win32'",
     "python_full_version == '3.10.*'",
 ]
@@ -1374,10 +1374,10 @@ resolution-markers = [
     "python_full_version >= '3.14' and sys_platform == 'emscripten'",
     "python_full_version >= '3.14' and sys_platform != 'emscripten' and sys_platform != 'win32'",
     "python_full_version >= '3.12' and python_full_version < '3.14' and sys_platform == 'win32'",
-    "python_full_version == '3.11.*' and sys_platform == 'win32'",
     "python_full_version >= '3.12' and python_full_version < '3.14' and sys_platform == 'emscripten'",
-    "python_full_version == '3.11.*' and sys_platform == 'emscripten'",
     "python_full_version >= '3.12' and python_full_version < '3.14' and sys_platform != 'emscripten' and sys_platform != 'win32'",
+    "python_full_version == '3.11.*' and sys_platform == 'win32'",
+    "python_full_version == '3.11.*' and sys_platform == 'emscripten'",
     "python_full_version == '3.11.*' and sys_platform != 'emscripten' and sys_platform != 'win32'",
     "python_full_version == '3.10.*'",
 ]

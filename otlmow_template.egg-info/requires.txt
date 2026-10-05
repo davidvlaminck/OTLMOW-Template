@@ -1,5 +1,5 @@
-otlmow-converter>=1.14
-otlmow-modelbuilder>=0.37
+otlmow-converter>=1.26
+otlmow-modelbuilder>=0.44
 
 [test]
 pytest
