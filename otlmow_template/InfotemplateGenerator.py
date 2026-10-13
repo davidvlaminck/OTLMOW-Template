@@ -1,12 +1,12 @@
+from __future__ import annotations
+
 import asyncio
 from pathlib import Path
-from typing import Optional
+from typing import ClassVar
 
 from openpyxl import Workbook
-from openpyxl.styles import Font, Border, Side, PatternFill, Alignment
+from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.worksheet.worksheet import Worksheet
-
-from otlmow_modelbuilder.OSLOCollector import OSLOCollector
 from otlmow_modelbuilder.SQLDataClasses.OSLOClass import OSLOClass
 
 from otlmow_template.TemplateGeneratorBase import TemplateGeneratorBase
@@ -20,30 +20,82 @@ class InfotemplateGenerator(TemplateGeneratorBase):
     and information purposes, not for data delivery.
     """
     
+    # Feature 3: Generic attribute URIs that get light green background
+    GENERIC_ATTRIBUTE_URIS: ClassVar[set[str]] = {
+        'https://wegenenverkeer.data.vlaanderen.be/ns/implementatieelement#AIMObject.assetId',
+        'https://wegenenverkeer.data.vlaanderen.be/ns/implementatieelement#AIMObject.datumOprichtingObject',
+        'https://wegenenverkeer.data.vlaanderen.be/ns/implementatieelement#AIMObject.bestekPostNummer',
+        'https://wegenenverkeer.data.vlaanderen.be/ns/implementatieelement#AIMNaamObject.naam',
+        'https://wegenenverkeer.data.vlaanderen.be/ns/implementatieelement#AIMDBStatus.isActief',
+        'https://wegenenverkeer.data.vlaanderen.be/ns/implementatieelement#AIMToestand.toestand',
+    }
+    
     def __init__(self):
         super().__init__()
-        self.relation_dict: dict[str, set[tuple[str, str]]] = {}
+        self.relation_dict: dict[str, list[tuple[str, str]]] = {}
     
     def _build_relation_dict(self):
-        """Build relation dictionary from OSLORelaties using OSLOCollector."""
+        """Build relation dictionary from OSLORelaties using OSLOCollector.
+        
+        Only includes relations where both bron and doel are concrete (non-abstract) classes.
+        For 'heeftBetrokkene' relations, creates two entries (Feature 2).
+        Uses lists to preserve duplicates for heeftBetrokkene.
+        """
         self.relation_dict = {}
+        
+        # Build a set of concrete class names for quick lookup
+        concrete_class_names = {cls.name for cls in self._filter_concrete_classes()}
+        
+        # Use a set to track unique relations for deduplication (except heeftBetrokkene)
+        seen_relations = set()
         
         for relation in self.collector.relations:
             bron = relation.bron_uri.split("#")[-1]
             doel = relation.doel_uri.split("#")[-1]
             relatie = relation.objectUri.split("#")[-1]
             
-            self.relation_dict.setdefault(bron, set()).add((relatie, doel))
-            self.relation_dict.setdefault(doel, set()).add((relatie, bron))
+            # Only include relations where both bron and doel are concrete classes
+            if bron in concrete_class_names and doel in concrete_class_names:
+                # Add relation from bron perspective
+                if relatie == 'heeftBetrokkene':
+                    # For heeftBetrokkene, allow duplicates
+                    self.relation_dict.setdefault(bron, []).append((relatie, doel))
+                else:
+                    rel_key = (bron, relatie, doel)
+                    if rel_key not in seen_relations:
+                        seen_relations.add(rel_key)
+                        self.relation_dict.setdefault(bron, []).append((relatie, doel))
+                
+                # Also add from doel perspective (reverse direction)
+                if relatie == 'heeftBetrokkene':
+                    self.relation_dict.setdefault(doel, []).append((relatie, bron))
+                else:
+                    rel_key = (doel, relatie, bron)
+                    if rel_key not in seen_relations:
+                        seen_relations.add(rel_key)
+                        self.relation_dict.setdefault(doel, []).append((relatie, bron))
+        
+        # Feature 2: Double the 'heeftBetrokkene' relations
+        for bron, relations in self.relation_dict.items():
+            new_relations = []
+            for relatie, doel in relations:
+                new_relations.append((relatie, doel))
+                if relatie == 'heeftBetrokkene':
+                    # Add a second entry for heeftBetrokkene
+                    new_relations.append((relatie, doel))
+            self.relation_dict[bron] = new_relations
     
     def _get_attributes_for_class(self, class_uri: str) -> list[tuple]:
-        """Get attributes for a class from the database (including inherited)."""
+        """Get attributes for a class from the database (including inherited).
+        
+        Returns list of tuples: (label_nl, kardinaliteit_min, kardinaliteit_max, type, attribute_uri)
+        """
         import sqlite3
         conn = sqlite3.connect(self.collector.path)
         cursor = conn.cursor()
         
         cursor.execute("""
-            SELECT label_nl, kardinaliteit_min, kardinaliteit_max, type
+            SELECT label_nl, kardinaliteit_min, kardinaliteit_max, type, uri
             FROM OSLOAttributen
             WHERE class_uri = ?
             ORDER BY label_nl
@@ -53,7 +105,7 @@ class InfotemplateGenerator(TemplateGeneratorBase):
         conn.close()
         return result
     
-    def _apply_template_layout(self, ws: Worksheet, attribute_count: int):
+    def _apply_template_layout(self, ws: Worksheet, attribute_count: int, attr_header_row: int):
         """Apply standard layout formatting to worksheet."""
         ws.column_dimensions["A"].width = 40
         ws.column_dimensions["B"].width = 25
@@ -86,15 +138,26 @@ class InfotemplateGenerator(TemplateGeneratorBase):
             ws[cell].font = bold
             ws[cell].border = medium_border
         
-        for cell in ["A14", "B14", "C14", "D14", "E14", "F14"]:
+        # Feature 6: Bold relation headers (row 5)
+        for cell in ["B5", "C5", "D5", "E5", "F5"]:
             ws[cell].font = bold
+        
+        # Feature 6: Bold attribute headers
+        for col in range(1, 7):
+            cell = ws.cell(row=attr_header_row, column=col)
+            cell.font = bold
         
         last_row = 14 + attribute_count
         for row in range(15, last_row + 1):
             for col in range(1, 7):
                 cell = ws.cell(row=row, column=col)
-                cell.fill = yellow_fill
                 cell.border = dotted_border
+                # Only apply yellow fill if not already set (generic attributes get light green)
+                if cell.fill.start_color.rgb == '00000000':
+                    cell.fill = yellow_fill
+        
+        # Feature 10: Auto-filter on attribute header row
+        ws.auto_filter.ref = f"A{attr_header_row}:F{last_row}"
     
     def _create_worksheet_for_class(self, wb: Workbook, cls: OSLOClass) -> Worksheet:
         """Create a worksheet for a single class."""
@@ -115,7 +178,8 @@ class InfotemplateGenerator(TemplateGeneratorBase):
         ws["B5"] = "Verplicht y/n"
         ws["C5"] = "Wie levert aan?"
         ws["D5"] = "Type Relatie"
-        ws["E5"] = "Relatie Met"
+        # Feature 11: Column E is now "Richting" instead of "Relatie Met"
+        ws["E5"] = "Richting"
         ws["F5"] = "Opmerkingen"
         
         ws["A13"] = "EIGENSCHAPPEN"
@@ -145,11 +209,33 @@ class InfotemplateGenerator(TemplateGeneratorBase):
         ws[f"E{eigenschappen_row+1}"] = "Formaat/Opmaak/naamconventie"
         ws[f"F{eigenschappen_row+1}"] = "Opmerkingen"
         
+        attr_header_row = eigenschappen_row + 1
+        
         relation_row = 6
         for relatie_type, relatie_met in relaties:
             ws.cell(relation_row, 4, relatie_type)
-            ws.cell(relation_row, 5, relatie_met)
+            # Feature 11: Column E is now "Richting" with direction indicators
+            # Determine direction based on relation type and bron/doel
+            # For now, use '<===>' as default (undirected), but we can improve this
+            if relatie_type in ['Bevestiging', 'HoortBij']:
+                # These are typically undirected or source->destination
+                if relatie_type == 'HoortBij':
+                    richting = '<===>'  # Can be both ways
+                else:
+                    richting = '<===>'  # Undirected
+            else:
+                richting = '<===>'
+            ws.cell(relation_row, 5, richting)
+            # Feature 4: Default 'aannemer' in "Wie levert aan?" column (C)
+            ws.cell(relation_row, 3, 'aannemer')
             relation_row += 1
+        
+        # Feature 3: Light green fill for generic attributes
+        light_green_fill = PatternFill(
+            fill_type="solid",
+            start_color="90EE90",
+            end_color="90EE90"
+        )
         
         # Attributes
         attributes = self._get_attributes_for_class(cls.objectUri)
@@ -157,7 +243,7 @@ class InfotemplateGenerator(TemplateGeneratorBase):
         attribuut_start = eigenschappen_row + 2
         current_row = attribuut_start
         
-        for attribuut, kard_min, kard_max, datatype in attributes:
+        for attribuut, kard_min, kard_max, datatype, attr_uri in attributes:
             ws.cell(current_row, 1, attribuut)
             
             if kard_min == "1":
@@ -165,15 +251,36 @@ class InfotemplateGenerator(TemplateGeneratorBase):
             else:
                 ws.cell(current_row, 2, "n")
             
+            # Feature 4: Default 'aannemer' in "Wie levert aan?" column (C)
+            ws.cell(current_row, 3, 'aannemer')
+            
             if datatype:
                 datatype = datatype.split("#")[-1]
                 ws.cell(current_row, 5, datatype)
+            
+            # Feature 5: TypeURI in opmerkingen for typeURI attribute only
+            if attribuut.lower() == 'type uri':
+                # Get the class typeURI
+                class_typeuri = cls.objectUri
+                ws.cell(current_row, 6, f"typeURI: {class_typeuri}")
+            
+            # Feature 3: Apply light green fill for generic attributes
+            if attr_uri in self.GENERIC_ATTRIBUTE_URIS:
+                for col in range(1, 7):
+                    cell = ws.cell(current_row, col)
+                    cell.fill = light_green_fill
+                    cell.border = Border(
+                        left=Side(style="dotted"),
+                        right=Side(style="dotted"),
+                        top=Side(style="dotted"),
+                        bottom=Side(style="dotted")
+                    )
             
             current_row += 1
         
         attribute_count = current_row - attribuut_start
         
-        self._apply_template_layout(ws, attribute_count)
+        self._apply_template_layout(ws, attribute_count, attr_header_row)
         
         return ws
     
@@ -181,7 +288,7 @@ class InfotemplateGenerator(TemplateGeneratorBase):
             self,
             subset_path: Path,
             template_file_path: Path,
-            model_directory: Path = None):
+            model_directory: Path | None = None):
         """Generate an info template from a subset file.
         
         :param subset_path: Path to the subset file
@@ -193,6 +300,8 @@ class InfotemplateGenerator(TemplateGeneratorBase):
         self._build_relation_dict()
         
         concrete_classes = self._filter_concrete_classes()
+        # Feature 12: Sort sheets alphabetically by class name
+        concrete_classes.sort(key=lambda cls: cls.name)
         
         wb = Workbook()
         wb.remove(wb.active)
@@ -202,7 +311,7 @@ class InfotemplateGenerator(TemplateGeneratorBase):
             self._create_worksheet_for_class(wb, cls)
         
         wb.save(template_file_path)
-        print("")
+        print()
         print("=" * 40)
         print("KLAAR")
         print(template_file_path)
@@ -212,13 +321,15 @@ class InfotemplateGenerator(TemplateGeneratorBase):
             self,
             subset_path: Path,
             template_file_path: Path,
-            model_directory: Path = None):
+            model_directory: Path | None = None):
         """Async version of generate_infotemplate_from_subset."""
         self.collector = await self._load_collector_async(subset_path)
         self.classes = self.collector.classes
         self._build_relation_dict()
         
         concrete_classes = self._filter_concrete_classes()
+        # Feature 12: Sort sheets alphabetically by class name
+        concrete_classes.sort(key=lambda cls: cls.name)
         
         wb = Workbook()
         wb.remove(wb.active)
@@ -229,7 +340,7 @@ class InfotemplateGenerator(TemplateGeneratorBase):
             await asyncio.sleep(0)
         
         wb.save(template_file_path)
-        print("")
+        print()
         print("=" * 40)
         print("KLAAR")
         print(template_file_path)
