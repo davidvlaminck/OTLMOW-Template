@@ -6,6 +6,7 @@ from typing import ClassVar
 
 from openpyxl import Workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
+from openpyxl.worksheet.datavalidation import DataValidation
 from openpyxl.worksheet.worksheet import Worksheet
 from otlmow_modelbuilder.SQLDataClasses.OSLOClass import OSLOClass
 
@@ -28,7 +29,15 @@ class InfotemplateGenerator(TemplateGeneratorBase):
         'https://wegenenverkeer.data.vlaanderen.be/ns/implementatieelement#AIMNaamObject.naam',
         'https://wegenenverkeer.data.vlaanderen.be/ns/implementatieelement#AIMDBStatus.isActief',
         'https://wegenenverkeer.data.vlaanderen.be/ns/implementatieelement#AIMToestand.toestand',
+        'https://wegenenverkeer.data.vlaanderen.be/ns/implementatieelement#AIMVersie.assetVersie',
+        'https://wegenenverkeer.data.vlaanderen.be/ns/implementatieelement#AIMObject.typeURI',
+        'https://wegenenverkeer.data.vlaanderen.be/ns/implementatieelement#AIMObject.theoretischeLevensduur',
+        'https://wegenenverkeer.data.vlaanderen.be/ns/implementatieelement#AIMObject.standaardBestekPostNummer',
+        'https://wegenenverkeer.data.vlaanderen.be/ns/implementatieelement#AIMObject.notitie',
     }
+    
+    # Lighter green color for generic attributes
+    LIGHT_GREEN_COLOR = "C8F7C8"
     
     def __init__(self):
         super().__init__()
@@ -40,6 +49,7 @@ class InfotemplateGenerator(TemplateGeneratorBase):
         Only includes relations where both bron and doel are concrete (non-abstract) classes.
         For 'heeftBetrokkene' relations, creates two entries (Feature 2).
         Uses lists to preserve duplicates for heeftBetrokkene.
+        Stores direction from database: Unspecified=<===>, Source -> Destination===>.
         """
         self.relation_dict = {}
         
@@ -53,36 +63,37 @@ class InfotemplateGenerator(TemplateGeneratorBase):
             bron = relation.bron_uri.split("#")[-1]
             doel = relation.doel_uri.split("#")[-1]
             relatie = relation.objectUri.split("#")[-1]
+            richting = relation.richting  # Get direction from database
             
             # Only include relations where both bron and doel are concrete classes
             if bron in concrete_class_names and doel in concrete_class_names:
                 # Add relation from bron perspective
                 if relatie == 'heeftBetrokkene':
                     # For heeftBetrokkene, allow duplicates
-                    self.relation_dict.setdefault(bron, []).append((relatie, doel))
+                    self.relation_dict.setdefault(bron, []).append((relatie, doel, richting))
                 else:
                     rel_key = (bron, relatie, doel)
                     if rel_key not in seen_relations:
                         seen_relations.add(rel_key)
-                        self.relation_dict.setdefault(bron, []).append((relatie, doel))
+                        self.relation_dict.setdefault(bron, []).append((relatie, doel, richting))
                 
                 # Also add from doel perspective (reverse direction)
                 if relatie == 'heeftBetrokkene':
-                    self.relation_dict.setdefault(doel, []).append((relatie, bron))
+                    self.relation_dict.setdefault(doel, []).append((relatie, bron, richting))
                 else:
                     rel_key = (doel, relatie, bron)
                     if rel_key not in seen_relations:
                         seen_relations.add(rel_key)
-                        self.relation_dict.setdefault(doel, []).append((relatie, bron))
+                        self.relation_dict.setdefault(doel, []).append((relatie, bron, richting))
         
         # Feature 2: Double the 'heeftBetrokkene' relations
         for bron, relations in self.relation_dict.items():
             new_relations = []
-            for relatie, doel in relations:
-                new_relations.append((relatie, doel))
+            for relatie, doel, richting in relations:
+                new_relations.append((relatie, doel, richting))
                 if relatie == 'heeftBetrokkene':
                     # Add a second entry for heeftBetrokkene
-                    new_relations.append((relatie, doel))
+                    new_relations.append((relatie, doel, richting))
             self.relation_dict[bron] = new_relations
     
     def _get_attributes_for_class(self, class_uri: str) -> list[tuple]:
@@ -105,7 +116,7 @@ class InfotemplateGenerator(TemplateGeneratorBase):
         conn.close()
         return result
     
-    def _apply_template_layout(self, ws: Worksheet, attribute_count: int, attr_header_row: int):
+    def _apply_template_layout(self, ws: Worksheet, attribute_count: int, attr_header_row: int, rel_start_row: int, rel_end_row: int):
         """Apply standard layout formatting to worksheet."""
         ws.column_dimensions["A"].width = 40
         ws.column_dimensions["B"].width = 25
@@ -139,7 +150,7 @@ class InfotemplateGenerator(TemplateGeneratorBase):
             ws[cell].border = medium_border
         
         # Feature 6: Bold relation headers (row 5)
-        for cell in ["B5", "C5", "D5", "E5", "F5"]:
+        for cell in ["A5", "B5", "C5", "D5", "E5", "F5"]:
             ws[cell].font = bold
         
         # Feature 6: Bold attribute headers
@@ -147,8 +158,8 @@ class InfotemplateGenerator(TemplateGeneratorBase):
             cell = ws.cell(row=attr_header_row, column=col)
             cell.font = bold
         
-        last_row = 14 + attribute_count
-        for row in range(15, last_row + 1):
+        last_row = attr_header_row + 1 + attribute_count
+        for row in range(attr_header_row + 2, last_row + 1):
             for col in range(1, 7):
                 cell = ws.cell(row=row, column=col)
                 cell.border = dotted_border
@@ -156,8 +167,30 @@ class InfotemplateGenerator(TemplateGeneratorBase):
                 if cell.fill.start_color.rgb == '00000000':
                     cell.fill = yellow_fill
         
+        # Apply dotted border to relation rows too
+        for row in range(rel_start_row, rel_end_row + 1):
+            for col in range(1, 7):
+                cell = ws.cell(row=row, column=col)
+                cell.border = dotted_border
+                if cell.fill.start_color.rgb == '00000000':
+                    cell.fill = yellow_fill
+        
         # Feature 10: Auto-filter on attribute header row
         ws.auto_filter.ref = f"A{attr_header_row}:F{last_row}"
+        
+        # Data validation for "Wie levert aan?" column (C) - both relations and attributes
+        dv = DataValidation(type="list", formula1='"AWV,aannemer"', allow_blank=True)
+        dv.error = "Selecteer AWV of aannemer"
+        dv.errorTitle = "Ongeldige invoer"
+        ws.add_data_validation(dv)
+        
+        # Apply to relation rows (column C)
+        for row in range(rel_start_row, rel_end_row + 1):
+            dv.add(ws.cell(row=row, column=3))
+        
+        # Apply to attribute rows (column C)
+        for row in range(attr_header_row + 2, last_row + 1):
+            dv.add(ws.cell(row=row, column=3))
     
     def _create_worksheet_for_class(self, wb: Workbook, cls: OSLOClass) -> Worksheet:
         """Create a worksheet for a single class."""
@@ -175,10 +208,11 @@ class InfotemplateGenerator(TemplateGeneratorBase):
         
         ws["A4"] = "RELATIES"
         
+        # Relations headers: A=Relatie Met, B=Verplicht y/n, C=Wie levert aan?, D=Type Relatie, E=Richting, F=Opmerkingen
+        ws["A5"] = "Relatie Met"
         ws["B5"] = "Verplicht y/n"
         ws["C5"] = "Wie levert aan?"
         ws["D5"] = "Type Relatie"
-        # Feature 11: Column E is now "Richting" instead of "Relatie Met"
         ws["E5"] = "Richting"
         ws["F5"] = "Opmerkingen"
         
@@ -210,40 +244,56 @@ class InfotemplateGenerator(TemplateGeneratorBase):
         ws[f"F{eigenschappen_row+1}"] = "Opmerkingen"
         
         attr_header_row = eigenschappen_row + 1
+        rel_start_row = 6
+        rel_end_row = rel_start_row + len(relaties) - 1
         
-        relation_row = 6
-        for relatie_type, relatie_met in relaties:
-            ws.cell(relation_row, 4, relatie_type)
-            # Feature 11: Column E is now "Richting" with direction indicators
-            # Determine direction based on relation type and bron/doel
-            # For now, use '<===>' as default (undirected), but we can improve this
-            if relatie_type in ['Bevestiging', 'HoortBij']:
-                # These are typically undirected or source->destination
-                if relatie_type == 'HoortBij':
-                    richting = '<===>'  # Can be both ways
-                else:
-                    richting = '<===>'  # Undirected
+        # Write relations: A=Relatie Met, D=Type Relatie, E=Richting
+        relation_row = rel_start_row
+        for relatie_type, relatie_met, richting in relaties:
+            ws.cell(relation_row, 1, relatie_met)      # A = Relatie Met
+            ws.cell(relation_row, 4, relatie_type)      # D = Type Relatie
+            # Feature 11: Column E is now "Richting" with direction indicators from database
+            # Unspecified = ⇔ (undirected), Source -> Destination = ⇒ (directed from bron to doel)
+            # Using Unicode arrows to avoid Excel/LibreOffice formula interpretation issues
+            if richting == 'Source -> Destination':
+                richting_symbol = "⇒"
             else:
-                richting = '<===>'
-            ws.cell(relation_row, 5, richting)
+                richting_symbol = "⇔"
+            ws.cell(relation_row, 5, richting_symbol)   # E = Richting
             # Feature 4: Default 'aannemer' in "Wie levert aan?" column (C)
             ws.cell(relation_row, 3, 'aannemer')
+            # B = Verplicht y/n (leave empty for relations)
             relation_row += 1
         
         # Feature 3: Light green fill for generic attributes
         light_green_fill = PatternFill(
             fill_type="solid",
-            start_color="90EE90",
-            end_color="90EE90"
+            start_color=self.LIGHT_GREEN_COLOR,
+            end_color=self.LIGHT_GREEN_COLOR
         )
         
-        # Attributes
+        # Attributes - get all attributes first, then sort: generic first (alphabetically), then non-generic (alphabetically)
         attributes = self._get_attributes_for_class(cls.objectUri)
+        
+        # Sort: generic attributes first (by name), then non-generic (by name)
+        generic_attrs = []
+        non_generic_attrs = []
+        for attr in attributes:
+            attribuut, kard_min, kard_max, datatype, attr_uri = attr
+            if attr_uri in self.GENERIC_ATTRIBUTE_URIS:
+                generic_attrs.append(attr)
+            else:
+                non_generic_attrs.append(attr)
+        
+        generic_attrs.sort(key=lambda x: x[0].lower())  # Sort by attribute name
+        non_generic_attrs.sort(key=lambda x: x[0].lower())
+        
+        sorted_attributes = generic_attrs + non_generic_attrs
         
         attribuut_start = eigenschappen_row + 2
         current_row = attribuut_start
         
-        for attribuut, kard_min, kard_max, datatype, attr_uri in attributes:
+        for attribuut, kard_min, kard_max, datatype, attr_uri in sorted_attributes:
             ws.cell(current_row, 1, attribuut)
             
             if kard_min == "1":
@@ -280,7 +330,7 @@ class InfotemplateGenerator(TemplateGeneratorBase):
         
         attribute_count = current_row - attribuut_start
         
-        self._apply_template_layout(ws, attribute_count, attr_header_row)
+        self._apply_template_layout(ws, attribute_count, attr_header_row, rel_start_row, rel_end_row)
         
         return ws
     
