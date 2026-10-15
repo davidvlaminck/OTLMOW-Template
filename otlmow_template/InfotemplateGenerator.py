@@ -98,13 +98,13 @@ class InfotemplateGenerator(TemplateGeneratorBase):
     
     def _get_attributes_for_class(self, class_uri: str) -> list[tuple]:
         """Get attributes for a class from the database (including inherited).
-        
+
         Returns list of tuples: (label_nl, kardinaliteit_min, kardinaliteit_max, type, attribute_uri, definitie)
         """
         import sqlite3
         conn = sqlite3.connect(self.collector.path)
         cursor = conn.cursor()
-        
+
         # Try to get definitie column; if it doesn't exist, default to None
         try:
             cursor.execute("""
@@ -133,10 +133,46 @@ class InfotemplateGenerator(TemplateGeneratorBase):
                 result = [row + (None,) for row in cursor.fetchall()]
                 conn.close()
                 return result
-        
+
         result = cursor.fetchall()
         conn.close()
         return result
+
+    def _get_codelist_uri_for_type(self, type_uri: str) -> str | None:
+        """Get the codelist URI for a given enumeration type from OSLOEnumeration table.
+
+        :param type_uri: The type URI (e.g. 'https://...#KlAIMToestand')
+        :return: The codelist URI if found, None otherwise
+        """
+        if not type_uri:
+            return None
+
+        import sqlite3
+        conn = sqlite3.connect(self.collector.path)
+        cursor = conn.cursor()
+
+        # Extract the type name from URI (e.g. 'KlAIMToestand' from '...#KlAIMToestand')
+        type_name = type_uri.split('#')[-1] if '#' in type_uri else type_uri
+
+        # Check if OSLOEnumeration table exists
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='OSLOEnumeration'")
+        if not cursor.fetchone():
+            conn.close()
+            return None
+
+        # Query the codelist for this enumeration
+        cursor.execute("""
+            SELECT codelist
+            FROM OSLOEnumeration
+            WHERE name = ?
+        """, (type_name,))
+
+        row = cursor.fetchone()
+        conn.close()
+
+        if row and row[0]:
+            return row[0]
+        return None
     
     def _apply_template_layout(self, ws: Worksheet, attribute_count: int, attr_header_row: int, rel_start_row: int, rel_end_row: int, eigenschappen_row: int):
         """Apply standard layout formatting to worksheet."""
@@ -320,39 +356,48 @@ class InfotemplateGenerator(TemplateGeneratorBase):
         non_generic_attrs.sort(key=lambda x: x[0].lower())
         
         sorted_attributes = generic_attrs + non_generic_attrs
-        
+
         attribuut_start = eigenschappen_row + 2
         current_row = attribuut_start
-        
+
         for attribuut, kard_min, kard_max, datatype, attr_uri, definitie in sorted_attributes:
             ws.cell(current_row, 1, attribuut)
-            
+
             if kard_min == "1":
                 ws.cell(current_row, 2, "ja")
             else:
                 ws.cell(current_row, 2, "nee")
-            
+
             # Write definition to "Wat?" column (D)
             ws.cell(current_row, 4, definitie if definitie is not None else "")
-            
+
             # Feature 4: Default 'aannemer' in "Wie levert aan?" column (C)
             ws.cell(current_row, 3, 'aannemer')
-            
+
             # Special opmerkingen for certain attributes
-            if attribuut.lower() == 'is actief':
+            attr_lower = attribuut.lower()
+            if attr_lower == 'is actief':
                 ws.cell(current_row, 6, "Moet TRUE zijn, behalve wanneer het asset uit de databank verwijderd moet worden")
-            elif attribuut.lower() == 'toestand':
+            elif attr_lower == 'toestand' or attr_lower == 'aim-toestand':
                 ws.cell(current_row, 6, "Is bijna altijd 'in-gebruik'")
-            elif datatype:
-                datatype = datatype.split("#")[-1]
-                ws.cell(current_row, 5, datatype)
-            
+
+            # Handle datatype in Formaat/Opmaak/naamconventie (col E)
+            if datatype:
+                datatype_clean = datatype.split("#")[-1]
+                ws.cell(current_row, 5, datatype_clean)
+
+                # Feature 8: If type starts with 'Kl' (keuzelijst/codelist), add codelist URI link
+                if datatype_clean.startswith('Kl'):
+                    codelist_uri = self._get_codelist_uri_for_type(datatype)
+                    if codelist_uri:
+                        ws.cell(current_row, 5, f"{datatype_clean} - {codelist_uri}")
+
             # Feature 5: TypeURI in opmerkingen for typeURI attribute only
             if attribuut.lower() == 'type uri':
                 # Get the class typeURI
                 class_typeuri = cls.objectUri
                 ws.cell(current_row, 6, f"typeURI: {class_typeuri}")
-            
+
             # Feature 3: Apply light green fill for generic attributes
             if attr_uri in self.GENERIC_ATTRIBUTE_URIS:
                 for col in range(1, 7):
@@ -364,9 +409,9 @@ class InfotemplateGenerator(TemplateGeneratorBase):
                         top=Side(style="dotted"),
                         bottom=Side(style="dotted")
                     )
-            
+
             current_row += 1
-        
+
         attribute_count = current_row - attribuut_start
         
         self._apply_template_layout(ws, attribute_count, attr_header_row, rel_start_row, rel_end_row, eigenschappen_row)
