@@ -99,24 +99,46 @@ class InfotemplateGenerator(TemplateGeneratorBase):
     def _get_attributes_for_class(self, class_uri: str) -> list[tuple]:
         """Get attributes for a class from the database (including inherited).
         
-        Returns list of tuples: (label_nl, kardinaliteit_min, kardinaliteit_max, type, attribute_uri)
+        Returns list of tuples: (label_nl, kardinaliteit_min, kardinaliteit_max, type, attribute_uri, definitie)
         """
         import sqlite3
         conn = sqlite3.connect(self.collector.path)
         cursor = conn.cursor()
         
-        cursor.execute("""
-            SELECT label_nl, kardinaliteit_min, kardinaliteit_max, type, uri
-            FROM OSLOAttributen
-            WHERE class_uri = ?
-            ORDER BY label_nl
-        """, (class_uri,))
+        # Try to get definitie column; if it doesn't exist, default to None
+        try:
+            cursor.execute("""
+                SELECT label_nl, kardinaliteit_min, kardinaliteit_max, type, uri, definition_nl
+                FROM OSLOAttributen
+                WHERE class_uri = ?
+                ORDER BY label_nl
+            """, (class_uri,))
+        except sqlite3.OperationalError:
+            try:
+                cursor.execute("""
+                    SELECT label_nl, kardinaliteit_min, kardinaliteit_max, type, uri, definitie
+                    FROM OSLOAttributen
+                    WHERE class_uri = ?
+                    ORDER BY label_nl
+                """, (class_uri,))
+            except sqlite3.OperationalError:
+                # Definitie column does not exist, select without it
+                cursor.execute("""
+                    SELECT label_nl, kardinaliteit_min, kardinaliteit_max, type, uri
+                    FROM OSLOAttributen
+                    WHERE class_uri = ?
+                    ORDER BY label_nl
+                """, (class_uri,))
+                # Add a None for definitie for each row
+                result = [row + (None,) for row in cursor.fetchall()]
+                conn.close()
+                return result
         
         result = cursor.fetchall()
         conn.close()
         return result
     
-    def _apply_template_layout(self, ws: Worksheet, attribute_count: int, attr_header_row: int, rel_start_row: int, rel_end_row: int):
+    def _apply_template_layout(self, ws: Worksheet, attribute_count: int, attr_header_row: int, rel_start_row: int, rel_end_row: int, eigenschappen_row: int):
         """Apply standard layout formatting to worksheet."""
         ws.column_dimensions["A"].width = 40
         ws.column_dimensions["B"].width = 25
@@ -145,9 +167,13 @@ class InfotemplateGenerator(TemplateGeneratorBase):
             end_color="F4F1DE"
         )
         
-        for cell in ["A1", "A4", "A13"]:
+        for cell in ["A1", "A4"]:
             ws[cell].font = bold
             ws[cell].border = medium_border
+
+        # Set the "EIGENSCHAPPEN" header (column A of eigenschappen_row) to bold and medium border
+        ws.cell(row=eigenschappen_row, column=1).font = bold
+        ws.cell(row=eigenschappen_row, column=1).border = medium_border
         
         # Feature 6: Bold relation headers (row 5)
         for cell in ["A5", "B5", "C5", "D5", "E5", "F5"]:
@@ -158,8 +184,8 @@ class InfotemplateGenerator(TemplateGeneratorBase):
             cell = ws.cell(row=attr_header_row, column=col)
             cell.font = bold
         
-        last_row = attr_header_row + 1 + attribute_count
-        for row in range(attr_header_row + 2, last_row + 1):
+        last_row = attr_header_row + attribute_count
+        for row in range(attr_header_row + 1, last_row + 1):
             for col in range(1, 7):
                 cell = ws.cell(row=row, column=col)
                 cell.border = dotted_border
@@ -191,6 +217,16 @@ class InfotemplateGenerator(TemplateGeneratorBase):
         # Apply to attribute rows (column C)
         for row in range(attr_header_row + 2, last_row + 1):
             dv.add(ws.cell(row=row, column=3))
+        
+        # Data validation for "Verplicht ja/nee" column (B) - attribute rows only
+        dv_verplicht = DataValidation(type="list", formula1='"ja,nee"', allow_blank=True)
+        dv_verplicht.error = "Selecteer ja of nee"
+        dv_verplicht.errorTitle = "Ongeldige invoer"
+        ws.add_data_validation(dv_verplicht)
+        
+        # Apply to attribute rows (column B)
+        for row in range(attr_header_row + 1, last_row + 1):
+            dv_verplicht.add(ws.cell(row=row, column=2))
     
     def _create_worksheet_for_class(self, wb: Workbook, cls: OSLOClass) -> Worksheet:
         """Create a worksheet for a single class."""
@@ -210,43 +246,19 @@ class InfotemplateGenerator(TemplateGeneratorBase):
         
         # Relations headers: A=Relatie Met, B=Verplicht y/n, C=Wie levert aan?, D=Type Relatie, E=Richting, F=Opmerkingen
         ws["A5"] = "Relatie Met"
-        ws["B5"] = "Verplicht y/n"
+        ws["B5"] = "Verplicht ja/nee"
         ws["C5"] = "Wie levert aan?"
         ws["D5"] = "Type Relatie"
         ws["E5"] = "Richting"
         ws["F5"] = "Opmerkingen"
         
-        ws["A13"] = "EIGENSCHAPPEN"
-        
-        ws["A14"] = "Attribuutnaam"
-        ws["B14"] = "Verplicht y/n"
-        ws["C14"] = "Wie levert aan?"
-        ws["D14"] = "Wat?"
-        ws["E14"] = "Formaat/Opmaak/naamconventie"
-        ws["F14"] = "Opmerkingen"
+
         
         # Relations
         relaties = sorted(self.relation_dict.get(object_name, []))
-        max_rel_rows = 7
-        
-        if len(relaties) > max_rel_rows:
-            extra_rows = len(relaties) - max_rel_rows
-            ws.insert_rows(13, extra_rows)
-        
-        eigenschappen_row = 13 + max(0, len(relaties) - max_rel_rows)
-        
-        ws[f"A{eigenschappen_row}"] = "EIGENSCHAPPEN"
-        ws[f"A{eigenschappen_row+1}"] = "Attribuutnaam"
-        ws[f"B{eigenschappen_row+1}"] = "Verplicht y/n"
-        ws[f"C{eigenschappen_row+1}"] = "Wie levert aan?"
-        ws[f"D{eigenschappen_row+1}"] = "Wat?"
-        ws[f"E{eigenschappen_row+1}"] = "Formaat/Opmaak/naamconventie"
-        ws[f"F{eigenschappen_row+1}"] = "Opmerkingen"
-        
-        attr_header_row = eigenschappen_row + 1
         rel_start_row = 6
-        rel_end_row = rel_start_row + len(relaties) - 1
-        
+        rel_end_row = rel_start_row + len(relaties) - 1  # if len(relaties)==0, then rel_end_row=5
+
         # Write relations: A=Relatie Met, D=Type Relatie, E=Richting
         relation_row = rel_start_row
         for relatie_type, relatie_met, richting in relaties:
@@ -262,8 +274,27 @@ class InfotemplateGenerator(TemplateGeneratorBase):
             ws.cell(relation_row, 5, richting_symbol)   # E = Richting
             # Feature 4: Default 'aannemer' in "Wie levert aan?" column (C)
             ws.cell(relation_row, 3, 'aannemer')
-            # B = Verplicht y/n (leave empty for relations)
+            # B = Verplicht ja/nee (leave empty for relations)
             relation_row += 1
+
+        # Reserve minimum space for relation table (like original code with max_rel_rows=7)
+        # This ensures attributes don't start too early when there are few relations
+        min_rel_end_row = 12  # rows 6-12 reserved for relation data (7 rows)
+        relation_table_last_row = max(rel_end_row, min_rel_end_row)  # header is at row 5, data rows from 6 to relation_table_last_row
+        # Two empty rows after the relation table
+        eigenschappen_row = relation_table_last_row + 3
+        attr_header_row = eigenschappen_row + 1
+        attribuut_start = eigenschappen_row + 2
+
+        # Set the "EIGENSCHAPPEN" header
+        ws.cell(row=eigenschappen_row, column=1, value="EIGENSCHAPPEN")
+        # Set attribute headers
+        ws.cell(row=attr_header_row, column=1, value="Attribuutnaam")
+        ws.cell(row=attr_header_row, column=2, value="Verplicht ja/nee")
+        ws.cell(row=attr_header_row, column=3, value="Wie levert aan?")
+        ws.cell(row=attr_header_row, column=4, value="Wat?")
+        ws.cell(row=attr_header_row, column=5, value="Formaat/Opmaak/naamconventie")
+        ws.cell(row=attr_header_row, column=6, value="Opmerkingen")
         
         # Feature 3: Light green fill for generic attributes
         light_green_fill = PatternFill(
@@ -279,7 +310,7 @@ class InfotemplateGenerator(TemplateGeneratorBase):
         generic_attrs = []
         non_generic_attrs = []
         for attr in attributes:
-            attribuut, kard_min, kard_max, datatype, attr_uri = attr
+            attribuut, kard_min, kard_max, datatype, attr_uri, definitie = attr
             if attr_uri in self.GENERIC_ATTRIBUTE_URIS:
                 generic_attrs.append(attr)
             else:
@@ -293,18 +324,26 @@ class InfotemplateGenerator(TemplateGeneratorBase):
         attribuut_start = eigenschappen_row + 2
         current_row = attribuut_start
         
-        for attribuut, kard_min, kard_max, datatype, attr_uri in sorted_attributes:
+        for attribuut, kard_min, kard_max, datatype, attr_uri, definitie in sorted_attributes:
             ws.cell(current_row, 1, attribuut)
             
             if kard_min == "1":
-                ws.cell(current_row, 2, "y")
+                ws.cell(current_row, 2, "ja")
             else:
-                ws.cell(current_row, 2, "n")
+                ws.cell(current_row, 2, "nee")
+            
+            # Write definition to "Wat?" column (D)
+            ws.cell(current_row, 4, definitie if definitie is not None else "")
             
             # Feature 4: Default 'aannemer' in "Wie levert aan?" column (C)
             ws.cell(current_row, 3, 'aannemer')
             
-            if datatype:
+            # Special opmerkingen for certain attributes
+            if attribuut.lower() == 'is actief':
+                ws.cell(current_row, 6, "Moet TRUE zijn, behalve wanneer het asset uit de databank verwijderd moet worden")
+            elif attribuut.lower() == 'toestand':
+                ws.cell(current_row, 6, "Is bijna altijd 'in-gebruik'")
+            elif datatype:
                 datatype = datatype.split("#")[-1]
                 ws.cell(current_row, 5, datatype)
             
@@ -330,7 +369,7 @@ class InfotemplateGenerator(TemplateGeneratorBase):
         
         attribute_count = current_row - attribuut_start
         
-        self._apply_template_layout(ws, attribute_count, attr_header_row, rel_start_row, rel_end_row)
+        self._apply_template_layout(ws, attribute_count, attr_header_row, rel_start_row, rel_end_row, eigenschappen_row)
         
         return ws
     

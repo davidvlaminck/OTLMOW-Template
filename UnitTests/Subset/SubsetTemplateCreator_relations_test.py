@@ -18,7 +18,7 @@ def test_subset_with_AllCasesTestClass_0_records_relations():
                                               dummy_data_rows=0, ignore_relations=False)
     assert excel_path.exists()
 
-    book = openpyxl.load_workbook(excel_path, data_only=True, read_only=True)
+    book = openpyxl.load_workbook(excel_path, read_only=True)
     header_row_list = []
     bevestiging_sheet_data = []
 
@@ -91,7 +91,7 @@ def test_subset_slagboom_0_records_relations():
                                               add_geo_artefact=True, dummy_data_rows=0, ignore_relations=False)
     assert excel_path.exists()
 
-    book = openpyxl.load_workbook(excel_path, data_only=True, read_only=True)
+    book = openpyxl.load_workbook(excel_path, read_only=True)
     arm_header_row_list = []
     arm_data_row_list = []
     bevestiging_header_row_list = []
@@ -166,7 +166,7 @@ def test_subset_slagboom_relations_1_selected_class():
         dummy_data_rows=1, ignore_relations=False)
     assert excel_path.exists()
 
-    book = openpyxl.load_workbook(excel_path, data_only=True, read_only=True)
+    book = openpyxl.load_workbook(excel_path, read_only=True)
     arm_header_row_list = []
     arm_data_row_list = []
     bevestiging_header_row_list = []
@@ -233,7 +233,7 @@ def test_subset_slagboom_relations_2_selected_classes_2_rows():
         dummy_data_rows=2, ignore_relations=False, abbreviate_excel_sheettitles=True)
     assert excel_path.exists()
 
-    book = openpyxl.load_workbook(excel_path, data_only=True, read_only=True)
+    book = openpyxl.load_workbook(excel_path, read_only=True)
     arm_header_row_list = []
     arm_data_row_list = []
     bevestiging_header_row_list = []
@@ -304,7 +304,7 @@ def test_subset_slagboom_relations_2_non_related_selected_classes_2_rows():
         dummy_data_rows=2, ignore_relations=False)
     assert excel_path.exists()
 
-    book = openpyxl.load_workbook(excel_path, data_only=True, read_only=True)
+    book = openpyxl.load_workbook(excel_path, read_only=True)
     arm_header_row_list = []
     arm_data_row_list = []
     bevestiging_header_row_list = []

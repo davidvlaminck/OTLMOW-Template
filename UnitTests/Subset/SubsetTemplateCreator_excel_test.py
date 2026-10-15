@@ -55,7 +55,7 @@ def test_generate_excel_template(index, dummy_data_rows, add_geometry, add_attri
     # Assert
     # sourcery skip: no-conditionals-in-tests
 
-    book = openpyxl.load_workbook(path_to_template_file, read_only=True, data_only=True)
+    book = openpyxl.load_workbook(path_to_template_file, read_only=True)
     output_rows = []
     choice_list_sheet = False
     choice_list_data = []
@@ -166,7 +166,7 @@ async def test_generate_excel_template_async(index, dummy_data_rows, add_geometr
     # Assert
     # sourcery skip: no-conditionals-in-tests
 
-    book = openpyxl.load_workbook(path_to_template_file, read_only=True, data_only=True)
+    book = openpyxl.load_workbook(path_to_template_file, read_only=True)
     output_rows = []
     choice_list_sheet = False
     choice_list_data = []

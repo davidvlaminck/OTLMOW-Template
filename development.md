@@ -47,6 +47,11 @@ Daarna pas refactoren naar aparte klassen zoals in de intro
   - `https://wegenenverkeer.data.vlaanderen.be/ns/implementatieelement#AIMNaamObject.naam`
   - `https://wegenenverkeer.data.vlaanderen.be/ns/implementatieelement#AIMDBStatus.isActief`
   - `https://wegenenverkeer.data.vlaanderen.be/ns/implementatieelement#AIMToestand.toestand`
+  - `https://wegenenverkeer.data.vlaanderen.be/ns/implementatieelement#AIMVersie.assetVersie`
+  - `https://wegenenverkeer.data.vlaanderen.be/ns/implementatieelement#AIMObject.typeURI`
+  - `https://wegenenverkeer.data.vlaanderen.be/ns/implementatieelement#AIMObject.theoretischeLevensduur`
+  - `https://wegenenverkeer.data.vlaanderen.be/ns/implementatieelement#AIMObject.standaardBestekPostNummer`
+  - `https://wegenenverkeer.data.vlaanderen.be/ns/implementatieelement#AIMObject.notitie`
 
 ## 4. Default wie levert aan: aannemer
 - In de infotemplate: kolom "wie levert aan" standaard ingevuld op "aannemer"
@@ -86,3 +91,8 @@ Daarna pas refactoren naar aparte klassen zoals in de intro
 
 **Voorbeeld bestand:** `info_template_voorbeeld.xlsx` (in repo root en UnitTests/Subset/)
 **Test subset:** `/home/davidlinux/PycharmProjects/OTLMOW-GUI/otlmow_gui/demo_projects/simpel_vergelijkings_project/simpele_vergelijkings_subset.db`
+
+TODO:
+
+- ontbrekend type toestand
+- keuzelijst link
