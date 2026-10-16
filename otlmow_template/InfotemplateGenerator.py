@@ -43,6 +43,17 @@ class InfotemplateGenerator(TemplateGeneratorBase):
         super().__init__()
         self.relation_dict: dict[str, list[tuple[str, str]]] = {}
     
+    @staticmethod
+    def _reverse_direction(richting: str) -> str:
+        """Reverse the direction when viewing a relation from the doel side.
+        
+        A directed relation (Source -> Destination) becomes Destination -> Source
+        when looked at from the doel. Undirected relations stay unchanged.
+        """
+        if richting == 'Source -> Destination':
+            return 'Destination -> Source'
+        return richting
+
     def _build_relation_dict(self):
         """Build relation dictionary from OSLORelaties using OSLOCollector.
         
@@ -50,6 +61,7 @@ class InfotemplateGenerator(TemplateGeneratorBase):
         For 'heeftBetrokkene' relations, creates two entries (Feature 2).
         Uses lists to preserve duplicates for heeftBetrokkene.
         Stores direction from database: Unspecified=<===>, Source -> Destination===>.
+        Direction is reversed when storing from the doel perspective.
         """
         self.relation_dict = {}
         
@@ -67,7 +79,7 @@ class InfotemplateGenerator(TemplateGeneratorBase):
             
             # Only include relations where both bron and doel are concrete classes
             if bron in concrete_class_names and doel in concrete_class_names:
-                # Add relation from bron perspective
+                # Add relation from bron perspective (original direction)
                 if relatie == 'heeftBetrokkene':
                     # For heeftBetrokkene, allow duplicates
                     self.relation_dict.setdefault(bron, []).append((relatie, doel, richting))
@@ -77,14 +89,15 @@ class InfotemplateGenerator(TemplateGeneratorBase):
                         seen_relations.add(rel_key)
                         self.relation_dict.setdefault(bron, []).append((relatie, doel, richting))
                 
-                # Also add from doel perspective (reverse direction)
+                # Also add from doel perspective (direction reversed if directed)
+                doel_richting = self._reverse_direction(richting)
                 if relatie == 'heeftBetrokkene':
-                    self.relation_dict.setdefault(doel, []).append((relatie, bron, richting))
+                    self.relation_dict.setdefault(doel, []).append((relatie, bron, doel_richting))
                 else:
                     rel_key = (doel, relatie, bron)
                     if rel_key not in seen_relations:
                         seen_relations.add(rel_key)
-                        self.relation_dict.setdefault(doel, []).append((relatie, bron, richting))
+                        self.relation_dict.setdefault(doel, []).append((relatie, bron, doel_richting))
         
         # Feature 2: Double the 'heeftBetrokkene' relations
         for bron, relations in self.relation_dict.items():
@@ -263,6 +276,10 @@ class InfotemplateGenerator(TemplateGeneratorBase):
         # Apply to attribute rows (column B)
         for row in range(attr_header_row + 1, last_row + 1):
             dv_verplicht.add(ws.cell(row=row, column=2))
+
+        # Apply to relation rows (column B) - "Verplicht ja/nee"
+        for row in range(rel_start_row, rel_end_row + 1):
+            dv_verplicht.add(ws.cell(row=row, column=2))
     
     def _create_worksheet_for_class(self, wb: Workbook, cls: OSLOClass) -> Worksheet:
         """Create a worksheet for a single class."""
@@ -301,10 +318,13 @@ class InfotemplateGenerator(TemplateGeneratorBase):
             ws.cell(relation_row, 1, relatie_met)      # A = Relatie Met
             ws.cell(relation_row, 4, relatie_type)      # D = Type Relatie
             # Feature 11: Column E is now "Richting" with direction indicators from database
-            # Unspecified = ⇔ (undirected), Source -> Destination = ⇒ (directed from bron to doel)
+            # Unspecified = ⇔ (undirected), Source -> Destination = ⇒ (directed from bron to doel),
+            # Destination -> Source = ⇐ (directed from doel to bron, shown on doel side)
             # Using Unicode arrows to avoid Excel/LibreOffice formula interpretation issues
             if richting == 'Source -> Destination':
                 richting_symbol = "⇒"
+            elif richting == 'Destination -> Source':
+                richting_symbol = "⇐"
             else:
                 richting_symbol = "⇔"
             ws.cell(relation_row, 5, richting_symbol)   # E = Richting

@@ -94,5 +94,5 @@ Daarna pas refactoren naar aparte klassen zoals in de intro
 
 TODO:
 
-- ontbrekend type toestand
-- keuzelijst link
+- ontbrekend type toestand - ✅ GEREFACTORED: opmerking "Is bijna altijd 'in-gebruik'" toegevoegd voor toestand attributen
+- keuzelijst link - ✅ GEREFACTORED: codelist URI link toegevoegd voor attributen met type dat begint met 'Kl'
