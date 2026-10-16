@@ -189,12 +189,12 @@ class InfotemplateGenerator(TemplateGeneratorBase):
     
     def _apply_template_layout(self, ws: Worksheet, attribute_count: int, attr_header_row: int, rel_start_row: int, rel_end_row: int, eigenschappen_row: int):
         """Apply standard layout formatting to worksheet."""
-        ws.column_dimensions["A"].width = 40
-        ws.column_dimensions["B"].width = 25
-        ws.column_dimensions["C"].width = 30
-        ws.column_dimensions["D"].width = 70
-        ws.column_dimensions["E"].width = 45
-        ws.column_dimensions["F"].width = 30
+        ws.column_dimensions["A"].width = 20
+        ws.column_dimensions["B"].width = 12
+        ws.column_dimensions["C"].width = 17
+        ws.column_dimensions["D"].width = 90
+        ws.column_dimensions["E"].width = 35
+        ws.column_dimensions["F"].width = 47
         ws.row_dimensions[2].height = 50
         
         bold = Font(bold=True)
@@ -241,6 +241,7 @@ class InfotemplateGenerator(TemplateGeneratorBase):
                 # Only apply yellow fill if not already set (generic attributes get light green)
                 if cell.fill.start_color.rgb == '00000000':
                     cell.fill = yellow_fill
+                cell.alignment = Alignment(wrapText=True, vertical="top")
         
         # Apply dotted border to relation rows too
         for row in range(rel_start_row, rel_end_row + 1):
@@ -249,6 +250,7 @@ class InfotemplateGenerator(TemplateGeneratorBase):
                 cell.border = dotted_border
                 if cell.fill.start_color.rgb == '00000000':
                     cell.fill = yellow_fill
+                cell.alignment = Alignment(wrapText=True, vertical="top")
         
         # Feature 10: Auto-filter on attribute header row
         ws.auto_filter.ref = f"A{attr_header_row}:F{last_row}"
