@@ -384,13 +384,15 @@ class InfotemplateGenerator(TemplateGeneratorBase):
             # Handle datatype in Formaat/Opmaak/naamconventie (col E)
             if datatype:
                 datatype_clean = datatype.split("#")[-1]
-                ws.cell(current_row, 5, datatype_clean)
+                cell_e = ws.cell(current_row, 5, datatype_clean)
 
-                # Feature 8: If type starts with 'Kl' (keuzelijst/codelist), add codelist URI link
+                # Feature 8: If type starts with 'Kl' (keuzelijst/codelist), add clickable hyperlink
                 if datatype_clean.startswith('Kl'):
                     codelist_uri = self._get_codelist_uri_for_type(datatype)
                     if codelist_uri:
-                        ws.cell(current_row, 5, f"{datatype_clean} - {codelist_uri}")
+                        # Create a clickable hyperlink with display text = datatype name
+                        cell_e.value = datatype_clean
+                        cell_e.hyperlink = codelist_uri
 
             # Feature 5: TypeURI in opmerkingen for typeURI attribute only
             if attribuut.lower() == 'type uri':
