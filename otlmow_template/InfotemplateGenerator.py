@@ -72,15 +72,15 @@ class InfotemplateGenerator(TemplateGeneratorBase):
         seen_relations = set()
         
         for relation in self.collector.relations:
-            bron = relation.bron_uri.split("#")[-1]
-            doel = relation.doel_uri.split("#")[-1]
+            bron = relation.bron_uri.split("#")[-1].split("/")[-1]
+            doel = relation.doel_uri.split("#")[-1].split("/")[-1]
             relatie = relation.objectUri.split("#")[-1]
             richting = relation.richting  # Get direction from database
             
             # Only include relations where both bron and doel are concrete classes
             if bron in concrete_class_names and doel in concrete_class_names:
                 # Add relation from bron perspective (original direction)
-                if relatie == 'heeftBetrokkene':
+                if relatie.lower() == 'heeftbetrokkene':
                     # For heeftBetrokkene, allow duplicates
                     self.relation_dict.setdefault(bron, []).append((relatie, doel, richting))
                 else:
@@ -91,7 +91,7 @@ class InfotemplateGenerator(TemplateGeneratorBase):
                 
                 # Also add from doel perspective (direction reversed if directed)
                 doel_richting = self._reverse_direction(richting)
-                if relatie == 'heeftBetrokkene':
+                if relatie.lower() == 'heeftbetrokkene':
                     self.relation_dict.setdefault(doel, []).append((relatie, bron, doel_richting))
                 else:
                     rel_key = (doel, relatie, bron)
@@ -99,13 +99,16 @@ class InfotemplateGenerator(TemplateGeneratorBase):
                         seen_relations.add(rel_key)
                         self.relation_dict.setdefault(doel, []).append((relatie, bron, doel_richting))
         
-        # Feature 2: Double the 'heeftBetrokkene' relations
+        # Feature 2: Double the 'heeftBetrokkene' relations with specific role types
         for bron, relations in self.relation_dict.items():
             new_relations = []
             for relatie, doel, richting in relations:
-                new_relations.append((relatie, doel, richting))
-                if relatie == 'heeftBetrokkene':
-                    # Add a second entry for heeftBetrokkene
+                if relatie.lower() == 'heeftbetrokkene':
+                    # First record: HeeftBetrokkene - rol: toezichter
+                    new_relations.append(("HeeftBetrokkene - rol: toezichter", doel, richting))
+                    # Second record: HeeftBetrokkene - rol: installatieverantwoordelijke
+                    new_relations.append(("HeeftBetrokkene - rol: installatieverantwoordelijke", doel, richting))
+                else:
                     new_relations.append((relatie, doel, richting))
             self.relation_dict[bron] = new_relations
     
@@ -310,7 +313,8 @@ class InfotemplateGenerator(TemplateGeneratorBase):
 
         
         # Relations
-        relaties = sorted(self.relation_dict.get(object_name, []))
+        relaties = sorted(self.relation_dict.get(object_name, []),
+                         key=lambda x: (x[1].lower(), x[0].lower(), x[2]))
         rel_start_row = 6
         rel_end_row = rel_start_row + len(relaties) - 1  # if len(relaties)==0, then rel_end_row=5
 
