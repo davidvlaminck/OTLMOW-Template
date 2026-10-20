@@ -9,8 +9,8 @@ if __name__ == '__main__':
     generator = InfotemplateGenerator()
     
     # Path to your subset database
-    subset_path = Path('1.db')
-    output_path = Path('infotemplate_output.xlsx')
+    subset_path = Path('RHZ_20261016_V4.db')
+    output_path = Path('infotemplate_RHZ_20261016_V4.xlsx')
     
     if not subset_path.exists():
         print(f"Subset file not found: {subset_path}")
