@@ -7,6 +7,7 @@ import os
 from asyncio import sleep
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed, ALL_COMPLETED
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from openpyxl.cell import Cell
@@ -43,6 +44,82 @@ short_to_long_ns = {
     'lev': 'https://wegenenverkeer.data.vlaanderen.be/ns/levenscyclus#',
     'levenscyclus': 'https://wegenenverkeer.data.vlaanderen.be/ns/levenscyclus#'
 }
+
+AGENT_TYPE_URI = 'http://purl.org/dc/terms/Agent'
+HEEFT_BETROKKENE_URI = 'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#HeeftBetrokkene'
+TYPE_URI_DESCRIPTION = 'De URI van het object volgens https://www.w3.org/2001/XMLSchema#anyURI .'
+QUOTE_CHAR = '"'
+# the validations are only added up to this row, so a template stays usable
+MAX_VALIDATION_ROW = 1000
+
+
+@dataclass
+class AttributeInfo:
+    """The information about the attributes of a template, collected per column.
+
+    The Excel and the csv writer both add a row with the definition of every
+    attribute and a row that marks the deprecated attributes, so the collection
+    of those rows is shared.
+    """
+
+    add_attribute_info: bool
+    add_deprecated: bool
+    attribute_info_row: list[str] = field(default_factory=list)
+    deprecated_row: list[str] = field(default_factory=list)
+
+    def add_attribute(self, instance, header: str, attribute) -> None:
+        """Add the definition and the deprecated marker of an attribute."""
+        if self.add_attribute_info:
+            self.attribute_info_row.append(
+                SubsetTemplateCreator.get_attribute_info(
+                    instance=instance, header=header, attribute=attribute
+                )
+            )
+        if self.add_deprecated:
+            marker = 'DEPRECATED' if attribute.deprecated_version else ''
+            self.deprecated_row.append(marker)
+
+    def add_type_uri(self) -> None:
+        """Add the definition and the deprecated marker of the typeURI column."""
+        if self.add_attribute_info:
+            self.attribute_info_row.append(TYPE_URI_DESCRIPTION)
+        if self.add_deprecated:
+            self.deprecated_row.append('')
+
+    def add_missing_attribute(self) -> None:
+        """Add the definition and the deprecated marker of a column without attribute."""
+        if self.add_attribute_info:
+            self.attribute_info_row.append('')
+        if self.add_deprecated:
+            self.deprecated_row.append('')
+
+
+@dataclass
+class ExcelSheetContext:
+    """The state of a sheet while its headers are processed."""
+
+    sheet: Worksheet
+    workbook: Workbook
+    instance: OTLObject
+    type_uri: str
+    first_data_row: int
+    boolean_validation: DataValidation
+    generate_choice_list: bool
+    choice_list_dict: dict[str, str]
+    info: AttributeInfo
+    string_columns: list[int] = field(default_factory=list)
+
+
+@dataclass
+class GenerationContext:
+    """The input of the generation of the objects of a template."""
+
+    collector: OSLOCollector
+    filtered_class_list: list[OSLOClass]
+    add_geometry: bool
+    filter_attributes_by_subset: bool
+    dummy_data_rows: int
+    model_directory: Path
 
 
 class SubsetTemplateCreator:
@@ -207,39 +284,98 @@ class SubsetTemplateCreator:
             raise ValueError('Something went wrong, as the class_uri filter list is empty')
         cls.relation_dict = get_hardcoded_relation_dict(model_directory=model_directory)
 
-        amount_objects_to_create = max(1, dummy_data_rows)
-        otl_objects = []
-
-        while True:
-            with ThreadPoolExecutor() as executor:
-                futures = [
-                    executor.submit(cls.create_x_objects, oslo_class, add_geometry, collector,
-                                    filter_attributes_by_subset, model_directory, amount_objects_to_create)
-                    for oslo_class in [cl for cl in filtered_class_list if cl.abstract == 0]
-                ]
-                while futures:
-                    done, not_done = concurrent.futures.wait(futures, return_when=ALL_COMPLETED, timeout=60)
-                    for future in as_completed(done):
-                        otl_objects.extend(future.result())
-                    futures = not_done
-                    print(f'when using multiprocessing: {len(done)} done, {len(not_done)} not done')
-                    if len(not_done) > 0:
-                        print('restarting the loop with the not done ones')
-
-            created = len(otl_objects)
-            unique_ids = len({obj.assetId.identificator if obj.typeURI != 'http://purl.org/dc/terms/Agent' else obj.agentId.identificator
-                              for obj in otl_objects})
-            if created == unique_ids:
-                break
-            otl_objects = []
+        context = GenerationContext(
+            collector=collector,
+            filtered_class_list=filtered_class_list,
+            add_geometry=add_geometry,
+            filter_attributes_by_subset=filter_attributes_by_subset,
+            dummy_data_rows=dummy_data_rows,
+            model_directory=model_directory,
+        )
+        otl_objects = cls.create_objects_with_unique_ids(context=context)
 
         if not ignore_relations:
-            non_relations_class_uris = [cl.objectUri for cl in filtered_class_list
-                                        if cl.abstract == 0 and cl.objectUri not in cls.relation_dict]
             cls.append_relations_to_objects(otl_objects=otl_objects, collector=collector,
-                                            class_uris_filter=non_relations_class_uris, model_directory=model_directory)
+                                            class_uris_filter=cls.get_non_relation_class_uris(filtered_class_list),
+                                            model_directory=model_directory)
 
         return otl_objects
+
+    @classmethod
+    def create_objects_with_unique_ids(cls, context: GenerationContext) -> list:
+        """Creates the objects of a template, until every object has its own id."""
+        while True:
+            otl_objects = cls.create_objects_in_parallel(context=context)
+            if cls.has_unique_ids(otl_objects=otl_objects):
+                return otl_objects
+
+    @classmethod
+    def create_objects_in_parallel(cls, context: GenerationContext) -> list:
+        """Creates the objects of every class of a template, in parallel."""
+        otl_objects = []
+        with ThreadPoolExecutor() as executor:
+            futures = cls.submit_object_creation(executor=executor, context=context)
+            while futures:
+                done, not_done = concurrent.futures.wait(
+                    futures, return_when=ALL_COMPLETED, timeout=60
+                )
+                for future in as_completed(done):
+                    otl_objects.extend(future.result())
+                futures = not_done
+                cls.report_progress(done=done, not_done=not_done)
+        return otl_objects
+
+    @classmethod
+    def submit_object_creation(cls, executor, context: GenerationContext) -> list:
+        """Submits the creation of the objects of every class of a template."""
+        amount_objects_to_create = max(1, context.dummy_data_rows)
+        return [
+            executor.submit(
+                cls.create_x_objects,
+                oslo_class,
+                context.add_geometry,
+                context.collector,
+                context.filter_attributes_by_subset,
+                context.model_directory,
+                amount_objects_to_create,
+            )
+            for oslo_class in cls.get_classes_to_create(context=context)
+        ]
+
+    @classmethod
+    def get_classes_to_create(cls, context: GenerationContext) -> list:
+        """Returns the concrete classes of a template."""
+        return [cl for cl in context.filtered_class_list if cl.abstract == 0]
+
+    @classmethod
+    def report_progress(cls, done, not_done) -> None:
+        """Reports how many objects are created and how many are still running."""
+        print(f'when using multiprocessing: {len(done)} done, {len(not_done)} not done')
+        if len(not_done) > 0:
+            print('restarting the loop with the not done ones')
+
+    @classmethod
+    def has_unique_ids(cls, otl_objects: list) -> bool:
+        """Returns whether every object of a template has its own id."""
+        created = len(otl_objects)
+        unique_ids = len(
+            {
+                obj.assetId.identificator
+                if obj.typeURI != AGENT_TYPE_URI
+                else obj.agentId.identificator
+                for obj in otl_objects
+            }
+        )
+        return created == unique_ids
+
+    @classmethod
+    def get_non_relation_class_uris(cls, filtered_class_list: list) -> list:
+        """Returns the uris of the classes of a template that are not a relation."""
+        return [
+            cl.objectUri
+            for cl in filtered_class_list
+            if cl.abstract == 0 and cl.objectUri not in cls.relation_dict
+        ]
 
     @classmethod
     async def create_x_objects_async(cls, oslo_class, add_geometry, collector, filter_attributes_by_subset,
@@ -276,33 +412,48 @@ class SubsetTemplateCreator:
         await sleep(0)
         cls.relation_dict = get_hardcoded_relation_dict(model_directory=model_directory)
 
-        amount_objects_to_create = max(1, dummy_data_rows)
-        otl_objects = []
-
-        while True:
-            tasks = [
-                cls.create_x_objects_async(oslo_class, add_geometry, collector,
-                                           filter_attributes_by_subset, model_directory, amount_objects_to_create)
-                for oslo_class in [cl for cl in filtered_class_list if cl.abstract == 0]
-            ]
-            results = await asyncio.gather(*tasks)
-            otl_objects.extend([item for sublist in results for item in sublist])
-
-            created = len(otl_objects)
-            unique_ids = len({
-                                 obj.assetId.identificator if obj.typeURI != 'http://purl.org/dc/terms/Agent' else obj.agentId.identificator
-                                 for obj in otl_objects})
-            if created == unique_ids:
-                break
-            otl_objects = []
+        context = GenerationContext(
+            collector=collector,
+            filtered_class_list=filtered_class_list,
+            add_geometry=add_geometry,
+            filter_attributes_by_subset=filter_attributes_by_subset,
+            dummy_data_rows=dummy_data_rows,
+            model_directory=model_directory,
+        )
+        otl_objects = await cls.create_objects_with_unique_ids_async(context=context)
 
         if not ignore_relations:
-            non_relations_class_uris = [cl.objectUri for cl in filtered_class_list
-                                        if cl.abstract == 0 and cl.objectUri not in cls.relation_dict]
             cls.append_relations_to_objects(otl_objects=otl_objects, collector=collector,
-                                            class_uris_filter=non_relations_class_uris, model_directory=model_directory)
+                                            class_uris_filter=cls.get_non_relation_class_uris(filtered_class_list),
+                                            model_directory=model_directory)
 
         return otl_objects
+
+    @classmethod
+    async def create_objects_with_unique_ids_async(cls, context: GenerationContext) -> list:
+        """Creates the objects of a template, until every object has its own id."""
+        while True:
+            otl_objects = await cls.create_objects_in_parallel_async(context=context)
+            if cls.has_unique_ids(otl_objects=otl_objects):
+                return otl_objects
+
+    @classmethod
+    async def create_objects_in_parallel_async(cls, context: GenerationContext) -> list:
+        """Creates the objects of every class of a template, at the same time."""
+        amount_objects_to_create = max(1, context.dummy_data_rows)
+        tasks = [
+            cls.create_x_objects_async(
+                oslo_class,
+                context.add_geometry,
+                context.collector,
+                context.filter_attributes_by_subset,
+                context.model_directory,
+                amount_objects_to_create,
+            )
+            for oslo_class in cls.get_classes_to_create(context=context)
+        ]
+        results = await asyncio.gather(*tasks)
+        return [item for sublist in results for item in sublist]
 
     @classmethod
     def generate_object_from_oslo_class(
@@ -316,21 +467,47 @@ class SubsetTemplateCreator:
             return
 
         if filter_attributes_by_subset:
-            for attribute_object in collector.find_attributes_by_class(oslo_class):
-                attr = get_attribute_by_name(instance, attribute_object.name)
-                if attr is None:
-                    logging.warning(f'Attribute {attribute_object.name} not found in class {oslo_class.objectUri}')
-                elif attr.naam == 'isActief':
-                    attr.set_waarde(True)
-                else:
-                    attr.fill_with_dummy_data()
+            cls.fill_attributes_of_subset(
+                instance=instance, collector=collector, oslo_class=oslo_class
+            )
         else:
-            for attr in instance:
-                if attr.naam == 'isActief':
-                    attr.set_waarde(True)
-                elif attr.naam != 'geometry':
-                    attr.fill_with_dummy_data()
+            cls.fill_all_attributes(instance=instance)
 
+        cls.fill_asset_id(instance=instance, add_geometry=add_geometry)
+        cls.clear_asset_version(instance=instance)
+
+        DotnotationHelper.clear_list_of_list_attributes(instance)
+
+        return instance
+
+    @classmethod
+    def fill_attributes_of_subset(
+        cls, instance, collector: OSLOCollector, oslo_class: OSLOClass
+    ) -> None:
+        """Fills the attributes that are in the subset with dummy data."""
+        for attribute_object in collector.find_attributes_by_class(oslo_class):
+            attr = get_attribute_by_name(instance, attribute_object.name)
+            if attr is None:
+                logging.warning(
+                    f'Attribute {attribute_object.name} not found in class {oslo_class.objectUri}'
+                )
+            elif attr.naam == 'isActief':
+                attr.set_waarde(True)
+            else:
+                attr.fill_with_dummy_data()
+
+    @classmethod
+    def fill_all_attributes(cls, instance) -> None:
+        """Fills every attribute of an object with dummy data."""
+        for attr in instance:
+            if attr.naam == 'isActief':
+                attr.set_waarde(True)
+            elif attr.naam != 'geometry':
+                attr.fill_with_dummy_data()
+
+    @classmethod
+    def fill_asset_id(cls, instance, add_geometry: bool) -> None:
+        """Fills the asset id and the geometry of an object with dummy data."""
         with contextlib.suppress(AttributeError):
             assetId_attr = get_attribute_by_name(instance, 'assetId')
             if assetId_attr is not None:
@@ -340,13 +517,12 @@ class SubsetTemplateCreator:
                 if geo_attr is not None:
                     geo_attr.fill_with_dummy_data()
 
+    @classmethod
+    def clear_asset_version(cls, instance) -> None:
+        """Clears the asset version of an object."""
         asset_versie = get_attribute_by_name(instance, 'assetVersie')
         if asset_versie is not None:
             asset_versie.set_waarde(None)
-
-        DotnotationHelper.clear_list_of_list_attributes(instance)
-
-        return instance
 
     @classmethod
     def alter_excel_template(cls, instances: list, file_path: Path, add_attribute_info: bool,
@@ -417,54 +593,84 @@ class SubsetTemplateCreator:
     @classmethod
     def alter_csv_file(cls, add_attribute_info: bool, instances: [OTLObject], add_deprecated: bool, file_path: Path,
                        dummy_data_rows: int):
-        collected_attribute_info_row = []
-        deprecated_attributes_row = []
+        info = AttributeInfo(add_attribute_info=add_attribute_info, add_deprecated=add_deprecated)
         instance = instances[0]
-        quote_char = '"'
 
+        header_row, csv_data = cls.read_csv_file(file_path=file_path)
+        cls.collect_csv_header_info(instance=instance, info=info, header_row=header_row)
+        cls.write_csv_file(
+            info=info,
+            file_path=file_path,
+            header_row=header_row,
+            csv_data=csv_data,
+            dummy_data_rows=dummy_data_rows,
+        )
+
+    @classmethod
+    def read_csv_file(cls, file_path: Path) -> tuple[list, list]:
+        """Reads the header row and the data rows of a csv file."""
         with open(file_path, encoding='utf-8') as file:
-            csv_reader = csv.reader(file, delimiter=';', quotechar=quote_char)
+            csv_reader = csv.reader(file, delimiter=';', quotechar=QUOTE_CHAR)
             header_row = next(csv_reader)
             csv_data = list(csv_reader)
+        return header_row, csv_data
 
-        for index, header in enumerate(header_row):
-            if header is None or header == '':
+    @classmethod
+    def collect_csv_header_info(cls, instance, info: AttributeInfo, header_row: list) -> None:
+        """Collects the information of every column of a csv file."""
+        for header in header_row:
+            if not header:
                 continue
-
             if header == 'typeURI':
-                if add_attribute_info:
-                    collected_attribute_info_row.append(
-                        'De URI van het object volgens https://www.w3.org/2001/XMLSchema#anyURI .')
-                if add_deprecated:
-                    deprecated_attributes_row.append('')
-                continue
+                info.add_type_uri()
+            else:
+                cls.collect_csv_attribute_info(instance=instance, info=info, header=header)
 
-            try:
-                attribute = DotnotationHelper.get_attribute_by_dotnotation(instance, header)
-            except AttributeError:
-                if add_attribute_info:
-                    collected_attribute_info_row.append('')
-                if add_deprecated:
-                    deprecated_attributes_row.append('')
-                continue
+    @classmethod
+    def collect_csv_attribute_info(cls, instance, info: AttributeInfo, header: str) -> None:
+        """Collects the information of one attribute column of a csv file."""
+        try:
+            attribute = DotnotationHelper.get_attribute_by_dotnotation(instance, header)
+        except AttributeError:
+            info.add_missing_attribute()
+            return
+        info.add_attribute(instance=instance, header=header, attribute=attribute)
 
-            if add_attribute_info:
-                collected_attribute_info_row.append(
-                    cls.get_attribute_info(instance=instance, header=header, attribute=attribute))
-
-            if add_deprecated:
-                deprecated_attributes_row.append('DEPRECATED' if attribute.deprecated_version else '')
-
+    @classmethod
+    def write_csv_file(
+        cls,
+        info: AttributeInfo,
+        file_path: Path,
+        header_row: list,
+        csv_data: list,
+        dummy_data_rows: int,
+    ) -> None:
+        """Writes the information rows and the data of a csv file."""
         with open(file_path, 'w', newline='', encoding='utf-8') as file:
-            csv_writer = csv.writer(file, delimiter=';', quotechar=quote_char, quoting=csv.QUOTE_MINIMAL)
-            if add_attribute_info:
-                csv_writer.writerow(collected_attribute_info_row)
-            if add_deprecated and any(deprecated_attributes_row):
-                csv_writer.writerow(deprecated_attributes_row)
+            csv_writer = csv.writer(
+                file, delimiter=';', quotechar=QUOTE_CHAR, quoting=csv.QUOTE_MINIMAL
+            )
+            cls.write_csv_info_rows(info=info, csv_writer=csv_writer)
             csv_writer.writerow(header_row)
-            if dummy_data_rows != 0:
-                for line in csv_data:
-                    csv_writer.writerow(line)
+            cls.write_csv_data_rows(
+                csv_writer=csv_writer, csv_data=csv_data, dummy_data_rows=dummy_data_rows
+            )
+
+    @classmethod
+    def write_csv_info_rows(cls, info: AttributeInfo, csv_writer) -> None:
+        """Writes the attribute info row and the deprecated row of a csv file."""
+        if info.add_attribute_info:
+            csv_writer.writerow(info.attribute_info_row)
+        if info.add_deprecated and any(info.deprecated_row):
+            csv_writer.writerow(info.deprecated_row)
+
+    @classmethod
+    def write_csv_data_rows(cls, csv_writer, csv_data: list, dummy_data_rows: int) -> None:
+        """Writes the data rows of a csv file, unless the template has no data rows."""
+        if dummy_data_rows == 0:
+            return
+        for line in csv_data:
+            csv_writer.writerow(line)
 
     @classmethod
     async def alter_excel_template_async(cls, instances: list, file_path: Path, add_attribute_info: bool,
@@ -492,85 +698,32 @@ class SubsetTemplateCreator:
                           instances: [OTLObject], sheet: Worksheet, add_deprecated: bool, workbook: Workbook,
                           dummy_data_rows: int, abbreviate_excel_sheettitle: bool = True):
         type_uri = cls.get_uri_from_sheet_name(sheet.title)
-        instance = next((x for x in instances if x.typeURI == type_uri), None)
-        if instance is None:
-            instance = next((x for x in instances if x.typeURI.startswith(type_uri)), None)
-        if instance is None:
-            raise UnknownExcelError(f'When creating a template, no instance could be created for {type_uri}')
+        instance = cls.get_instance_for_type_uri(instances=instances, type_uri=type_uri)
 
         boolean_validation = DataValidation(type="list", formula1='"TRUE,FALSE,-"', allow_blank=True)
         sheet.add_data_validation(boolean_validation)
-        collected_attribute_info = []
-        deprecated_attributes_row = []
 
-        header_row = next(sheet.iter_rows(min_row=1, max_row=1))
+        context = ExcelSheetContext(
+            sheet=sheet,
+            workbook=workbook,
+            instance=instance,
+            type_uri=type_uri,
+            first_data_row=cls.get_first_data_row(add_attribute_info=add_attribute_info),
+            boolean_validation=boolean_validation,
+            generate_choice_list=generate_choice_list,
+            choice_list_dict=choice_list_dict,
+            info=AttributeInfo(
+                add_attribute_info=add_attribute_info, add_deprecated=add_deprecated
+            ),
+        )
 
-        first_data_row = 2 # first row is header, first data row is needed for later adjustments of formatting
-        if add_attribute_info:
-            first_data_row += 1
-        if add_deprecated and any(deprecated_attributes_row):
-            first_data_row += 1
+        for header_cell in next(sheet.iter_rows(min_row=1, max_row=1)):
+            cls.process_header_cell(context=context, header_cell=header_cell)
 
-        max_row = 1000  # limit to 1000 as we only add validations up to row 1000
-        # Collect string columns to format after header processing
-        string_col_indices = []
-
-        for header_cell in header_row:
-            header = header_cell.value
-            if not header:
-                continue
-
-            if header == 'typeURI':
-                data_validation = DataValidation(type="list", formula1=f'"{type_uri}"', allow_blank=True)
-                sheet.add_data_validation(data_validation)
-                data_validation.add(f'{header_cell.column_letter}{first_data_row}:{header_cell.column_letter}{max_row}')
-                if add_attribute_info:
-                    collected_attribute_info.append(
-                        'De URI van het object volgens https://www.w3.org/2001/XMLSchema#anyURI .')
-                if add_deprecated:
-                    deprecated_attributes_row.append('')
-                continue
-
-            if type_uri == 'http://purl.org/dc/terms/Agent' and header.startswith('assetId.'):
-                continue
-
-            attribute = DotnotationHelper.get_attribute_by_dotnotation(instance, header)
-
-            if add_attribute_info:
-                collected_attribute_info.append(
-                    cls.get_attribute_info(instance=instance, header=header, attribute=attribute))
-
-            if add_deprecated:
-                deprecated_attributes_row.append('DEPRECATED' if attribute.deprecated_version else '')
-
-            if generate_choice_list:
-                if attribute.field.native_type == bool:
-                    boolean_validation.add(f'{header_cell.column_letter}{first_data_row}:{header_cell.column_letter}{max_row}')
-                    cls.color_choice_lists_green(sheet=sheet, header_cell_column=header_cell)
-                elif hasattr(attribute.field, 'options') and attribute.field.options is not None:
-                    cls.generate_choice_list_in_excel(
-                        attribute=attribute, choice_list_dict=choice_list_dict, column=header_cell.column,
-                        row_nr=1, sheet=sheet, workbook=workbook)
-                    cls.color_choice_lists_green(sheet=sheet, header_cell_column=header_cell)
-
-            if attribute.field.native_type == str:
-                string_col_indices.append(header_cell.column)
-
-        # Efficiently format all string columns in one pass
-        for col_idx in string_col_indices:
-            for row_idx in range(first_data_row, max_row + 1):
-                sheet.cell(row=row_idx, column=col_idx).number_format = "@"
-
-        if dummy_data_rows == 0:
-            instance_count = len([x for x in instances if x.typeURI == type_uri])
-            if instance_count > 0:
-                sheet.delete_rows(idx=2, amount=instance_count)
-
-        if add_deprecated and any(deprecated_attributes_row):
-            cls.add_deprecated_row_to_sheet(deprecated_attributes_row, sheet)
-
-        if add_attribute_info:
-            cls.add_attribute_info_to_sheet(collected_attribute_info, sheet)
+        cls.format_string_columns(context=context)
+        cls.delete_dummy_rows(context=context, instances=instances, dummy_data_rows=dummy_data_rows)
+        cls.add_deprecated_row(context=context)
+        cls.add_attribute_info_row(context=context)
 
         cls.set_fixed_column_width(sheet=sheet, width=25)
 
@@ -578,9 +731,160 @@ class SubsetTemplateCreator:
             cls.abbreviate_excel_sheettitle(sheet=sheet)
 
     @classmethod
+    def get_instance_for_type_uri(cls, instances: list, type_uri: str):
+        """Returns the instance of the type of a sheet, raises when there is none."""
+        instance = cls.find_instance_with_type_uri(instances=instances, type_uri=type_uri)
+        if instance is None:
+            instance = cls.find_instance_with_type_uri_prefix(
+                instances=instances, type_uri=type_uri
+            )
+        if instance is None:
+            raise UnknownExcelError(f'When creating a template, no instance could be created for {type_uri}')
+        return instance
+
+    @classmethod
+    def find_instance_with_type_uri(cls, instances: list, type_uri: str):
+        """Returns the instance with exactly the given type uri, None when there is none."""
+        for instance in instances:
+            if instance.typeURI == type_uri:
+                return instance
+        return None
+
+    @classmethod
+    def find_instance_with_type_uri_prefix(cls, instances: list, type_uri: str):
+        """Returns the instance whose type uri starts with the given one, None when there is none."""
+        for instance in instances:
+            if instance.typeURI.startswith(type_uri):
+                return instance
+        return None
+
+    @classmethod
+    def get_first_data_row(cls, add_attribute_info: bool) -> int:
+        """Returns the first row of a sheet that holds data.
+
+        The first row is the header row. The attribute info row is added in front
+        of it, so the data starts one row lower. The deprecated row is added
+        after the validations are applied, so it does not move the data.
+        """
+        first_data_row = 2
+        if add_attribute_info:
+            first_data_row += 1
+        return first_data_row
+
+    @classmethod
+    def process_header_cell(cls, context: ExcelSheetContext, header_cell) -> None:
+        """Adds the validations and the information of one header cell to the sheet."""
+        header = header_cell.value
+        if not header:
+            return
+        if header == 'typeURI':
+            cls.process_type_uri_header(context=context, header_cell=header_cell)
+            return
+        if cls.is_agent_asset_id_header(context=context, header=header):
+            return
+        cls.process_attribute_header(context=context, header_cell=header_cell, header=header)
+
+    @classmethod
+    def is_agent_asset_id_header(cls, context: ExcelSheetContext, header: str) -> bool:
+        """Returns whether a header is the asset id of the agent sheet."""
+        return context.type_uri == AGENT_TYPE_URI and header.startswith('assetId.')
+
+    @classmethod
+    def process_type_uri_header(cls, context: ExcelSheetContext, header_cell) -> None:
+        """Adds the validation that fixes the type of the objects of a sheet."""
+        data_validation = DataValidation(
+            type='list', formula1=f'"{context.type_uri}"', allow_blank=True
+        )
+        context.sheet.add_data_validation(data_validation)
+        data_validation.add(
+            cls.get_validation_range(header_cell=header_cell, first_data_row=context.first_data_row)
+        )
+        context.info.add_type_uri()
+
+    @classmethod
+    def process_attribute_header(cls, context: ExcelSheetContext, header_cell, header: str) -> None:
+        """Adds the validations and the information of one attribute column to the sheet."""
+        attribute = DotnotationHelper.get_attribute_by_dotnotation(context.instance, header)
+
+        context.info.add_attribute(instance=context.instance, header=header, attribute=attribute)
+        cls.add_choice_list_validation(
+            context=context, attribute=attribute, header_cell=header_cell
+        )
+
+        if attribute.field.native_type == str:
+            context.string_columns.append(header_cell.column)
+
+    @classmethod
+    def add_choice_list_validation(cls, context: ExcelSheetContext, attribute, header_cell) -> None:
+        """Adds the validation of a boolean or a choice list column."""
+        if not context.generate_choice_list:
+            return
+        if attribute.field.native_type == bool:
+            cls.add_boolean_validation(context=context, header_cell=header_cell)
+        elif hasattr(attribute.field, 'options') and attribute.field.options is not None:
+            cls.add_option_validation(context=context, attribute=attribute, header_cell=header_cell)
+
+    @classmethod
+    def add_boolean_validation(cls, context: ExcelSheetContext, header_cell) -> None:
+        """Restricts a boolean column to the values of a boolean list."""
+        context.boolean_validation.add(
+            cls.get_validation_range(header_cell=header_cell, first_data_row=context.first_data_row)
+        )
+        cls.color_choice_lists_green(sheet=context.sheet, header_cell_column=header_cell)
+
+    @classmethod
+    def add_option_validation(cls, context: ExcelSheetContext, attribute, header_cell) -> None:
+        """Restricts a column to the values of its choice list."""
+        cls.generate_choice_list_in_excel(
+            attribute=attribute,
+            choice_list_dict=context.choice_list_dict,
+            column=header_cell.column,
+            row_nr=1,
+            sheet=context.sheet,
+            workbook=context.workbook,
+        )
+        cls.color_choice_lists_green(sheet=context.sheet, header_cell_column=header_cell)
+
+    @classmethod
+    def get_validation_range(cls, header_cell, first_data_row: int) -> str:
+        """Returns the range of the rows a validation is added to."""
+        column_letter = header_cell.column_letter
+        return f'{column_letter}{first_data_row}:{column_letter}{MAX_VALIDATION_ROW}'
+
+    @classmethod
+    def format_string_columns(cls, context: ExcelSheetContext) -> None:
+        """Formats the string columns of a sheet as text, so Excel keeps the leading zeros."""
+        for col_idx in context.string_columns:
+            for row_idx in range(context.first_data_row, MAX_VALIDATION_ROW + 1):
+                context.sheet.cell(row=row_idx, column=col_idx).number_format = '@'
+
+    @classmethod
+    def delete_dummy_rows(
+        cls, context: ExcelSheetContext, instances: list, dummy_data_rows: int
+    ) -> None:
+        """Deletes the dummy rows of a template without data rows."""
+        if dummy_data_rows != 0:
+            return
+        instance_count = len([x for x in instances if x.typeURI == context.type_uri])
+        if instance_count > 0:
+            context.sheet.delete_rows(idx=2, amount=instance_count)
+
+    @classmethod
+    def add_deprecated_row(cls, context: ExcelSheetContext) -> None:
+        """Adds the row that marks the deprecated attributes of a sheet."""
+        if context.info.add_deprecated and any(context.info.deprecated_row):
+            cls.add_deprecated_row_to_sheet(context.info.deprecated_row, context.sheet)
+
+    @classmethod
+    def add_attribute_info_row(cls, context: ExcelSheetContext) -> None:
+        """Adds the row with the definition of the attributes of a sheet."""
+        if context.info.add_attribute_info:
+            cls.add_attribute_info_to_sheet(context.info.attribute_info_row, context.sheet)
+
+    @classmethod
     def color_choice_lists_green(cls, sheet: Worksheet, header_cell_column: Cell):
         for cell in sheet.iter_rows(min_col=header_cell_column.column, max_col=header_cell_column.column,
-                                    min_row=2, max_row=1000):
+                                    min_row=2, max_row=MAX_VALIDATION_ROW):
             cell[0].fill = cls.green_fill
 
     @classmethod
@@ -646,6 +950,12 @@ class SubsetTemplateCreator:
         standaard_eenheid = get_attribute_by_name(waarde, 'standaardEenheid')
         if standaard_eenheid is None:
             return None
+        return cls.find_standard_unit(standaard_eenheid=standaard_eenheid)
+
+    @classmethod
+    def find_standard_unit(cls, standaard_eenheid) -> str:
+        """Returns the standard unit in the notations of a datatype,
+        None when the notations do not contain one."""
         for notation in [standaard_eenheid.usagenote, standaard_eenheid.constraints]:
             if '"' in notation:
                 return notation.split('"')[1]
@@ -666,7 +976,7 @@ class SubsetTemplateCreator:
                                   allowBlank=True)
         sheet.add_data_validation(data_val)
         data_val.add(f'{get_column_letter(column)}{row_nr + 1}:'
-                     f'{get_column_letter(column)}1000')
+                     f'{get_column_letter(column)}{MAX_VALIDATION_ROW}')
 
     @classmethod
     def filters_classes_by_subset(cls, collector: OSLOCollector,
@@ -711,29 +1021,81 @@ class SubsetTemplateCreator:
     @classmethod
     def append_relations_to_objects(cls, otl_objects: [OTLObject], collector: OSLOCollector, class_uris_filter: [str],
                                     model_directory: Path):
-        class_dict = defaultdict(list)
-        for instance in otl_objects:
-            class_dict[instance.typeURI].append(instance)
+        class_dict = cls.fill_class_dict(otl_objects)
 
         for class_uri in class_uris_filter:
-            for relation in collector.find_all_concrete_relations(objectUri=class_uri):
-                if class_uri != relation.bron_uri:
-                    continue
-                for i, bron_instance in enumerate(class_dict[relation.bron_uri]):
-                    if relation.doel_uri not in class_dict:
-                        continue
-                    doel_instance = class_dict[relation.doel_uri][i]
-                    if relation.objectUri == 'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#HeeftBetrokkene':
-                        relation_instance = create_betrokkenerelation(rol='toezichter', source=bron_instance,
-                                                            target=doel_instance, model_directory=model_directory)
-                    else:
-                        if relation.richting == 'Unspecified' and bron_instance.assetId.identificator > doel_instance.assetId.identificator:
-                            continue
-                        relation_type = dynamic_create_type_from_uri(class_uri=relation.objectUri, model_directory=model_directory)
-                        relation_instance = create_relation(relation_type=relation_type, source=bron_instance,
-                                                            target=doel_instance, model_directory=model_directory)
+            cls.append_relations_of_class(
+                class_dict=class_dict,
+                otl_objects=otl_objects,
+                class_uri=class_uri,
+                collector=collector,
+                model_directory=model_directory,
+            )
 
-                    otl_objects.append(relation_instance)
+    @classmethod
+    def append_relations_of_class(
+        cls,
+        class_dict: dict,
+        otl_objects: [OTLObject],
+        class_uri: str,
+        collector: OSLOCollector,
+        model_directory: Path,
+    ) -> None:
+        """Adds the relations of one class to the objects of a template."""
+        for relation in collector.find_all_concrete_relations(objectUri=class_uri):
+            if class_uri != relation.bron_uri:
+                continue
+            cls.append_relations_of_relation(
+                class_dict=class_dict,
+                otl_objects=otl_objects,
+                relation=relation,
+                model_directory=model_directory,
+            )
+
+    @classmethod
+    def append_relations_of_relation(
+        cls, class_dict: dict, otl_objects: [OTLObject], relation, model_directory: Path
+    ) -> None:
+        """Adds the relations of one relation type to the objects of a template."""
+        for index, bron_instance in enumerate(class_dict[relation.bron_uri]):
+            if relation.doel_uri not in class_dict:
+                continue
+            doel_instance = class_dict[relation.doel_uri][index]
+            relation_instance = cls.create_relation_instance(
+                relation=relation,
+                bron_instance=bron_instance,
+                doel_instance=doel_instance,
+                model_directory=model_directory,
+            )
+            if relation_instance is not None:
+                otl_objects.append(relation_instance)
+
+    @classmethod
+    def create_relation_instance(
+        cls, relation, bron_instance, doel_instance, model_directory: Path
+    ):
+        """Creates the relation between two objects, None when the relation is not created."""
+        if relation.objectUri == HEEFT_BETROKKENE_URI:
+            return create_betrokkenerelation(
+                rol='toezichter',
+                source=bron_instance,
+                target=doel_instance,
+                model_directory=model_directory,
+            )
+        if (
+            relation.richting == 'Unspecified'
+            and bron_instance.assetId.identificator > doel_instance.assetId.identificator
+        ):
+            return None
+        relation_type = dynamic_create_type_from_uri(
+            class_uri=relation.objectUri, model_directory=model_directory
+        )
+        return create_relation(
+            relation_type=relation_type,
+            source=bron_instance,
+            target=doel_instance,
+            model_directory=model_directory,
+        )
 
     @classmethod
     def abbreviate_excel_sheettitle(cls, sheet):
