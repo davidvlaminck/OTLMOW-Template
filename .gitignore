@@ -3,3 +3,5 @@
 /UnitTests/.coverage
 *.pyc
 __pycache__/
+code_quality/reports/coverage.json
+code_quality/reports/crap.json

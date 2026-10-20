@@ -49,3 +49,57 @@ test = [
     "pytest-timeout",
     "pytest-asyncio"
 ]
+
+# --- code quality tooling -------------------------------------------------
+# The full process behind these settings lives in code_quality/README.md.
+
+[tool.ruff]
+line-length = 100
+target-version = "py39"
+src = ["otlmow_template", "UnitTests"]
+# UnitTests/TestModel is a vendored copy of the otlmow_model package: it is not
+# ours to lint, and linting it buries the real findings.
+extend-exclude = ["UnitTests/TestModel"]
+
+[tool.ruff.lint]
+select = [
+    "E", "F", "I", "B", "C4", "UP", "PYI", "PT", "RUF", "S", "BLE", "TRY", "FLY",
+    "A", "C", "PL", "Q", "RET", "N", "W", "T20", "G", "LOG", "PIE", "SIM", "PERF",
+    "ARG", "TID", "PTH",
+]
+ignore = ["E501"]
+
+[tool.ruff.lint.flake8-tidy-imports]
+ban-relative-imports = "all"
+
+[tool.ruff.lint.flake8-quotes]
+inline-quotes = "single"
+docstring-quotes = "double"
+
+[tool.ruff.lint.per-file-ignores]
+"UnitTests/**" = ["S101", "N802", "N803", "N815", "PLR2004", "PT006"]
+"otlmow_template/**/*.py" = ["N802", "N803", "N815", "N806"]
+# CLI tooling: printing to stdout is the interface, and subprocess calls always
+# use an argument list (never shell=True).
+"code_quality/scripts/*.py" = ["T201", "S603"]
+
+[tool.ruff.format]
+docstring-code-format = true
+quote-style = "single"
+
+# mypy is adopted in stages; see code_quality/README.md section 6.
+# Stage 1 (now): bodies are checked, signatures are not required.
+# Stage 2: every module annotated, disallow_untyped_defs per module.
+# Stage 3: strict = true for the whole package.
+[tool.mypy]
+python_version = "3.9"
+warn_unused_ignores = true
+check_untyped_defs = true
+disallow_any_generics = true
+no_implicit_optional = true
+strict_equality = true
+warn_return_any = true
+
+[[tool.mypy.overrides]]
+module = ["otlmow_template.*"]
+disallow_untyped_defs = false
