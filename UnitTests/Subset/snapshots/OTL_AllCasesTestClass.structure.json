@@ -1,0 +1,261 @@
+{
+  "Keuzelijsten": {
+    "columns": {
+      "KlAIMToestand": [
+        "-",
+        "geannuleerd",
+        "gepland",
+        "in-gebruik",
+        "in-ontwerp",
+        "in-opbouw",
+        "overgedragen",
+        "uit-gebruik",
+        "verwijderd"
+      ],
+      "KlTestKeuzelijst": [
+        "-",
+        "waarde-1",
+        "waarde-2",
+        "waarde-3",
+        "waarde-4",
+        "waarde-5",
+        null,
+        null,
+        null
+      ]
+    },
+    "validations": []
+  },
+  "onderdeel#AllCasesTestClass": {
+    "columns": {
+      "assetId.identificator": [
+        "<text>"
+      ],
+      "assetId.toegekendDoor": [
+        "<text>"
+      ],
+      "bestekPostNummer[]": [
+        "<text>"
+      ],
+      "datumOprichtingObject": [
+        "<text>"
+      ],
+      "geometry": [
+        "<text>"
+      ],
+      "isActief": [
+        "<text>"
+      ],
+      "notitie": [
+        "<text>"
+      ],
+      "standaardBestekPostNummer[]": [
+        "<text>"
+      ],
+      "testBooleanField": [
+        "<text>"
+      ],
+      "testComplexType.testBooleanField": [
+        "<text>"
+      ],
+      "testComplexType.testComplexType2.testKwantWrd": [
+        "<text>"
+      ],
+      "testComplexType.testComplexType2.testStringField": [
+        "<text>"
+      ],
+      "testComplexType.testComplexType2MetKard[].testKwantWrd": [
+        "<text>"
+      ],
+      "testComplexType.testComplexType2MetKard[].testStringField": [
+        "<text>"
+      ],
+      "testComplexType.testKeuzelijst": [
+        "<text>"
+      ],
+      "testComplexType.testKwantWrd": [
+        "<text>"
+      ],
+      "testComplexType.testKwantWrdMetKard[]": [
+        "<text>"
+      ],
+      "testComplexType.testStringField": [
+        "<text>"
+      ],
+      "testComplexType.testStringFieldMetKard[]": [
+        "<text>"
+      ],
+      "testComplexTypeMetKard[].testBooleanField": [
+        "<text>"
+      ],
+      "testComplexTypeMetKard[].testComplexType2.testKwantWrd": [
+        "<text>"
+      ],
+      "testComplexTypeMetKard[].testComplexType2.testStringField": [
+        "<text>"
+      ],
+      "testComplexTypeMetKard[].testKeuzelijst": [
+        "<text>"
+      ],
+      "testComplexTypeMetKard[].testKwantWrd": [
+        "<text>"
+      ],
+      "testComplexTypeMetKard[].testStringField": [
+        "<text>"
+      ],
+      "testDateField": [
+        "<text>"
+      ],
+      "testDateTimeField": [
+        "<text>"
+      ],
+      "testDecimalField": [
+        "<text>"
+      ],
+      "testDecimalFieldMetKard[]": [
+        "<text>"
+      ],
+      "testEenvoudigType": [
+        "<text>"
+      ],
+      "testEenvoudigTypeMetKard[]": [
+        "<text>"
+      ],
+      "testIntegerField": [
+        "<text>"
+      ],
+      "testIntegerFieldMetKard[]": [
+        "<text>"
+      ],
+      "testKeuzelijst": [
+        "<text>"
+      ],
+      "testKeuzelijstMetKard[]": [
+        "<text>"
+      ],
+      "testKwantWrd": [
+        "<text>"
+      ],
+      "testKwantWrdMetKard[]": [
+        "<text>"
+      ],
+      "testStringField": [
+        "<text>"
+      ],
+      "testStringFieldMetKard[]": [
+        "<text>"
+      ],
+      "testTimeField": [
+        "<text>"
+      ],
+      "testUnionType*": [
+        "<text>"
+      ],
+      "theoretischeLevensduur": [
+        "<text>"
+      ],
+      "toestand": [
+        "<text>"
+      ],
+      "typeURI": [
+        "<text>"
+      ]
+    },
+    "validations": [
+      "A2:A1000",
+      "AI2:AI1000",
+      "AJ2:AJ1000",
+      "AS2:AS1000",
+      "G2:G1000 J2:J1000 K2:K1000 U2:U1000",
+      "P2:P1000",
+      "X2:X1000"
+    ]
+  },
+  "onderdeel#AnotherTestClass": {
+    "columns": {
+      "assetId.identificator": [
+        "<text>"
+      ],
+      "assetId.toegekendDoor": [
+        "<text>"
+      ],
+      "bestekPostNummer[]": [
+        "<text>"
+      ],
+      "datumOprichtingObject": [
+        "<text>"
+      ],
+      "deprecatedString": [
+        "<text>"
+      ],
+      "geometry": [
+        "<text>"
+      ],
+      "isActief": [
+        "<text>"
+      ],
+      "notitie": [
+        "<text>"
+      ],
+      "standaardBestekPostNummer[]": [
+        "<text>"
+      ],
+      "theoretischeLevensduur": [
+        "<text>"
+      ],
+      "toestand": [
+        "<text>"
+      ],
+      "typeURI": [
+        "<text>"
+      ]
+    },
+    "validations": [
+      "A2:A1000",
+      "H2:H1000",
+      "L2:L1000"
+    ]
+  },
+  "onderdeel#DeprecatedTestClass": {
+    "columns": {
+      "assetId.identificator": [
+        "<text>"
+      ],
+      "assetId.toegekendDoor": [
+        "<text>"
+      ],
+      "bestekPostNummer[]": [
+        "<text>"
+      ],
+      "datumOprichtingObject": [
+        "<text>"
+      ],
+      "geometry": [
+        "<text>"
+      ],
+      "isActief": [
+        "<text>"
+      ],
+      "notitie": [
+        "<text>"
+      ],
+      "standaardBestekPostNummer[]": [
+        "<text>"
+      ],
+      "theoretischeLevensduur": [
+        "<text>"
+      ],
+      "toestand": [
+        "<text>"
+      ],
+      "typeURI": [
+        "<text>"
+      ]
+    },
+    "validations": [
+      "A2:A1000",
+      "G2:G1000",
+      "K2:K1000"
+    ]
+  }
+}

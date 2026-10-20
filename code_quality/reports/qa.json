@@ -1,12 +1,13 @@
 {
   "date": "2026-10-20",
   "repo": "otlmow_template",
-  "commit": "9b99643",
+  "commit": "543d681",
   "thresholds": {
     "ruff_issues": 0,
     "ruff_format_files": 0,
     "mypy_errors": 0,
     "coverage_percent": 80.0,
+    "coverage_branch_percent": 75.0,
     "max_crap": 10.0,
     "max_complexity": 15,
     "bandit_high": 0,
@@ -16,8 +17,9 @@
     "ruff_issues": 181,
     "ruff_format_files": 0,
     "mypy_errors": 18,
-    "coverage_percent": 91.1,
-    "max_crap": 35.6,
+    "coverage_percent": 95.9,
+    "coverage_branch_percent": 86.4,
+    "max_crap": 35.1,
     "max_complexity": 35,
     "bandit_high": 0,
     "dead_code": 0
@@ -27,8 +29,8 @@
     "name": "alter_excel_sheet",
     "block_type": "method",
     "complexity": 35,
-    "coverage": 91.9,
-    "crap": 35.6,
+    "coverage": 95.2,
+    "crap": 35.1,
     "lineno": 491
   },
   "hotspots": [
@@ -79,8 +81,8 @@
       "name": "alter_excel_sheet",
       "block_type": "method",
       "complexity": 35,
-      "coverage": 91.9,
-      "crap": 35.6,
+      "coverage": 95.2,
+      "crap": 35.1,
       "lineno": 491
     },
     {
@@ -88,8 +90,8 @@
       "name": "alter_csv_file",
       "block_type": "method",
       "complexity": 18,
-      "coverage": 82.5,
-      "crap": 19.7,
+      "coverage": 97.5,
+      "crap": 18.0,
       "lineno": 418
     },
     {
@@ -97,8 +99,8 @@
       "name": "generate_objects_for_template",
       "block_type": "method",
       "complexity": 16,
-      "coverage": 89.3,
-      "crap": 16.3,
+      "coverage": 92.9,
+      "crap": 16.1,
       "lineno": 197
     },
     {
@@ -106,8 +108,8 @@
       "name": "generate_objects_for_template_async",
       "block_type": "method",
       "complexity": 15,
-      "coverage": 83.3,
-      "crap": 16.0,
+      "coverage": 95.8,
+      "crap": 15.0,
       "lineno": 263
     },
     {
@@ -115,8 +117,8 @@
       "name": "generate_object_from_oslo_class",
       "block_type": "method",
       "complexity": 13,
-      "coverage": 76.7,
-      "crap": 15.1,
+      "coverage": 93.3,
+      "crap": 13.1,
       "lineno": 308
     },
     {
@@ -142,8 +144,8 @@
       "name": "generate_template_from_subset_async",
       "block_type": "method",
       "complexity": 4,
-      "coverage": 83.3,
-      "crap": 4.1,
+      "coverage": 100.0,
+      "crap": 4.0,
       "lineno": 58
     },
     {
@@ -220,15 +222,6 @@
     },
     {
       "file": "otlmow_template/SubsetTemplateCreator.py",
-      "name": "get_uri_from_sheet_name",
-      "block_type": "method",
-      "complexity": 3,
-      "coverage": 71.4,
-      "crap": 3.2,
-      "lineno": 703
-    },
-    {
-      "file": "otlmow_template/SubsetTemplateCreator.py",
       "name": "alter_excel_template",
       "block_type": "method",
       "complexity": 3,
@@ -268,9 +261,18 @@
       "name": "add_choice_list_to_sheet",
       "block_type": "method",
       "complexity": 3,
-      "coverage": 92.9,
+      "coverage": 100.0,
       "crap": 3.0,
       "lineno": 686
+    },
+    {
+      "file": "otlmow_template/SubsetTemplateCreator.py",
+      "name": "get_uri_from_sheet_name",
+      "block_type": "method",
+      "complexity": 3,
+      "coverage": 100.0,
+      "crap": 3.0,
+      "lineno": 703
     },
     {
       "file": "otlmow_template/SubsetTemplateCreator.py",

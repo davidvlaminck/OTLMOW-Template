@@ -40,6 +40,7 @@ DEFAULT_THRESHOLDS = {
     'ruff_format_files': 0,
     'mypy_errors': 0,
     'coverage_percent': 80.0,
+    'coverage_branch_percent': 75.0,
     'max_crap': 10.0,
     'max_complexity': 15,
     'bandit_high': 0,
@@ -124,18 +125,32 @@ def run_mypy(source: str, tests: str, scripts: str) -> dict[str, Any]:
     }
 
 
+def coverage_totals(data: dict[str, Any]) -> dict[str, float]:
+    """Return the line and the branch coverage of a coverage report."""
+    totals = data.get('totals', {})
+    statements = int(totals.get('num_statements', 0))
+    covered_lines = int(totals.get('covered_lines', 0))
+    branches = int(totals.get('num_branches', 0))
+    covered_branches = int(totals.get('covered_branches', 0))
+    return {
+        'percent': 100.0 * covered_lines / statements if statements else 0.0,
+        'branch_percent': 100.0 * covered_branches / branches if branches else 0.0,
+    }
+
+
 def run_pytest(source: str, coverage_json: str, skip_tests: bool) -> dict[str, Any]:
-    """Run the test suite with coverage and return the coverage percentage."""
+    """Run the test suite with coverage and return the coverage percentages."""
     if skip_tests:
         if not Path(coverage_json).exists():
-            return {'available': False, 'percent': 0.0, 'detail': 'no coverage report available'}
+            return {
+                'available': False,
+                'percent': 0.0,
+                'branch_percent': 0.0,
+                'detail': 'no coverage report available',
+            }
         with Path(coverage_json).open(encoding='utf-8') as handle:
             data = json.load(handle)
-        return {
-            'available': True,
-            'percent': float(data.get('totals', {}).get('percent_covered', 0.0)),
-            'reused': True,
-        }
+        return {'available': True, **coverage_totals(data), 'reused': True}
     command = [
         sys.executable,
         '-m',
@@ -151,13 +166,17 @@ def run_pytest(source: str, coverage_json: str, skip_tests: bool) -> dict[str, A
     code, output = _run(command, env=environment)
     with Path(coverage_json).open(encoding='utf-8') as handle:
         data = json.load(handle)
-    percent = float(data.get('totals', {}).get('percent_covered', 0.0))
     summary = [
         line
         for line in output.splitlines()
         if ' passed' in line or ' failed' in line or 'error' in line.lower()
     ]
-    return {'available': True, 'percent': percent, 'exit_code': code, 'summary': summary[-3:]}
+    return {
+        'available': True,
+        **coverage_totals(data),
+        'exit_code': code,
+        'summary': summary[-3:],
+    }
 
 
 def run_bandit(source: str) -> dict[str, Any]:
@@ -262,8 +281,11 @@ def render_report(
         f'| {status(metrics["ruff_format_files"], thresholds["ruff_format_files"], False)} |',
         f'| mypy errors | {thresholds["mypy_errors"]} | {metrics["mypy_errors"]} '
         f'| {status(metrics["mypy_errors"], thresholds["mypy_errors"], False)} |',
-        f'| test coverage | ≥ {thresholds["coverage_percent"]} % | {metrics["coverage_percent"]} % '
+        f'| test coverage (lines) | ≥ {thresholds["coverage_percent"]} % | {metrics["coverage_percent"]} % '
         f'| {status(metrics["coverage_percent"], thresholds["coverage_percent"], True)} |',
+        f'| test coverage (branches) | ≥ {thresholds["coverage_branch_percent"]} % '
+        f'| {metrics["coverage_branch_percent"]} % '
+        f'| {status(metrics["coverage_branch_percent"], thresholds["coverage_branch_percent"], True)} |',
         f'| max CRAP score | ≤ {thresholds["max_crap"]} | {metrics["max_crap"]} '
         f'| {status(metrics["max_crap"], thresholds["max_crap"], False)} |',
         f'| max cyclomatic complexity | ≤ {thresholds["max_complexity"]} | {metrics["max_complexity"]} '
@@ -323,12 +345,14 @@ def render_report(
     lines += [
         '## History',
         '',
-        '| Date | Coverage % | Ruff | MyPy | Max CRAP | Max complexity | Result |',
-        '|---|---:|---:|---:|---:|---:|---|',
+        '| Date | Coverage % | Branch % | Ruff | MyPy | Max CRAP | Max complexity | Result |',
+        '|---|---:|---:|---:|---:|---:|---:|---|',
     ]
     for entry in history[-10:]:
         lines.append(
-            f'| {entry["date"]} | {entry["metrics"]["coverage_percent"]} | {entry["metrics"]["ruff_issues"]} '
+            f'| {entry["date"]} | {entry["metrics"]["coverage_percent"]} '
+            f'| {entry["metrics"].get("coverage_branch_percent", "-")} '
+            f'| {entry["metrics"]["ruff_issues"]} '
             f'| {entry["metrics"]["mypy_errors"]} | {entry["metrics"]["max_crap"]} '
             f'| {entry["metrics"]["max_complexity"]} | {entry.get("result", "")} |'
         )
@@ -353,12 +377,18 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         '--coverage-min', type=float, default=DEFAULT_THRESHOLDS['coverage_percent']
     )
+    parser.add_argument(
+        '--coverage-branch-min',
+        type=float,
+        default=DEFAULT_THRESHOLDS['coverage_branch_percent'],
+    )
     args = parser.parse_args(argv)
 
     thresholds = dict(DEFAULT_THRESHOLDS)
     thresholds['max_crap'] = args.max_crap
     thresholds['max_complexity'] = args.max_complexity
     thresholds['coverage_percent'] = args.coverage_min
+    thresholds['coverage_branch_percent'] = args.coverage_branch_min
 
     ruff = run_ruff(args.source, args.tests, args.scripts)
     ruff_format = run_ruff_format(args.source, args.tests, args.scripts)
@@ -377,6 +407,7 @@ def main(argv: list[str] | None = None) -> int:
         'ruff_format_files': ruff_format['files'],
         'mypy_errors': mypy['errors'],
         'coverage_percent': round(pytest_result['percent'], 1),
+        'coverage_branch_percent': round(pytest_result['branch_percent'], 1),
         'max_crap': max((row['crap'] for row in crap_rows), default=0.0),
         'max_complexity': max((row['complexity'] for row in crap_rows), default=0),
         'bandit_high': bandit.get('high', 0),
@@ -420,6 +451,7 @@ def main(argv: list[str] | None = None) -> int:
                 metrics['ruff_format_files'] <= thresholds['ruff_format_files'],
                 metrics['mypy_errors'] <= thresholds['mypy_errors'],
                 metrics['coverage_percent'] >= thresholds['coverage_percent'],
+                metrics['coverage_branch_percent'] >= thresholds['coverage_branch_percent'],
                 metrics['max_crap'] <= thresholds['max_crap'],
                 metrics['max_complexity'] <= thresholds['max_complexity'],
                 metrics['bandit_high'] <= thresholds['bandit_high'],
