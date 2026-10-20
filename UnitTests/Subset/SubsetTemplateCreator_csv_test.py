@@ -224,3 +224,26 @@ async def test_generate_csv_template_async(
         assert len(row) == expected_column_count
 
     path_to_template_file.unlink()
+
+
+def test_csv_with_empty_header_column():
+    """Empty header columns should be skipped in CSV parsing."""
+    from pathlib import Path
+    from otlmow_template.SubsetTemplateCreator import SubsetTemplateCreator
+
+    current_dir = Path(__file__).parent
+    model_directory_path = Path(__file__).parent.parent / 'TestModel'
+    subset_tool = SubsetTemplateCreator()
+    csv_path = current_dir / 'OTL_AllCasesTestClass_emptyheader.csv'
+    subset_tool.generate_template_from_subset(
+        subset_path=current_dir / 'OTL_AllCasesTestClass.db',
+        template_file_path=csv_path,
+        model_directory=model_directory_path,
+        class_uris_filter=['https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#AnotherTestClass'],
+        add_attribute_info=False,
+    )
+    split_path = current_dir / 'OTL_AllCasesTestClass_emptyheader_onderdeel_AnotherTestClass.csv'
+    assert split_path.exists()
+    split_path.unlink()
+    if csv_path.exists():
+        csv_path.unlink()
