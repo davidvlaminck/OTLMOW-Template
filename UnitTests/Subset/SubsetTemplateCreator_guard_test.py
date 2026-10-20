@@ -31,8 +31,7 @@ def test_get_uri_from_sheet_name_requires_a_namespace():
 def test_get_uri_from_sheet_name_maps_the_agent_sheet():
     """The Agent sheet has its own uri."""
     assert (
-        SubsetTemplateCreator.get_uri_from_sheet_name('Agent')
-        == 'http://purl.org/dc/terms/Agent'
+        SubsetTemplateCreator.get_uri_from_sheet_name('Agent') == 'http://purl.org/dc/terms/Agent'
     )
 
 
@@ -49,9 +48,12 @@ def test_filters_classes_by_subset_returns_nothing_for_an_unknown_filter():
     collector = SubsetTemplateCreator._load_collector_from_subset_path(
         subset_path=current_dir / 'OTL_AllCasesTestClass.db'
     )
-    assert SubsetTemplateCreator.filters_classes_by_subset(
-        collector=collector, class_uris_filter=['https://example.com/does-not-exist']
-    ) == []
+    assert (
+        SubsetTemplateCreator.filters_classes_by_subset(
+            collector=collector, class_uris_filter=['https://example.com/does-not-exist']
+        )
+        == []
+    )
 
 
 def test_an_empty_class_uris_filter_raises(tmp_path):
@@ -97,7 +99,9 @@ def test_an_unknown_attribute_is_skipped_in_the_csv(tmp_path):
     """An attribute that the instance does not have is left empty."""
     instances = SubsetTemplateCreator.generate_objects_for_template(
         subset_path=current_dir / 'OTL_AllCasesTestClass.db',
-        class_uris_filter=['https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#AnotherTestClass'],
+        class_uris_filter=[
+            'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#AnotherTestClass'
+        ],
         filter_attributes_by_subset=True,
         dummy_data_rows=0,
         add_geometry=True,
@@ -136,7 +140,9 @@ def test_a_sheet_without_a_matching_instance_raises():
     """A sheet that has no matching instance is an error, not an empty sheet."""
     instances = SubsetTemplateCreator.generate_objects_for_template(
         subset_path=current_dir / 'OTL_AllCasesTestClass.db',
-        class_uris_filter=['https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#AnotherTestClass'],
+        class_uris_filter=[
+            'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#AnotherTestClass'
+        ],
         filter_attributes_by_subset=True,
         dummy_data_rows=0,
         add_geometry=True,

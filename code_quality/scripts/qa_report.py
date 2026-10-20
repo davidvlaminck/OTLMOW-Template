@@ -41,10 +41,25 @@ DEFAULT_THRESHOLDS = {
     'mypy_errors': 0,
     'coverage_percent': 80.0,
     'coverage_branch_percent': 75.0,
-    'max_crap': 10.0,
-    'max_complexity': 15,
+    'max_crap': 6.0,
+    'max_complexity': 6,
     'bandit_high': 0,
     'dead_code': 0,
+}
+
+# The gates that can be enforced on their own: the name, the metric it reads
+# and whether a higher value is better. The ratchet is not in this list: it is
+# enforced by every run, because a lint count that goes up is never acceptable.
+GATES = {
+    'ruff': ('ruff_issues', False),
+    'format': ('ruff_format_files', False),
+    'mypy': ('mypy_errors', False),
+    'coverage': ('coverage_percent', True),
+    'coverage-branch': ('coverage_branch_percent', True),
+    'crap': ('max_crap', False),
+    'complexity': ('max_complexity', False),
+    'bandit': ('bandit_high', False),
+    'dead-code': ('dead_code', False),
 }
 
 
@@ -106,8 +121,12 @@ def run_ruff_format(source: str, tests: str, scripts: str) -> dict[str, Any]:
     if command is None:
         return {'available': False, 'files': 0}
     code, output = _run([*command, 'format', '--check', source, tests, scripts])
-    files = len([line for line in output.splitlines() if line.startswith('Would reformat')])
-    return {'available': True, 'files': files, 'exit_code': code}
+    # ruff 0.17 prints "unformatted: File would be reformatted" per file, older
+    # versions print "Would reformat: <path>". Counting only the first one makes
+    # the gate pass without checking anything.
+    unformatted = [line for line in output.splitlines() if line.startswith('unformatted:')]
+    would_reformat = [line for line in output.splitlines() if line.startswith('Would reformat')]
+    return {'available': True, 'files': len(unformatted) + len(would_reformat), 'exit_code': code}
 
 
 def run_mypy(source: str, tests: str, scripts: str) -> dict[str, Any]:
@@ -257,6 +276,21 @@ def status(value: Any, threshold: Any, higher_is_better: bool) -> str:
     return '🟢' if value <= threshold else '🔴'
 
 
+def failed_gates(
+    metrics: dict[str, Any], thresholds: dict[str, Any], gates: list[str]
+) -> list[str]:
+    """Return the names of the gates that are not met."""
+    failed = []
+    for gate in gates:
+        metric, higher_is_better = GATES[gate]
+        value = metrics[metric]
+        threshold = thresholds[metric]
+        met = value >= threshold if higher_is_better else value <= threshold
+        if not met:
+            failed.append(gate)
+    return failed
+
+
 def render_report(
     snapshot: dict[str, Any], history: list[dict[str, Any]], regressions: list[str]
 ) -> str:
@@ -305,6 +339,27 @@ def render_report(
             '',
         ]
         lines += [f'- {item}' for item in regressions]
+        lines.append('')
+
+    enforced = snapshot.get('enforced_gates') or []
+    if enforced:
+        failed = snapshot.get('failed_gates') or []
+        met = 'all met' if not failed else f'failed: {", ".join(failed)}'
+        lines += [
+            '## Enforced gates',
+            '',
+            f'These gates block a merge — {met}. The gates that are not listed are '
+            'reported only; the ratchet is enforced by every run.',
+            '',
+            '| Gate | Threshold | Current | Status |',
+            '|---|---|---|---|',
+        ]
+        for gate in enforced:
+            metric, higher_is_better = GATES[gate]
+            lines.append(
+                f'| `{gate}` | {thresholds[metric]} | {metrics[metric]} '
+                f'| {status(metrics[metric], thresholds[metric], higher_is_better)} |'
+            )
         lines.append('')
 
     lead = snapshot.get('lead_target')
@@ -360,7 +415,8 @@ def render_report(
     return '\n'.join(lines)
 
 
-def main(argv: list[str] | None = None) -> int:
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
+    """Parse the command line arguments."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--source', default='otlmow_template')
     parser.add_argument('--tests', default='UnitTests')
@@ -371,6 +427,19 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument(
         '--no-ratchet', action='store_true', help='do not compare against the previous cycle'
+    )
+    parser.add_argument(
+        '--no-history',
+        action='store_true',
+        help='do not append a row to the ratchet history (a CI run must not change it)',
+    )
+    parser.add_argument(
+        '--fail-on',
+        default='',
+        help=(
+            'comma separated gates that must pass for the run to succeed: '
+            f'{", ".join(sorted(GATES))}. Without it, every gate must pass.'
+        ),
     )
     parser.add_argument('--max-crap', type=float, default=DEFAULT_THRESHOLDS['max_crap'])
     parser.add_argument('--max-complexity', type=int, default=DEFAULT_THRESHOLDS['max_complexity'])
@@ -383,6 +452,18 @@ def main(argv: list[str] | None = None) -> int:
         default=DEFAULT_THRESHOLDS['coverage_branch_percent'],
     )
     args = parser.parse_args(argv)
+
+    unknown = sorted({gate.strip() for gate in args.fail_on.split(',') if gate.strip()} - set(GATES))
+    if unknown:
+        parser.error(f'unknown gate: {unknown[0]} (known gates: {", ".join(sorted(GATES))})')
+
+    return args
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = parse_args(argv)
+
+    enforced = [gate.strip() for gate in args.fail_on.split(',') if gate.strip()]
 
     thresholds = dict(DEFAULT_THRESHOLDS)
     thresholds['max_crap'] = args.max_crap
@@ -420,6 +501,9 @@ def main(argv: list[str] | None = None) -> int:
     if history and not args.no_ratchet:
         regressions = ratchet_violations(ruff['per_rule'], previous)
 
+    failed = failed_gates(metrics, thresholds, enforced)
+    all_met = not failed_gates(metrics, thresholds, list(GATES))
+
     commit = _run(['git', 'rev-parse', '--short', 'HEAD'])[1].strip() or 'unknown'
     snapshot = {
         'date': datetime.date.today().isoformat(),
@@ -427,6 +511,8 @@ def main(argv: list[str] | None = None) -> int:
         'commit': commit,
         'thresholds': thresholds,
         'metrics': metrics,
+        'enforced_gates': enforced,
+        'failed_gates': failed,
         'lead_target': crap_rows[0] if crap_rows else None,
         'hotspots': hotspots,
         'ruff_per_rule': ruff['per_rule'],
@@ -443,34 +529,18 @@ def main(argv: list[str] | None = None) -> int:
     with SNAPSHOT_FILE.open('w', encoding='utf-8') as handle:
         json.dump(snapshot, handle, indent=2)
 
-    result = (
-        'green'
-        if all(
-            [
-                metrics['ruff_issues'] <= thresholds['ruff_issues'],
-                metrics['ruff_format_files'] <= thresholds['ruff_format_files'],
-                metrics['mypy_errors'] <= thresholds['mypy_errors'],
-                metrics['coverage_percent'] >= thresholds['coverage_percent'],
-                metrics['coverage_branch_percent'] >= thresholds['coverage_branch_percent'],
-                metrics['max_crap'] <= thresholds['max_crap'],
-                metrics['max_complexity'] <= thresholds['max_complexity'],
-                metrics['bandit_high'] <= thresholds['bandit_high'],
-                metrics['dead_code'] <= thresholds['dead_code'],
-                not regressions,
-            ]
+    result = 'green' if all_met and not regressions else 'red'
+    if not args.no_history:
+        history.append(
+            {
+                'date': snapshot['date'],
+                'commit': commit,
+                'metrics': metrics,
+                'ruff_per_rule': ruff['per_rule'],
+                'result': result,
+            }
         )
-        else 'red'
-    )
-    history.append(
-        {
-            'date': snapshot['date'],
-            'commit': commit,
-            'metrics': metrics,
-            'ruff_per_rule': ruff['per_rule'],
-            'result': result,
-        }
-    )
-    write_history(history)
+        write_history(history)
 
     with REPORT_FILE.open('w', encoding='utf-8') as handle:
         handle.write(render_report(snapshot, history, regressions))
@@ -479,11 +549,18 @@ def main(argv: list[str] | None = None) -> int:
     print(f'wrote {SNAPSHOT_FILE}')
     for name, value in metrics.items():
         print(f'  {name}: {value}')
+    if failed:
+        print('failed gates:')
+        for gate in failed:
+            print(f'  {gate}')
     if regressions:
         print('ratchet regressions:')
         for item in regressions:
             print(f'  {item}')
-    return 0 if result == 'green' else 1
+
+    # with --fail-on only the named gates block the run, without it every gate does
+    blocked = bool(failed) if enforced else not all_met
+    return 1 if blocked or regressions else 0
 
 
 if __name__ == '__main__':

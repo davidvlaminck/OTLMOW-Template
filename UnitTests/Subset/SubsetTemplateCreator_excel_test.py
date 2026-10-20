@@ -3,7 +3,6 @@ from pathlib import Path
 
 import openpyxl
 import pytest
-
 from otlmow_template.SubsetTemplateCreator import SubsetTemplateCreator
 
 current_dir = Path(__file__).parent
@@ -20,20 +19,17 @@ model_directory_path = Path(__file__).parent.parent / 'TestModel'
 
 
 @pytest.mark.parametrize(
-    "index, dummy_data_rows, add_geometry, add_attribute_info, add_deprecated, generate_choice_list",
+    'index, dummy_data_rows, add_geometry, add_attribute_info, add_deprecated, generate_choice_list',
     [
-        (i, amount, geo, attr, dep, choice) for i, (amount, geo, attr, dep, choice) in enumerate(
-        product(
-            [0, 1, 2],
-            [True, False],
-            [True, False],
-            [True, False],
-            [True, False])
-    )
-    ]
+        (i, amount, geo, attr, dep, choice)
+        for i, (amount, geo, attr, dep, choice) in enumerate(
+            product([0, 1, 2], [True, False], [True, False], [True, False], [True, False])
+        )
+    ],
 )
-def test_generate_excel_template(index, dummy_data_rows, add_geometry, add_attribute_info,
-                               add_deprecated, generate_choice_list):
+def test_generate_excel_template(
+    index, dummy_data_rows, add_geometry, add_attribute_info, add_deprecated, generate_choice_list
+):
     # Arrange
     subset_path = current_dir / 'OTL_AllCasesTestClass.db'
     path_to_template_file = current_dir / f'OTL_AllCasesTestClass_{index}.xlsx'
@@ -48,9 +44,14 @@ def test_generate_excel_template(index, dummy_data_rows, add_geometry, add_attri
     # Act
     subset_tool = SubsetTemplateCreator()
     subset_tool.generate_template_from_subset(
-        subset_path=subset_path, template_file_path=path_to_template_file,
-        class_uris_filter=["https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#AnotherTestClass"],
-        model_directory=model_directory_path, **kwargs)
+        subset_path=subset_path,
+        template_file_path=path_to_template_file,
+        class_uris_filter=[
+            'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#AnotherTestClass'
+        ],
+        model_directory=model_directory_path,
+        **kwargs,
+    )
 
     # Assert
     # sourcery skip: no-conditionals-in-tests
@@ -90,11 +91,34 @@ def test_generate_excel_template(index, dummy_data_rows, add_geometry, add_attri
         'Extra notitie voor het object.',
         'Een verwijzing naar een postnummer uit het standaardbestek waar het object mee verband houdt. De notatie van het postnummer moet overeenkomen met de notatie die gebruikt is in de catalogi van standaardbestekken, bijvoorbeeld postnummer 0701.20404G.',
         'De levensduur in aantal maanden die theoretisch mag verwacht worden voor een object. Standaard eenheid: mo',
-        'Geeft de actuele stand in de levenscyclus van het object.']
-    expected_header_row = ['typeURI', 'assetId.identificator', 'assetId.toegekendDoor', 'bestekPostNummer[]',
-                           'datumOprichtingObject', 'deprecatedString', 'isActief', 'notitie',
-                           'standaardBestekPostNummer[]', 'theoretischeLevensduur', 'toestand']
-    expected_deprecated_header_row = [None, None, None, None, None, 'DEPRECATED', None, None, None, None, None]
+        'Geeft de actuele stand in de levenscyclus van het object.',
+    ]
+    expected_header_row = [
+        'typeURI',
+        'assetId.identificator',
+        'assetId.toegekendDoor',
+        'bestekPostNummer[]',
+        'datumOprichtingObject',
+        'deprecatedString',
+        'isActief',
+        'notitie',
+        'standaardBestekPostNummer[]',
+        'theoretischeLevensduur',
+        'toestand',
+    ]
+    expected_deprecated_header_row = [
+        None,
+        None,
+        None,
+        None,
+        None,
+        'DEPRECATED',
+        None,
+        None,
+        None,
+        None,
+        None,
+    ]
 
     expected_row_count = dummy_data_rows + 1
 
@@ -130,21 +154,18 @@ def test_generate_excel_template(index, dummy_data_rows, add_geometry, add_attri
 
 
 @pytest.mark.parametrize(
-    "index, dummy_data_rows, add_geometry, add_attribute_info, add_deprecated, generate_choice_list",
+    'index, dummy_data_rows, add_geometry, add_attribute_info, add_deprecated, generate_choice_list',
     [
-        (i, amount, geo, attr, dep, choice) for i, (amount, geo, attr, dep, choice) in enumerate(
-        product(
-            [0, 1, 2],
-            [True, False],
-            [True, False],
-            [True, False],
-            [True, False])
-    )
-    ]
+        (i, amount, geo, attr, dep, choice)
+        for i, (amount, geo, attr, dep, choice) in enumerate(
+            product([0, 1, 2], [True, False], [True, False], [True, False], [True, False])
+        )
+    ],
 )
 @pytest.mark.asyncio
-async def test_generate_excel_template_async(index, dummy_data_rows, add_geometry, add_attribute_info,
-                               add_deprecated, generate_choice_list):
+async def test_generate_excel_template_async(
+    index, dummy_data_rows, add_geometry, add_attribute_info, add_deprecated, generate_choice_list
+):
     # Arrange
     subset_path = current_dir / 'OTL_AllCasesTestClass.db'
     path_to_template_file = current_dir / f'OTL_AllCasesTestClass_{index}.xlsx'
@@ -159,9 +180,14 @@ async def test_generate_excel_template_async(index, dummy_data_rows, add_geometr
     # Act
     subset_tool = SubsetTemplateCreator()
     await subset_tool.generate_template_from_subset_async(
-        subset_path=subset_path, template_file_path=path_to_template_file,
-        class_uris_filter=["https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#AnotherTestClass"],
-        model_directory=model_directory_path, **kwargs)
+        subset_path=subset_path,
+        template_file_path=path_to_template_file,
+        class_uris_filter=[
+            'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#AnotherTestClass'
+        ],
+        model_directory=model_directory_path,
+        **kwargs,
+    )
 
     # Assert
     # sourcery skip: no-conditionals-in-tests
@@ -200,11 +226,34 @@ async def test_generate_excel_template_async(index, dummy_data_rows, add_geometr
         'Extra notitie voor het object.',
         'Een verwijzing naar een postnummer uit het standaardbestek waar het object mee verband houdt. De notatie van het postnummer moet overeenkomen met de notatie die gebruikt is in de catalogi van standaardbestekken, bijvoorbeeld postnummer 0701.20404G.',
         'De levensduur in aantal maanden die theoretisch mag verwacht worden voor een object. Standaard eenheid: mo',
-        'Geeft de actuele stand in de levenscyclus van het object.']
-    expected_header_row = ['typeURI', 'assetId.identificator', 'assetId.toegekendDoor', 'bestekPostNummer[]',
-                           'datumOprichtingObject', 'deprecatedString', 'isActief', 'notitie',
-                           'standaardBestekPostNummer[]', 'theoretischeLevensduur', 'toestand']
-    expected_deprecated_header_row = [None, None, None, None, None, 'DEPRECATED', None, None, None, None, None]
+        'Geeft de actuele stand in de levenscyclus van het object.',
+    ]
+    expected_header_row = [
+        'typeURI',
+        'assetId.identificator',
+        'assetId.toegekendDoor',
+        'bestekPostNummer[]',
+        'datumOprichtingObject',
+        'deprecatedString',
+        'isActief',
+        'notitie',
+        'standaardBestekPostNummer[]',
+        'theoretischeLevensduur',
+        'toestand',
+    ]
+    expected_deprecated_header_row = [
+        None,
+        None,
+        None,
+        None,
+        None,
+        'DEPRECATED',
+        None,
+        None,
+        None,
+        None,
+        None,
+    ]
 
     expected_row_count = dummy_data_rows + 1
 

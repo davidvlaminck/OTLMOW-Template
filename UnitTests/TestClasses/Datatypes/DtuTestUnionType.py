@@ -1,30 +1,33 @@
-# coding=utf-8
 from otlmow_model.BaseClasses.OTLObject import OTLAttribuut
-from UnitTests.TestClasses.Datatypes.KwantWrdTest import KwantWrdTest, KwantWrdTestWaarden
 from otlmow_model.BaseClasses.StringField import StringField
 from otlmow_model.BaseClasses.UnionTypeField import UnionTypeField
 from otlmow_model.BaseClasses.UnionWaarden import UnionWaarden
+from UnitTests.TestClasses.Datatypes.KwantWrdTest import KwantWrdTest, KwantWrdTestWaarden
 
 
 # Generated with OTLUnionDatatypeCreator. To modify: extend, do not edit
 class DtuTestUnionTypeWaarden(UnionWaarden):
     def __init__(self):
         UnionWaarden.__init__(self)
-        self._unionKwantWrd = OTLAttribuut(field=KwantWrdTest,
-                                           naam='unionKwantWrd',
-                                           label='Union kwantitatieve waarde',
-                                           objectUri='https://wegenenverkeer.data.vlaanderen.be/ns/implementatieelement#DtuTestUnionType.unionKwantWrd',
-                                           kardinaliteit_min='0',
-                                           definition='Kwantitatieve waarde van het test Union datatype',
-                                           owner=self)
+        self._unionKwantWrd = OTLAttribuut(
+            field=KwantWrdTest,
+            naam='unionKwantWrd',
+            label='Union kwantitatieve waarde',
+            objectUri='https://wegenenverkeer.data.vlaanderen.be/ns/implementatieelement#DtuTestUnionType.unionKwantWrd',
+            kardinaliteit_min='0',
+            definition='Kwantitatieve waarde van het test Union datatype',
+            owner=self,
+        )
 
-        self._unionString = OTLAttribuut(field=StringField,
-                                         naam='unionString',
-                                         label='Union tekstveld',
-                                         objectUri='https://wegenenverkeer.data.vlaanderen.be/ns/implementatieelement#DtuTestUnionType.unionString',
-                                         kardinaliteit_min='0',
-                                         definition='Vrij tekstveld van het test Union datatype',
-                                         owner=self)
+        self._unionString = OTLAttribuut(
+            field=StringField,
+            naam='unionString',
+            label='Union tekstveld',
+            objectUri='https://wegenenverkeer.data.vlaanderen.be/ns/implementatieelement#DtuTestUnionType.unionString',
+            kardinaliteit_min='0',
+            definition='Vrij tekstveld van het test Union datatype',
+            owner=self,
+        )
 
     @property
     def unionKwantWrd(self) -> KwantWrdTestWaarden:
@@ -52,6 +55,7 @@ class DtuTestUnionTypeWaarden(UnionWaarden):
 # Generated with OTLUnionDatatypeCreator. To modify: extend, do not edit
 class DtuTestUnionType(UnionTypeField):
     """Union datatype voor test doeleinden."""
+
     naam = 'DtuTestUnionType'
     label = 'Test UnionType'
     objectUri = 'https://wegenenverkeer.data.vlaanderen.be/ns/implementatieelement#DtuTestUnionType'
@@ -60,4 +64,3 @@ class DtuTestUnionType(UnionTypeField):
 
     def __str__(self):
         return UnionTypeField.__str__(self)
-

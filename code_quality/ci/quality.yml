@@ -1,12 +1,13 @@
 # Copy this file to .github/workflows/quality.yml to activate the gate.
+# In this repository it is already installed there: keep both files in sync.
 #
-# Rollout in two stages, otherwise the first run is red and the workflow gets
-# disabled on day two:
-#   1. ADVISORY   — keep `continue-on-error: true` on the lint/type steps for a
-#                   few cycles so the report is published but nothing blocks.
-#   2. ENFORCING  — remove `continue-on-error`. The ratchet (a lint count may not
-#                   increase) is enforced from the start; the absolute zero-issue
-#                   gate comes last, once the budget is actually zero.
+# The gate runs in two stages, so the first run is not red and the workflow does
+# not get disabled on day two:
+#   1. ADVISORY   — the gates with a known budget report but do not block
+#      (`continue-on-error: true`): lint, format and type check.
+#   2. ENFORCING  — remove `continue-on-error` from a step when its budget is
+#      zero. The ratchet (lint counts may not increase) and the gates named in
+#      `--fail-on` always block.
 #
 # The workflow runs on the lowest supported Python version as well, because type
 # and lint results differ per version.
@@ -23,13 +24,15 @@ on:
 
 jobs:
   quality:
-    name: Quality gate
+    name: Quality gate for Python 3.9
     timeout-minutes: 15
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
 
       - name: Install uv with Python 3.9
+        # The gate runs on the lowest supported Python version, because the type
+        # and lint results differ per version.
         uses: astral-sh/setup-uv@v7
         with:
           python-version: '3.9'
@@ -44,9 +47,22 @@ jobs:
         # mypy must stay < 2: mypy 2.x refuses to target Python 3.9, which is the
         # minimum version this package supports.
         # Note: `uv sync` removes tools that are not in the lock file, so install
-        # the quality tools explicitly instead of using uv sync.
+        # the quality tools explicitly instead of using `uv sync`.
         run: uv pip install ruff==0.17.0 "mypy<2" radon bandit vulture
 
+      - name: Tests and coverage
+        env:
+          COVERAGE_RCFILE: code_quality/coverage.cfg
+        run: |
+          uv run python -m pytest \
+            --cov=otlmow_template \
+            --cov-report=json:code_quality/reports/coverage.json \
+            --cov-fail-under=80 \
+            -q
+
+      # The steps below only make the findings visible in the log. The gates
+      # that block a merge are enforced by the `Quality gates` step, with the
+      # thresholds of code_quality/scripts/qa_report.py.
       - name: Lint
         continue-on-error: true
         run: uv run ruff check otlmow_template UnitTests code_quality/scripts
@@ -59,22 +75,6 @@ jobs:
         continue-on-error: true
         run: uv run mypy otlmow_template UnitTests code_quality/scripts
 
-      - name: Tests and coverage
-        env:
-          COVERAGE_RCFILE: code_quality/coverage.cfg
-        run: |
-          uv run python -m pytest \
-            --cov=otlmow_template \
-            --cov-report=term \
-            --cov-report=json:code_quality/reports/coverage.json \
-            --cov-fail-under=80 \
-            -q
-
-      - name: Complexity
-        # --fail-under makes radon exit 2; `-n C` only filters the output.
-        continue-on-error: true
-        run: uv run radon cc -s --fail-under 15 otlmow_template
-
       - name: Security
         continue-on-error: true
         run: uv run bandit -q -r otlmow_template
@@ -83,13 +83,16 @@ jobs:
         continue-on-error: true
         run: uv run vulture otlmow_template --min-confidence 80
 
-      - name: CRAP ranking and change hot spots
-        continue-on-error: true
-        run: uv run python code_quality/scripts/crap_scores.py --source otlmow_template --top 25
-
-      - name: QA report
-        continue-on-error: true
-        run: uv run python code_quality/scripts/qa_report.py --skip-tests
+      - name: Quality gates
+        # The gates that block a merge, on top of the ratchet that every run
+        # enforces: a lint count may never go up. The thresholds are the ones
+        # of code_quality/scripts/qa_report.py, so there is a single source.
+        # `--no-history`: a run on the CI must not change the ratchet history.
+        run: |
+          uv run python code_quality/scripts/qa_report.py \
+            --skip-tests \
+            --no-history \
+            --fail-on coverage,coverage-branch,crap,complexity,bandit,dead-code
 
       - name: Upload QA report
         if: always()

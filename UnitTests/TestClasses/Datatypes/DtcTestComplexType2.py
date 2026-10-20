@@ -1,28 +1,31 @@
-# coding=utf-8
-from otlmow_model.BaseClasses.OTLObject import OTLAttribuut
-from otlmow_model.BaseClasses.WaardenObject import WaardenObject
 from otlmow_model.BaseClasses.ComplexField import ComplexField
-from UnitTests.TestClasses.Datatypes.KwantWrdTest import KwantWrdTest, KwantWrdTestWaarden
+from otlmow_model.BaseClasses.OTLObject import OTLAttribuut
 from otlmow_model.BaseClasses.StringField import StringField
+from otlmow_model.BaseClasses.WaardenObject import WaardenObject
+from UnitTests.TestClasses.Datatypes.KwantWrdTest import KwantWrdTest, KwantWrdTestWaarden
 
 
 # Generated with OTLComplexDatatypeCreator. To modify: extend, do not edit
 class DtcTestComplexType2Waarden(WaardenObject):
     def __init__(self):
         WaardenObject.__init__(self)
-        self._testKwantWrd = OTLAttribuut(field=KwantWrdTest,
-                                          naam='testKwantWrd',
-                                          label='Test kwantitatieve waarde',
-                                          objectUri='https://wegenenverkeer.data.vlaanderen.be/ns/implementatieelement#DtcTestComplexType2.testKwantWrd',
-                                          definition='Test attribuut voor Kwantitatieve waarde in een complex datatype.',
-                                          owner=self)
+        self._testKwantWrd = OTLAttribuut(
+            field=KwantWrdTest,
+            naam='testKwantWrd',
+            label='Test kwantitatieve waarde',
+            objectUri='https://wegenenverkeer.data.vlaanderen.be/ns/implementatieelement#DtcTestComplexType2.testKwantWrd',
+            definition='Test attribuut voor Kwantitatieve waarde in een complex datatype.',
+            owner=self,
+        )
 
-        self._testStringField = OTLAttribuut(field=StringField,
-                                             naam='testStringField',
-                                             label='Test tekstveld',
-                                             objectUri='https://wegenenverkeer.data.vlaanderen.be/ns/implementatieelement#DtcTestComplexType2.testStringField',
-                                             definition='Test attribuut voor tekst in een complex datatype.',
-                                             owner=self)
+        self._testStringField = OTLAttribuut(
+            field=StringField,
+            naam='testStringField',
+            label='Test tekstveld',
+            objectUri='https://wegenenverkeer.data.vlaanderen.be/ns/implementatieelement#DtcTestComplexType2.testStringField',
+            definition='Test attribuut voor tekst in een complex datatype.',
+            owner=self,
+        )
 
     @property
     def testKwantWrd(self) -> KwantWrdTestWaarden:
@@ -46,12 +49,14 @@ class DtcTestComplexType2Waarden(WaardenObject):
 # Generated with OTLComplexDatatypeCreator. To modify: extend, do not edit
 class DtcTestComplexType2(ComplexField):
     """Test datatype voor een complexe waarde in een complexe waarde"""
+
     naam = 'DtcTestComplexType2'
     label = 'Test ComplexType2'
-    objectUri = 'https://wegenenverkeer.data.vlaanderen.be/ns/implementatieelement#DtcTestComplexType2'
+    objectUri = (
+        'https://wegenenverkeer.data.vlaanderen.be/ns/implementatieelement#DtcTestComplexType2'
+    )
     definition = 'Test datatype voor een complexe waarde in een complexe waarde'
     waardeObject = DtcTestComplexType2Waarden
 
     def __str__(self):
         return ComplexField.__str__(self)
-

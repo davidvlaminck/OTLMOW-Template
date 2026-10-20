@@ -1,7 +1,7 @@
-# coding=utf-8
-from otlmow_model.BaseClasses.OTLObject import OTLAttribuut
-from abc import abstractmethod, ABC
+from abc import ABC, abstractmethod
+
 from otlmow_model.BaseClasses.BooleanField import BooleanField
+from otlmow_model.BaseClasses.OTLObject import OTLAttribuut
 
 
 # Generated with OTLClassCreator. To modify: extend, do not edit
@@ -15,12 +15,14 @@ class AIMDBStatus(ABC):
     def __init__(self):
         super().__init__()
 
-        self._isActief = OTLAttribuut(field=BooleanField,
-                                      naam='isActief',
-                                      label='is actief',
-                                      objectUri='https://wegenenverkeer.data.vlaanderen.be/ns/implementatieelement#AIMDBStatus.isActief',
-                                      definition='Geeft aan of het object actief kan gebruikt worden of (zacht) verwijderd is uit het asset beheer systeem.',
-                                      owner=self)
+        self._isActief = OTLAttribuut(
+            field=BooleanField,
+            naam='isActief',
+            label='is actief',
+            objectUri='https://wegenenverkeer.data.vlaanderen.be/ns/implementatieelement#AIMDBStatus.isActief',
+            definition='Geeft aan of het object actief kan gebruikt worden of (zacht) verwijderd is uit het asset beheer systeem.',
+            owner=self,
+        )
 
     @property
     def isActief(self) -> bool:

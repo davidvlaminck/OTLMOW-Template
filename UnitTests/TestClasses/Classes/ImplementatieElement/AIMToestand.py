@@ -1,6 +1,6 @@
-# coding=utf-8
+from abc import ABC, abstractmethod
+
 from otlmow_model.BaseClasses.OTLObject import OTLAttribuut
-from abc import abstractmethod, ABC
 from UnitTests.TestClasses.Datatypes.KlAIMToestand import KlAIMToestand
 
 
@@ -15,12 +15,14 @@ class AIMToestand(ABC):
     def __init__(self):
         super().__init__()
 
-        self._toestand = OTLAttribuut(field=KlAIMToestand,
-                                      naam='toestand',
-                                      label='toestand',
-                                      objectUri='https://wegenenverkeer.data.vlaanderen.be/ns/implementatieelement#AIMToestand.toestand',
-                                      definition='Geeft de actuele stand in de levenscyclus van het object.',
-                                      owner=self)
+        self._toestand = OTLAttribuut(
+            field=KlAIMToestand,
+            naam='toestand',
+            label='toestand',
+            objectUri='https://wegenenverkeer.data.vlaanderen.be/ns/implementatieelement#AIMToestand.toestand',
+            definition='Geeft de actuele stand in de levenscyclus van het object.',
+            owner=self,
+        )
 
     @property
     def toestand(self) -> str:

@@ -95,7 +95,9 @@ def snapshot_workbook(
                     if column and column[0] is not None
                 }
             else:
-                headers = [str(value) if value is not None else '' for value in rows[0]] if rows else []
+                headers = (
+                    [str(value) if value is not None else '' for value in rows[0]] if rows else []
+                )
                 data = [[normalise_value(value) for value in row] for row in rows[1:]]
                 columns = {}
                 for index, header in enumerate(headers):

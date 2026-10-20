@@ -1,5 +1,6 @@
-# coding=utf-8
-from UnitTests.TestClasses.Classes.ImplementatieElement.NietDirectioneleRelatie import NietDirectioneleRelatie
+from UnitTests.TestClasses.Classes.ImplementatieElement.NietDirectioneleRelatie import (
+    NietDirectioneleRelatie,
+)
 
 
 # Generated with OTLClassCreator. To modify: extend, do not edit

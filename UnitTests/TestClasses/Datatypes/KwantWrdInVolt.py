@@ -1,31 +1,34 @@
-# coding=utf-8
-from otlmow_model.BaseClasses.OTLObject import OTLAttribuut
-from otlmow_model.BaseClasses.OTLField import OTLField
-from otlmow_model.BaseClasses.WaardenObject import WaardenObject
 from otlmow_model.BaseClasses.FloatOrDecimalField import FloatOrDecimalField
+from otlmow_model.BaseClasses.OTLField import OTLField
+from otlmow_model.BaseClasses.OTLObject import OTLAttribuut
 from otlmow_model.BaseClasses.StringField import StringField
+from otlmow_model.BaseClasses.WaardenObject import WaardenObject
 
 
 # Generated with OTLPrimitiveDatatypeCreator. To modify: extend, do not edit
 class KwantWrdInVoltWaarden(WaardenObject):
     def __init__(self):
         WaardenObject.__init__(self)
-        self._standaardEenheid = OTLAttribuut(field=StringField,
-                                              naam='standaardEenheid',
-                                              label='standaard eenheid',
-                                              objectUri='https://wegenenverkeer.data.vlaanderen.be/ns/implementatieelement#KwantWrdInVolt.standaardEenheid',
-                                              usagenote='"V"^^cdt:ucumunit',
-                                              readonly=True,
-                                              constraints='"V"^^cdt:ucumunit',
-                                              definition='De standaard eenheid bij dit datatype is uitgedrukt in Volt.',
-                                              owner=self)
+        self._standaardEenheid = OTLAttribuut(
+            field=StringField,
+            naam='standaardEenheid',
+            label='standaard eenheid',
+            objectUri='https://wegenenverkeer.data.vlaanderen.be/ns/implementatieelement#KwantWrdInVolt.standaardEenheid',
+            usagenote='"V"^^cdt:ucumunit',
+            readonly=True,
+            constraints='"V"^^cdt:ucumunit',
+            definition='De standaard eenheid bij dit datatype is uitgedrukt in Volt.',
+            owner=self,
+        )
 
-        self._waarde = OTLAttribuut(field=FloatOrDecimalField,
-                                    naam='waarde',
-                                    label='waarde',
-                                    objectUri='https://wegenenverkeer.data.vlaanderen.be/ns/implementatieelement#KwantWrdInVolt.waarde',
-                                    definition='Bevat een getal die bij het datatype hoort.',
-                                    owner=self)
+        self._waarde = OTLAttribuut(
+            field=FloatOrDecimalField,
+            naam='waarde',
+            label='waarde',
+            objectUri='https://wegenenverkeer.data.vlaanderen.be/ns/implementatieelement#KwantWrdInVolt.waarde',
+            definition='Bevat een getal die bij het datatype hoort.',
+            owner=self,
+        )
 
     @property
     def standaardEenheid(self) -> str:
@@ -45,6 +48,7 @@ class KwantWrdInVoltWaarden(WaardenObject):
 # Generated with OTLPrimitiveDatatypeCreator. To modify: extend, do not edit
 class KwantWrdInVolt(OTLField):
     """Een kwantitatieve waarde die een getal in volt uitdrukt."""
+
     naam = 'KwantWrdInVolt'
     label = 'Kwantitatieve waarde in volt'
     objectUri = 'https://wegenenverkeer.data.vlaanderen.be/ns/implementatieelement#KwantWrdInVolt'
@@ -54,4 +58,3 @@ class KwantWrdInVolt(OTLField):
 
     def __str__(self):
         return OTLField.__str__(self)
-

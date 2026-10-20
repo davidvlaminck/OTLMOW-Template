@@ -1,10 +1,12 @@
-# coding=utf-8
-from otlmow_model.BaseClasses.OTLObject import OTLAttribuut
 from abc import abstractmethod
-from UnitTests.TestClasses.Classes.ImplementatieElement.AIMDBStatus import AIMDBStatus
+
 from otlmow_model.BaseClasses.DavieRelatieAttributes import DavieRelatieAttributes
-from otlmow_model.BaseClasses.OTLObject import OTLObject
-from UnitTests.TestClasses.Datatypes.DtcIdentificator import DtcIdentificator, DtcIdentificatorWaarden
+from otlmow_model.BaseClasses.OTLObject import OTLAttribuut, OTLObject
+from UnitTests.TestClasses.Classes.ImplementatieElement.AIMDBStatus import AIMDBStatus
+from UnitTests.TestClasses.Datatypes.DtcIdentificator import (
+    DtcIdentificator,
+    DtcIdentificatorWaarden,
+)
 
 
 # Generated with OTLClassCreator. To modify: extend, do not edit
@@ -18,26 +20,32 @@ class RelatieObject(AIMDBStatus, DavieRelatieAttributes, OTLObject):
     def __init__(self):
         super().__init__()
 
-        self._assetId = OTLAttribuut(field=DtcIdentificator,
-                                     naam='assetId',
-                                     label='asset-id',
-                                     objectUri='https://wegenenverkeer.data.vlaanderen.be/ns/implementatieelement#RelatieObject.assetId',
-                                     definition='Unieke identificatie van de asset zoals toegekend door de assetbeheerder of n.a.v. eerste aanlevering door de leverancier.',
-                                     owner=self)
+        self._assetId = OTLAttribuut(
+            field=DtcIdentificator,
+            naam='assetId',
+            label='asset-id',
+            objectUri='https://wegenenverkeer.data.vlaanderen.be/ns/implementatieelement#RelatieObject.assetId',
+            definition='Unieke identificatie van de asset zoals toegekend door de assetbeheerder of n.a.v. eerste aanlevering door de leverancier.',
+            owner=self,
+        )
 
-        self._bronAssetId = OTLAttribuut(field=DtcIdentificator,
-                                         naam='bronAssetId',
-                                         label='asset-id bron-asset',
-                                         objectUri='https://wegenenverkeer.data.vlaanderen.be/ns/implementatieelement#RelatieObject.bronAssetId',
-                                         definition='De identificator van het object waaruit de relatie vertrekt.',
-                                         owner=self)
+        self._bronAssetId = OTLAttribuut(
+            field=DtcIdentificator,
+            naam='bronAssetId',
+            label='asset-id bron-asset',
+            objectUri='https://wegenenverkeer.data.vlaanderen.be/ns/implementatieelement#RelatieObject.bronAssetId',
+            definition='De identificator van het object waaruit de relatie vertrekt.',
+            owner=self,
+        )
 
-        self._doelAssetId = OTLAttribuut(field=DtcIdentificator,
-                                         naam='doelAssetId',
-                                         label='asset-id doel-asset',
-                                         objectUri='https://wegenenverkeer.data.vlaanderen.be/ns/implementatieelement#RelatieObject.doelAssetId',
-                                         definition='De identificator van het object waarin de relatie toekomt.',
-                                         owner=self)
+        self._doelAssetId = OTLAttribuut(
+            field=DtcIdentificator,
+            naam='doelAssetId',
+            label='asset-id doel-asset',
+            objectUri='https://wegenenverkeer.data.vlaanderen.be/ns/implementatieelement#RelatieObject.doelAssetId',
+            definition='De identificator van het object waarin de relatie toekomt.',
+            owner=self,
+        )
 
     @property
     def assetId(self) -> DtcIdentificatorWaarden:

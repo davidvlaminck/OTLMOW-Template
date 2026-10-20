@@ -1,31 +1,34 @@
-# coding=utf-8
-from otlmow_model.BaseClasses.OTLObject import OTLAttribuut
-from otlmow_model.BaseClasses.OTLField import OTLField
-from otlmow_model.BaseClasses.WaardenObject import WaardenObject
 from otlmow_model.BaseClasses.NonNegIntegerField import NonNegIntegerField
+from otlmow_model.BaseClasses.OTLField import OTLField
+from otlmow_model.BaseClasses.OTLObject import OTLAttribuut
 from otlmow_model.BaseClasses.StringField import StringField
+from otlmow_model.BaseClasses.WaardenObject import WaardenObject
 
 
 # Generated with OTLPrimitiveDatatypeCreator. To modify: extend, do not edit
 class KwantWrdInMaandWaarden(WaardenObject):
     def __init__(self):
         WaardenObject.__init__(self)
-        self._standaardEenheid = OTLAttribuut(field=StringField,
-                                              naam='standaardEenheid',
-                                              label='standaard eenheid',
-                                              objectUri='https://wegenenverkeer.data.vlaanderen.be/ns/implementatieelement#KwantWrdInMaand.standaardEenheid',
-                                              usagenote='"mo"^^cdt:ucumunit',
-                                              readonly=True,
-                                              constraints='"mo"^^cdt:ucumunit',
-                                              definition='De standaard eenheid bij dit datatype is uitgedrukt in maand.',
-                                              owner=self)
+        self._standaardEenheid = OTLAttribuut(
+            field=StringField,
+            naam='standaardEenheid',
+            label='standaard eenheid',
+            objectUri='https://wegenenverkeer.data.vlaanderen.be/ns/implementatieelement#KwantWrdInMaand.standaardEenheid',
+            usagenote='"mo"^^cdt:ucumunit',
+            readonly=True,
+            constraints='"mo"^^cdt:ucumunit',
+            definition='De standaard eenheid bij dit datatype is uitgedrukt in maand.',
+            owner=self,
+        )
 
-        self._waarde = OTLAttribuut(field=NonNegIntegerField,
-                                    naam='waarde',
-                                    label='waarde',
-                                    objectUri='https://wegenenverkeer.data.vlaanderen.be/ns/implementatieelement#KwantWrdInMaand.waarde',
-                                    definition='Bevat een getal die bij het datatype hoort.',
-                                    owner=self)
+        self._waarde = OTLAttribuut(
+            field=NonNegIntegerField,
+            naam='waarde',
+            label='waarde',
+            objectUri='https://wegenenverkeer.data.vlaanderen.be/ns/implementatieelement#KwantWrdInMaand.waarde',
+            definition='Bevat een getal die bij het datatype hoort.',
+            owner=self,
+        )
 
     @property
     def standaardEenheid(self) -> str:
@@ -45,6 +48,7 @@ class KwantWrdInMaandWaarden(WaardenObject):
 # Generated with OTLPrimitiveDatatypeCreator. To modify: extend, do not edit
 class KwantWrdInMaand(OTLField):
     """Een kwantitatieve waarde die een getal in aantal maanden uitdrukt."""
+
     naam = 'KwantWrdInMaand'
     label = 'Kwantitatieve waarde in maand'
     objectUri = 'https://wegenenverkeer.data.vlaanderen.be/ns/implementatieelement#KwantWrdInMaand'
@@ -54,4 +58,3 @@ class KwantWrdInMaand(OTLField):
 
     def __str__(self):
         return OTLField.__str__(self)
-

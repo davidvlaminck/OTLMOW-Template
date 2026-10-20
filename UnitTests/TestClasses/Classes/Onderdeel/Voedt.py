@@ -1,6 +1,7 @@
-# coding=utf-8
 from otlmow_model.BaseClasses.OTLObject import OTLAttribuut
-from UnitTests.TestClasses.Classes.ImplementatieElement.DirectioneleRelatie import DirectioneleRelatie
+from UnitTests.TestClasses.Classes.ImplementatieElement.DirectioneleRelatie import (
+    DirectioneleRelatie,
+)
 from UnitTests.TestClasses.Datatypes.KwantWrdInVolt import KwantWrdInVolt, KwantWrdInVoltWaarden
 
 
@@ -14,21 +15,25 @@ class Voedt(DirectioneleRelatie):
     def __init__(self):
         super().__init__()
 
-        self._aansluitspanning = OTLAttribuut(field=KwantWrdInVolt,
-                                              naam='aansluitspanning',
-                                              label='aansluitspanning',
-                                              objectUri='https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Voedt.aansluitspanning',
-                                              definition='Spanning van de aansluiting, dit wordt enkel ingevuld op voedingsrelaties voorbij de hoofdschakelaar.',
-                                              owner=self)
+        self._aansluitspanning = OTLAttribuut(
+            field=KwantWrdInVolt,
+            naam='aansluitspanning',
+            label='aansluitspanning',
+            objectUri='https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Voedt.aansluitspanning',
+            definition='Spanning van de aansluiting, dit wordt enkel ingevuld op voedingsrelaties voorbij de hoofdschakelaar.',
+            owner=self,
+        )
 
-        self._aansluitvermogen = OTLAttribuut(field=KwantWrdInVolt,
-                                              naam='aansluitvermogen',
-                                              label='aansluitvermogen',
-                                              objectUri='https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Voedt.aansluitvermogen',
-                                              usagenote='Attribuut uit gebruik sinds versie 2.1.0 ',
-                                              deprecated_version='2.1.0',
-                                              definition='Vermogen van de aansluiting, dit wordt enkel ingevuld op voedingsrelaties voorbij de hoofdschakelaar.',
-                                              owner=self)
+        self._aansluitvermogen = OTLAttribuut(
+            field=KwantWrdInVolt,
+            naam='aansluitvermogen',
+            label='aansluitvermogen',
+            objectUri='https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#Voedt.aansluitvermogen',
+            usagenote='Attribuut uit gebruik sinds versie 2.1.0 ',
+            deprecated_version='2.1.0',
+            definition='Vermogen van de aansluiting, dit wordt enkel ingevuld op voedingsrelaties voorbij de hoofdschakelaar.',
+            owner=self,
+        )
 
     @property
     def aansluitspanning(self) -> KwantWrdInVoltWaarden:

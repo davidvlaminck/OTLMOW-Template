@@ -1,5 +1,5 @@
-# coding=utf-8
 from abc import abstractmethod
+
 from UnitTests.TestClasses.Classes.ImplementatieElement.RelatieObject import RelatieObject
 
 
@@ -7,7 +7,9 @@ from UnitTests.TestClasses.Classes.ImplementatieElement.RelatieObject import Rel
 class DirectioneleRelatie(RelatieObject):
     """Een abstracte die relaties groepeert waarbij de richting semantisch gedefinieerd is."""
 
-    typeURI = 'https://wegenenverkeer.data.vlaanderen.be/ns/implementatieelement#DirectioneleRelatie'
+    typeURI = (
+        'https://wegenenverkeer.data.vlaanderen.be/ns/implementatieelement#DirectioneleRelatie'
+    )
     """De URI van het object volgens https://www.w3.org/2001/XMLSchema#anyURI."""
 
     @abstractmethod

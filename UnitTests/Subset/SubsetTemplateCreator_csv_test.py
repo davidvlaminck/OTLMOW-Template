@@ -3,7 +3,6 @@ from itertools import product
 from pathlib import Path
 
 import pytest
-
 from otlmow_template.SubsetTemplateCreator import SubsetTemplateCreator
 
 current_dir = Path(__file__).parent
@@ -11,20 +10,17 @@ model_directory_path = Path(__file__).parent.parent / 'TestModel'
 
 
 @pytest.mark.parametrize(
-    "index, dummy_data_rows, add_geometry, add_attribute_info, add_deprecated, split",
+    'index, dummy_data_rows, add_geometry, add_attribute_info, add_deprecated, split',
     [
-        (i, amount, geo, attr, dep, split) for i, (amount, geo, attr, dep, split) in enumerate(
-            product(
-                [0, 1, 2],
-                [True, False],
-                [True, False],
-                [True, False],
-                [True, False])
-    )
-    ]
+        (i, amount, geo, attr, dep, split)
+        for i, (amount, geo, attr, dep, split) in enumerate(
+            product([0, 1, 2], [True, False], [True, False], [True, False], [True, False])
+        )
+    ],
 )
-def test_generate_csv_template(index, dummy_data_rows, add_geometry, add_attribute_info,
-                               add_deprecated, split):
+def test_generate_csv_template(
+    index, dummy_data_rows, add_geometry, add_attribute_info, add_deprecated, split
+):
     # Arrange
     subset_path = current_dir / 'OTL_AllCasesTestClass.db'
     path_to_template_file = current_dir / f'OTL_all_cases_{index}.csv'
@@ -38,16 +34,24 @@ def test_generate_csv_template(index, dummy_data_rows, add_geometry, add_attribu
     # Act
     subset_tool = SubsetTemplateCreator()
     subset_tool.generate_template_from_subset(
-        subset_path=subset_path, template_file_path=path_to_template_file, split_per_type=split,
-        class_uris_filter=["https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#AnotherTestClass"],
-        model_directory=model_directory_path, **kwargs)
+        subset_path=subset_path,
+        template_file_path=path_to_template_file,
+        split_per_type=split,
+        class_uris_filter=[
+            'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#AnotherTestClass'
+        ],
+        model_directory=model_directory_path,
+        **kwargs,
+    )
 
     # sourcery skip: no-conditionals-in-tests
     if split:
-        path_to_template_file = current_dir / f'OTL_all_cases_{index}_onderdeel_AnotherTestClass.csv'
+        path_to_template_file = (
+            current_dir / f'OTL_all_cases_{index}_onderdeel_AnotherTestClass.csv'
+        )
 
     # Assert
-    with open(path_to_template_file, encoding='utf-8', newline='\n') as output_file:
+    with path_to_template_file.open(encoding='utf-8', newline='\n') as output_file:
         output_reader = csv.reader(output_file, delimiter=';')
         output_rows = list(output_reader)
 
@@ -62,10 +66,21 @@ def test_generate_csv_template(index, dummy_data_rows, add_geometry, add_attribu
         'Extra notitie voor het object.',
         'Een verwijzing naar een postnummer uit het standaardbestek waar het object mee verband houdt. De notatie van het postnummer moet overeenkomen met de notatie die gebruikt is in de catalogi van standaardbestekken, bijvoorbeeld postnummer 0701.20404G.',
         'De levensduur in aantal maanden die theoretisch mag verwacht worden voor een object. Standaard eenheid: mo',
-        'Geeft de actuele stand in de levenscyclus van het object.']
-    expected_header_row = ['typeURI', 'assetId.identificator', 'assetId.toegekendDoor', 'bestekPostNummer[]',
-                           'datumOprichtingObject', 'deprecatedString', 'isActief', 'notitie',
-                           'standaardBestekPostNummer[]', 'theoretischeLevensduur', 'toestand']
+        'Geeft de actuele stand in de levenscyclus van het object.',
+    ]
+    expected_header_row = [
+        'typeURI',
+        'assetId.identificator',
+        'assetId.toegekendDoor',
+        'bestekPostNummer[]',
+        'datumOprichtingObject',
+        'deprecatedString',
+        'isActief',
+        'notitie',
+        'standaardBestekPostNummer[]',
+        'theoretischeLevensduur',
+        'toestand',
+    ]
     expected_deprecated_header_row = ['', '', '', '', '', 'DEPRECATED', '', '', '', '', '']
 
     expected_row_count = dummy_data_rows + 1
@@ -80,7 +95,6 @@ def test_generate_csv_template(index, dummy_data_rows, add_geometry, add_attribu
 
     header_index = 0
     deprecated_index = 0
-
 
     if add_attribute_info:
         assert output_rows[0] == expected_attribute_info_row
@@ -104,21 +118,18 @@ def test_generate_csv_template(index, dummy_data_rows, add_geometry, add_attribu
 
 
 @pytest.mark.parametrize(
-    "index, dummy_data_rows, add_geometry, add_attribute_info, add_deprecated, split",
+    'index, dummy_data_rows, add_geometry, add_attribute_info, add_deprecated, split',
     [
-        (i, amount, geo, attr, dep, split) for i, (amount, geo, attr, dep, split) in enumerate(
-        product(
-            [0, 1, 2],
-            [True, False],
-            [True, False],
-            [True, False],
-            [True, False])
-    )
-    ]
+        (i, amount, geo, attr, dep, split)
+        for i, (amount, geo, attr, dep, split) in enumerate(
+            product([0, 1, 2], [True, False], [True, False], [True, False], [True, False])
+        )
+    ],
 )
 @pytest.mark.asyncio
-async def test_generate_csv_template_async(index, dummy_data_rows, add_geometry, add_attribute_info,
-                               add_deprecated, split):
+async def test_generate_csv_template_async(
+    index, dummy_data_rows, add_geometry, add_attribute_info, add_deprecated, split
+):
     # Arrange
     subset_path = current_dir / 'OTL_AllCasesTestClass.db'
     path_to_template_file = current_dir / f'OTL_all_cases_async_{index}.csv'
@@ -132,16 +143,24 @@ async def test_generate_csv_template_async(index, dummy_data_rows, add_geometry,
     # Act
     subset_tool = SubsetTemplateCreator()
     await subset_tool.generate_template_from_subset_async(
-        subset_path=subset_path, template_file_path=path_to_template_file, split_per_type=split,
-        class_uris_filter=["https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#AnotherTestClass"],
-        model_directory=model_directory_path, **kwargs)
+        subset_path=subset_path,
+        template_file_path=path_to_template_file,
+        split_per_type=split,
+        class_uris_filter=[
+            'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#AnotherTestClass'
+        ],
+        model_directory=model_directory_path,
+        **kwargs,
+    )
 
     # sourcery skip: no-conditionals-in-tests
     if split:
-        path_to_template_file = current_dir / f'OTL_all_cases_async_{index}_onderdeel_AnotherTestClass.csv'
+        path_to_template_file = (
+            current_dir / f'OTL_all_cases_async_{index}_onderdeel_AnotherTestClass.csv'
+        )
 
     # Assert
-    with open(path_to_template_file, encoding='utf-8', newline='\n') as output_file:
+    with path_to_template_file.open(encoding='utf-8', newline='\n') as output_file:
         output_reader = csv.reader(output_file, delimiter=';')
         output_rows = list(output_reader)
 
@@ -156,10 +175,21 @@ async def test_generate_csv_template_async(index, dummy_data_rows, add_geometry,
         'Extra notitie voor het object.',
         'Een verwijzing naar een postnummer uit het standaardbestek waar het object mee verband houdt. De notatie van het postnummer moet overeenkomen met de notatie die gebruikt is in de catalogi van standaardbestekken, bijvoorbeeld postnummer 0701.20404G.',
         'De levensduur in aantal maanden die theoretisch mag verwacht worden voor een object. Standaard eenheid: mo',
-        'Geeft de actuele stand in de levenscyclus van het object.']
-    expected_header_row = ['typeURI', 'assetId.identificator', 'assetId.toegekendDoor', 'bestekPostNummer[]',
-                           'datumOprichtingObject', 'deprecatedString', 'isActief', 'notitie',
-                           'standaardBestekPostNummer[]', 'theoretischeLevensduur', 'toestand']
+        'Geeft de actuele stand in de levenscyclus van het object.',
+    ]
+    expected_header_row = [
+        'typeURI',
+        'assetId.identificator',
+        'assetId.toegekendDoor',
+        'bestekPostNummer[]',
+        'datumOprichtingObject',
+        'deprecatedString',
+        'isActief',
+        'notitie',
+        'standaardBestekPostNummer[]',
+        'theoretischeLevensduur',
+        'toestand',
+    ]
     expected_deprecated_header_row = ['', '', '', '', '', 'DEPRECATED', '', '', '', '', '']
 
     expected_row_count = dummy_data_rows + 1
