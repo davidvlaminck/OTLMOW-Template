@@ -212,6 +212,7 @@ Every command below was executed against this repository; the exit codes are rea
 | `radon cc -j <src>` + the `max complexity` row of the QA report | complexity ceiling | 1 |
 | `bandit -q -r <src>` | security findings | 1 |
 | `vulture <src> --min-confidence 80` | dead code | 1 |
+| `qa_report.py --fail-on <gates>` | the named gates **and the ratchet** | 1 |
 
 The quality tooling in `code_quality/scripts/` is linted and type-checked by the
 same gate: a gate that does not check itself is not a gate.
@@ -408,10 +409,10 @@ CRAP = complexity² × (1 − coverage/100)³ + complexity
 | 0 % | CRAP = complexity² + complexity |
 
 **At high coverage CRAP degenerates into raw complexity.** In this repository
-coverage is 91 %, so CRAP is a rescaled complexity score. Three consequences:
+coverage is 99 %, so CRAP is a rescaled complexity score. Three consequences:
 
 - Adding tests will not move the metric for well-covered code. Target complexity.
-- The absolute threshold (≤ 10) is only meaningful for weakly covered code. Read the
+- The absolute threshold (≤ 6 here) is only meaningful for weakly covered code. Read the
   CRAP column *together with* the complexity and coverage columns, never alone.
 - A function can be "improved" by splitting it into ten small ones. That is metric
   gaming, not a refactor: require the behaviour to stay identical and the tests to
@@ -442,7 +443,7 @@ for one file than for many), skips class-level blocks, and reports the ranking:
 ```
 | CRAP | Complexity | Coverage | Function | Location |
 |---:|---:|---:|---|---|
-| 35.6 | 35 | 91.9 % | `alter_excel_sheet` | `otlmow_template/SubsetTemplateCreator.py:491` |
+| 5.0 | 5 | 100.0 % | `add_choice_list_validation` | `otlmow_template/SubsetTemplateCreator.py:818` |
 ```
 
 ### 9.5 Change hot spots — complexity alone picks the wrong target
@@ -454,7 +455,7 @@ month. The script combines git churn with complexity:
 ```
 | Score | Commits | Lines changed | Max complexity | File |
 |---:|---:|---:|---:|---|
-| 3780 | 7 | 108 | 35 | `otlmow_template/SubsetTemplateCreator.py` |
+| 540 | 7 | 108 | 5 | `otlmow_template/SubsetTemplateCreator.py` |
 ```
 
 Selection rule for the lead target:
@@ -617,24 +618,57 @@ row to `reports/qa-history.json`.
   reviewable.
 - `reports/` holds generated artefacts: keep `qa.json` if you want the history in
   git, and ignore the rest.
+- `--skip-tests` reuses the existing coverage report, `--no-history` keeps the
+  ratchet history untouched (for a run on the CI) and `--fail-on <gates>` limits
+  the gates that block the run — see §16.
 
-The report contains: the threshold table, the lead refactor target, the hot spots,
-the per-rule lint breakdown and the cycle history.
+The report contains: the threshold table, the enforced gates, the lead refactor
+target, the hot spots, the per-rule lint breakdown and the cycle history.
 
 ---
 
 ## 16. CI enforcement
 
-Copy `ci/quality.yml` to `.github/workflows/quality.yml`.
+Copy `ci/quality.yml` to `.github/workflows/quality.yml`. In this repository the
+gate is installed: `.github/workflows/quality.yml` runs on every push and pull
+request, and `ci/quality.yml` is the template of that file — keep the two in sync.
 
 **Roll it out in two stages**, otherwise the first run is red and the workflow gets
 disabled on day two:
 
-1. **Advisory** — `continue-on-error: true`, so the report is published but nothing
-   blocks. Let it run for a few cycles.
-2. **Enforcing** — remove `continue-on-error`, keep the ratchet check (lint counts
-   may not increase). The absolute zero-issue gate comes last, once the budget is
-   actually zero.
+1. **Advisory** — the gates with a known budget report but do not block
+   (`continue-on-error: true`): lint, format check, type check. They become
+   blocking when their budget is zero, one rule at a time: add the gate to the
+   `--fail-on` list below.
+2. **Enforcing** — the gates that are green today block the merge, and so does the
+   ratchet (lint counts may not increase). The absolute zero-issue gate comes
+   last, once the budget is actually zero.
+
+The individual `ruff`/`mypy`/`bandit`/`vulture` steps only make the findings
+visible in the log; the thresholds that decide whether a merge is blocked live in
+`DEFAULT_THRESHOLDS` of `qa_report.py`, so the workflow and the report can never
+disagree.
+
+Which gates block is decided in one place, in the script:
+
+```yaml
+- name: Quality gates
+  run: |
+    uv run python code_quality/scripts/qa_report.py \
+      --skip-tests \
+      --no-history \
+      --fail-on coverage,coverage-branch,crap,complexity,bandit,dead-code
+```
+
+- `--fail-on <gates>` — the comma separated gates that must pass; without it,
+  *every* gate must pass. The thresholds stay in `DEFAULT_THRESHOLDS` of the
+  script, so the workflow and the report can never disagree.
+- `--skip-tests` — reuse the coverage report of the test step instead of running
+  the suite twice.
+- `--no-history` — a run on the CI must not append a row to the ratchet history;
+  the history is the audit trail of the real cycles.
+
+The ratchet is enforced by every run, with or without `--fail-on`.
 
 Notes:
 
@@ -745,13 +779,17 @@ behaviour changed.
    writer, the object generation and the relation builder were split into
    helpers; the package has no function above a complexity of 5 any more, and
    the CRAP gate was tightened from 10 to 6.
-2. The 12-argument public methods — introduce a small configuration object
+2. ~~The CI gate~~ — done. `.github/workflows/quality.yml` runs on every push and
+   pull request: the coverage, CRAP, complexity, security and dead-code gates
+   and the ratchet block a merge, the lint, format and type budgets are
+   reported (§16).
+3. The 12-argument public methods — introduce a small configuration object
    (`TemplateOptions`) instead of growing the parameter list; keep the old signature
    working as a thin wrapper so the published API does not break.
-3. mypy stage 1 (18 errors) → stage 2 (77) → stage 3 `strict` (81).
-4. `ruff format` over the package and the real tests — **as its own commit**.
+4. mypy stage 1 (18 errors) → stage 2 (77) → stage 3 `strict` (81).
+5. `ruff format` over the package and the real tests — **as its own commit**.
    31 files are waiting for it.
-5. The remaining ruff findings, per rule, as separate commits.
+6. The remaining ruff findings, per rule, as separate commits.
 
 ### What the last cycle deliberately left alone
 
@@ -764,6 +802,9 @@ behaviour changed.
   one-line change, but it changes what a caller sees in its logs.
 - The formatting debt of the 31 files (plan item 4) and the mypy stages
   (plan item 3): separate commits, by design (§11.2, §11.3).
+- The lint, format and type budgets of 171, 31 and 18 findings: the CI reports
+  them but does not block on them yet (§16). Each of them becomes blocking when
+  its budget reaches zero.
 
 ---
 
@@ -777,7 +818,7 @@ The bundle is designed to be copied. This section is the checklist for doing tha
 | File | Why it is portable |
 |---|---|
 | `code_quality/scripts/crap_scores.py` | every path is derived from `__file__`; the package, the coverage report and the churn window are CLI arguments. Falls back to `uvx radon` when radon is not installed. |
-| `code_quality/scripts/qa_report.py` | same; the project name in the report title is read from `pyproject.toml`. |
+| `code_quality/scripts/qa_report.py` | same; the project name in the report title is read from `pyproject.toml`. The thresholds in `DEFAULT_THRESHOLDS` are the ones of the repository it was written for — every one of them has a CLI flag (`--max-crap`, `--max-complexity`, `--coverage-min`, `--coverage-branch-min`), or you edit the constant. |
 | `code_quality/PY-ANTI-PATTERNS.md` | documentation only, no repository specifics. |
 
 ### Copy and edit these values
@@ -785,8 +826,8 @@ The bundle is designed to be copied. This section is the checklist for doing tha
 | File | What to change |
 |---|---|
 | `code_quality/coverage.cfg` | `source = <package>` and the `omit` list (drop the vendored-model entry if there is none). |
-| `code_quality/ci/quality.yml` | the four path arguments (`otlmow_template`, `UnitTests`), the Python version, and the tool pins (`ruff==…`, `mypy<2`). |
-| `code_quality/README.md` | §4.1/§6 config blocks; delete §18 (the measured baseline) and write your own. |
+| `code_quality/ci/quality.yml` | the four path arguments (`otlmow_template`, `UnitTests`), the Python version, the tool pins (`ruff==…`, `mypy<2`) and the list of gates that block the merge in the `--fail-on` step. |
+| `code_quality/README.md` | §4.1/§6 config blocks; delete §18 (the measured baseline) and §20 (the test analysis of this repository) and write your own. |
 | `pyproject.toml` | `[tool.ruff*]`, `[tool.mypy]`: the `src`, `extend-exclude` and `per-file-ignores` paths. |
 
 ### Do not copy
@@ -819,7 +860,7 @@ close the gaps. It is the evidence behind the order of work in §18.3.
 | Gap | Evidence | Consequence |
 |---|---|---|
 | **The generated template is not reproducible.** The dummy values come from `random` inside `otlmow_model`, the sheet and column order depend on the order in which the parallel generation finishes, and the model picks a random branch of a union type. | Two runs of the same input produce different workbooks — different values, different column order, different union columns. | No golden-file test was possible, so a refactor could change the whole template without a single test failing. |
-| **The asynchronous implementation was barely tested.** It is a copy of the synchronous one. | `ignore_relations`, `abbreviate_excel_sheettitles`, `add_deprecated`, `add_attribute_info`, `filter_attributes_by_subset` and `generate_choice_list` were never exercised asynchronously; the relation branch of the async path (lines 299‑303) was unreachable in the suite. | The two copies could drift apart silently. The async one would have produced a template without relations. |
+| **The asynchronous implementation was barely tested.** It is a copy of the synchronous one. | `ignore_relations`, `abbreviate_excel_sheettitles`, `add_deprecated`, `add_attribute_info`, `filter_attributes_by_subset` and `generate_choice_list` were never exercised asynchronously; the relation branch of the async path was unreachable in the suite. | The two copies could drift apart silently. The async one would have produced a template without relations. |
 | **The error and guard paths were untested.** | 41 statements and 48 branches were never executed, including every `raise` that guards a bad input and every path that swallows a problem. | A changed guard, a changed message or a swallowed defect was invisible. The swallowing paths are the dangerous ones: they turn a defect into a template that looks fine. |
 | **Coverage was measured on lines only.** | 91.1 % line coverage but only **78.2 %** branch coverage. | The gate would have passed on the comfortable number. |
 | **The assertions were shallow.** | Most assertions check a header list or that a file exists (`assert excel_path.exists()`); nothing verified which cells are filled, which data validations are attached or what the choice lists contain. | The most user-visible parts of the template — the choice lists and the dropdown validations — were not verified at all. |
