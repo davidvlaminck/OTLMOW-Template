@@ -168,3 +168,64 @@ def test_an_empty_value_gets_an_empty_value_first():
 
     assert SubsetTemplateCreator.get_standard_unit(attribute) is None
     assert attribute.waarde is not None
+
+
+def test_report_progress_with_not_done():
+    SubsetTemplateCreator.report_progress(done=[1], not_done=[2, 3])
+
+
+def test_report_progress_empty():
+    SubsetTemplateCreator.report_progress(done=[1], not_done=[])
+
+
+def test_generate_object_from_oslo_class_with_none_instance():
+    from otlmow_template.SubsetTemplateCreator import SubsetTemplateCreator
+    from otlmow_modelbuilder.OSLOCollector import OSLOCollector
+    from pathlib import Path
+
+    BASE_DIR = Path('/home/davidlinux/PycharmProjects/OTLMOW-Template')
+    current_dir = BASE_DIR / 'UnitTests' / 'Subset'
+    model_directory_path = BASE_DIR / 'UnitTests' / 'TestModel'
+
+    collector = SubsetTemplateCreator._load_collector_from_subset_path(
+        subset_path=current_dir / 'OTL_AllCasesTestClass.db'
+    )
+    # find a class
+    for cl in collector.classes:
+        if cl.objectUri == 'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#AllCasesTestClass':
+            result = SubsetTemplateCreator.generate_object_from_oslo_class(
+                oslo_class=cl,
+                add_geometry=False,
+                filter_attributes_by_subset=False,
+                collector=collector,
+                model_directory=model_directory_path,
+            )
+            assert result is not None
+            break
+
+
+def test_fill_attributes_of_subset_with_missing_attribute_on_different_instance():
+    from otlmow_template.SubsetTemplateCreator import SubsetTemplateCreator
+    from pathlib import Path
+
+    BASE_DIR = Path('/home/davidlinux/PycharmProjects/OTLMOW-Template')
+    current_dir = BASE_DIR / 'UnitTests' / 'Subset'
+    model_directory_path = BASE_DIR / 'UnitTests' / 'TestModel'
+
+    collector = SubsetTemplateCreator._load_collector_from_subset_path(
+        subset_path=current_dir / 'OTL_AllCasesTestClass.db'
+    )
+    for cl in collector.classes:
+        if cl.objectUri == 'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#AllCasesTestClass':
+            inst = SubsetTemplateCreator.generate_object_from_oslo_class(
+                oslo_class=cl,
+                add_geometry=True,
+                filter_attributes_by_subset=False,
+                collector=collector,
+                model_directory=model_directory_path,
+            )
+            for cl2 in collector.classes:
+                if cl2.objectUri == 'https://wegenenverkeer.data.vlaanderen.be/ns/onderdeel#AnotherTestClass':
+                    SubsetTemplateCreator.fill_attributes_of_subset(inst, collector, cl2)
+                    break
+            break
