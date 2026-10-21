@@ -15,6 +15,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import ast
 import datetime
 import json
 import os
@@ -45,6 +46,7 @@ DEFAULT_THRESHOLDS = {
     'max_complexity': 6,
     'bandit_high': 0,
     'dead_code': 0,
+    'god_classes': 0,
 }
 
 # The gates that can be enforced on their own: the name, the metric it reads
@@ -60,6 +62,7 @@ GATES = {
     'complexity': ('max_complexity', False),
     'bandit': ('bandit_high', False),
     'dead-code': ('dead_code', False),
+    'god-classes': ('god_classes', False),
 }
 
 
@@ -227,6 +230,34 @@ def run_vulture(source: str) -> dict[str, Any]:
     return {'available': True, 'items': len(items), 'exit_code': code, 'sample': items[:20]}
 
 
+def detect_god_classes(source: str) -> dict[str, Any]:
+    """Detect potential god classes using simple heuristics."""
+    god_classes = []
+    source_path = REPO_ROOT / source
+    if not source_path.exists():
+        return {'available': False, 'count': 0, 'classes': []}
+    for py_file in source_path.rglob('*.py'):
+        if '__pycache__' in str(py_file) or 'TestModel' in str(py_file):
+            continue
+        try:
+            with py_file.open(encoding='utf-8') as f:
+                content_file = f.read()
+            tree = ast.parse(content_file)
+        except Exception:
+            continue
+        for node in ast.walk(tree):
+            if isinstance(node, ast.ClassDef):
+                methods = [n for n in node.body if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))]
+                method_count = len(methods)
+                if method_count > 30 or py_file.stat().st_size > 30000:
+                    try:
+                        rel_path = py_file.relative_to(REPO_ROOT)
+                    except Exception:
+                        rel_path = py_file
+                    god_classes.append(f'{rel_path}:{node.name}')
+    return {'available': True, 'count': len(god_classes), 'classes': god_classes[:20]}
+
+
 def repo_name() -> str:
     """Return the project name, taken from pyproject.toml when possible."""
     pyproject = REPO_ROOT / 'pyproject.toml'
@@ -328,6 +359,8 @@ def render_report(
         f'| {status(metrics["bandit_high"], thresholds["bandit_high"], False)} |',
         f'| dead code items | {thresholds["dead_code"]} | {metrics["dead_code"]} '
         f'| {status(metrics["dead_code"], thresholds["dead_code"], False)} |',
+        f'| god classes | {thresholds["god_classes"]} | {metrics["god_classes"]} '
+        f'| {status(metrics["god_classes"], thresholds["god_classes"], False)} |',
         '',
     ]
 
@@ -477,6 +510,7 @@ def main(argv: list[str] | None = None) -> int:
     pytest_result = run_pytest(args.source, args.coverage, args.skip_tests)
     bandit = run_bandit(args.source)
     vulture = run_vulture(args.source)
+    god_classes = detect_god_classes(args.source)
 
     crap_rows: list[dict[str, Any]] = []
     if Path(args.coverage).exists():
@@ -493,6 +527,7 @@ def main(argv: list[str] | None = None) -> int:
         'max_complexity': max((row['complexity'] for row in crap_rows), default=0),
         'bandit_high': bandit.get('high', 0),
         'dead_code': vulture.get('items', 0),
+        'god_classes': god_classes.get('count', 0),
     }
 
     history = read_history()
@@ -517,6 +552,7 @@ def main(argv: list[str] | None = None) -> int:
         'hotspots': hotspots,
         'ruff_per_rule': ruff['per_rule'],
         'crap': crap_rows,
+        'god_classes_detail': god_classes,
         'tools': {
             'ruff': ruff.get('available', False),
             'mypy': mypy.get('available', False),
