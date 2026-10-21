@@ -99,7 +99,35 @@ disallow_any_generics = true
 no_implicit_optional = true
 strict_equality = true
 warn_return_any = true
+# otlmow_template is a namespace package (it has no __init__.py). Without these
+# two settings mypy resolves every module of the package twice, once as
+# 'otlmow_template.<module>' and once as '<module>', and then refuses to
+# check it: "Source file found twice under different module names".
+explicit_package_bases = true
+mypy_path = [".", "UnitTests/Subset", "code_quality/scripts"]
+# UnitTests/TestModel and UnitTests/TestClasses are vendored/generated copies
+# of the otlmow_model package: they are not ours to type check, and they import
+# generated classes that are not on disk.
+exclude = ["^UnitTests/TestModel/", "^UnitTests/TestClasses/"]
 
 [[tool.mypy.overrides]]
 module = ["otlmow_template.*"]
 disallow_untyped_defs = false
+
+# The otlmow packages and openpyxl ship no type information. Their imports are
+# therefore untyped, which is a fact about those packages, not about this code.
+[[tool.mypy.overrides]]
+module = [
+    "otlmow_converter.*",
+    "otlmow_model.*",
+    "otlmow_modelbuilder.*",
+    "openpyxl.*",
+]
+ignore_missing_imports = true
+
+# pytest ships type information, so mypy reads its source. That source uses
+# syntax that the minimum supported Python (3.9) does not have, which is a fact
+# about pytest, not about this code.
+[[tool.mypy.overrides]]
+module = ["pytest.*", "_pytest.*"]
+follow_imports = "skip"

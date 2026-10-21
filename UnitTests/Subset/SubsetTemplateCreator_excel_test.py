@@ -1,5 +1,6 @@
 from itertools import product
 from pathlib import Path
+from typing import Any
 
 import openpyxl
 import pytest
@@ -59,7 +60,7 @@ def test_generate_excel_template(
     book = openpyxl.load_workbook(path_to_template_file, read_only=True, data_only=True)
     output_rows = []
     choice_list_sheet = False
-    choice_list_data = []
+    choice_list_data: list[Any] = []
     MAX_EMPTY_ROWS = 5
     empty_rows_encountered = 0
 
@@ -195,7 +196,7 @@ async def test_generate_excel_template_async(
     book = openpyxl.load_workbook(path_to_template_file, read_only=True, data_only=True)
     output_rows = []
     choice_list_sheet = False
-    choice_list_data = []
+    choice_list_data: list[Any] = []
     empty_rows_encountered = 0
 
     for sheet in book.worksheets:

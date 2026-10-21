@@ -1,5 +1,6 @@
 import gc
 from pathlib import Path
+from typing import Any
 
 import openpyxl
 from otlmow_template.SubsetTemplateCreator import SubsetTemplateCreator
@@ -124,10 +125,10 @@ def test_subset_slagboom_0_records_relations():
     assert excel_path.exists()
 
     book = openpyxl.load_workbook(excel_path, data_only=True, read_only=True)
-    arm_header_row_list = []
-    arm_data_row_list = []
-    bevestiging_header_row_list = []
-    bevestiging_data_row_list = []
+    arm_header_row_list: list[Any] = []
+    arm_data_row_list: list[Any] = []
+    bevestiging_header_row_list: list[Any] = []
+    bevestiging_data_row_list: list[Any] = []
 
     for sheet in book.worksheets:
         sheet_name = sheet.title
@@ -212,10 +213,10 @@ def test_subset_slagboom_relations_1_selected_class():
     assert excel_path.exists()
 
     book = openpyxl.load_workbook(excel_path, data_only=True, read_only=True)
-    arm_header_row_list = []
-    arm_data_row_list = []
-    bevestiging_header_row_list = []
-    bevestiging_data_row_list = []
+    arm_header_row_list: list[Any] = []
+    arm_data_row_list: list[Any] = []
+    bevestiging_header_row_list: list[Any] = []
+    bevestiging_data_row_list: list[Any] = []
 
     for sheet in book.worksheets:
         sheet_name = sheet.title
@@ -286,10 +287,10 @@ def test_subset_slagboom_relations_2_selected_classes_2_rows():
     assert excel_path.exists()
 
     book = openpyxl.load_workbook(excel_path, data_only=True, read_only=True)
-    arm_header_row_list = []
-    arm_data_row_list = []
-    bevestiging_header_row_list = []
-    bevestiging_data_row_list = []
+    arm_header_row_list: list[Any] = []
+    arm_data_row_list: list[Any] = []
+    bevestiging_header_row_list: list[Any] = []
+    bevestiging_data_row_list: list[Any] = []
 
     for sheet in book.worksheets:
         sheet_name = sheet.title
@@ -367,10 +368,10 @@ def test_subset_slagboom_relations_2_non_related_selected_classes_2_rows():
     assert excel_path.exists()
 
     book = openpyxl.load_workbook(excel_path, data_only=True, read_only=True)
-    arm_header_row_list = []
-    arm_data_row_list = []
-    bevestiging_header_row_list = []
-    bevestiging_data_row_list = []
+    arm_header_row_list: list[Any] = []
+    arm_data_row_list: list[Any] = []
+    bevestiging_header_row_list: list[Any] = []
+    bevestiging_data_row_list: list[Any] = []
 
     for sheet in book.worksheets:
         sheet_name = sheet.title

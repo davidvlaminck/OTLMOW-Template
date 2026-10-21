@@ -21,7 +21,7 @@ def generate_template(path_to_template_file: Path) -> None:
     )
 
 
-def get_excel_attribute_info_by_header(path_to_template_file: Path) -> dict:
+def get_excel_attribute_info_by_header(path_to_template_file: Path) -> dict[str, str]:
     book = openpyxl.load_workbook(path_to_template_file, read_only=True, data_only=True)
     attribute_info_row, header_row = list(
         book[sheet_name].iter_rows(min_row=1, max_row=2, values_only=True)
@@ -30,7 +30,7 @@ def get_excel_attribute_info_by_header(path_to_template_file: Path) -> dict:
     return dict(zip(header_row, attribute_info_row))
 
 
-def get_csv_attribute_info_by_header(path_to_template_file: Path) -> dict:
+def get_csv_attribute_info_by_header(path_to_template_file: Path) -> dict[str, str]:
     with path_to_template_file.open(encoding='utf-8', newline='\n') as output_file:
         rows = list(csv.reader(output_file, delimiter=';'))
     return dict(zip(rows[1], rows[0]))

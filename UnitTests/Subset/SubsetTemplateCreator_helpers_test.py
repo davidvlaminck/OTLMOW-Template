@@ -13,6 +13,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from openpyxl import Workbook
+from openpyxl.worksheet.worksheet import Worksheet
 from otlmow_template.SubsetTemplateCreator import SubsetTemplateCreator
 
 current_dir = Path(__file__).parent
@@ -53,7 +54,7 @@ class FakeAttribuut:
         self.waarde = FakeWaarde()
 
 
-def build_sheet(title: str, headers: list[str]) -> tuple:
+def build_sheet(title: str, headers: list[str]) -> tuple[Workbook, Worksheet]:
     """Return a workbook with one sheet that has the given headers."""
     workbook = Workbook()
     sheet = workbook.active
@@ -65,7 +66,7 @@ def build_sheet(title: str, headers: list[str]) -> tuple:
 
 def test_a_column_without_a_header_is_skipped():
     """A column without a header gets no information and no validation."""
-    workbook, sheet = build_sheet('onderdeel#Test', ['typeURI', None])
+    workbook, sheet = build_sheet('onderdeel#Test', ['typeURI', None])  # type: ignore[list-item]
     # a cell that is emptied keeps the column in the sheet
     sheet['B1'] = 'leeg'
     sheet['B1'] = None
