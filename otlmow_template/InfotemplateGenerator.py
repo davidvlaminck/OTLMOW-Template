@@ -71,9 +71,14 @@ class InfotemplateGenerator(TemplateGeneratorBase):
             return 'Destination -> Source'
         return richting
 
-    @staticmethod
-    def _filter_concrete_classes_from(classes):
-        return [c for c in classes if not getattr(c, 'abstract', False)]
+    def _filter_concrete_classes_from(self, classes):
+        concrete_classes = []
+        for cls in classes:
+            if getattr(cls, 'abstract', 1) == 0:
+                if self._is_relation_class(cls.objectUri):
+                    continue
+                concrete_classes.append(cls)
+        return concrete_classes
 
     def _build_relation_dict(self, collector=None):
         """Build relation dictionary from OSLORelaties using OSLOCollector.
@@ -529,11 +534,16 @@ class InfotemplateGenerator(TemplateGeneratorBase):
         :param model_directory: Path to the model directory (optional)
         """
         collector = self._load_collector_from_subset_path(subset_path)
+        self.collector = collector
         relation_dict = self._build_relation_dict(collector)
         
         concrete_classes = self._filter_concrete_classes_from(collector.classes)
         # Feature 12: Sort sheets alphabetically by class name
         concrete_classes.sort(key=lambda cls: cls.name)
+
+        if not concrete_classes:
+            print("Geen concrete klassen gevonden in deze subset")
+            return
         
         wb = Workbook()
         wb.remove(wb.active)
@@ -556,11 +566,16 @@ class InfotemplateGenerator(TemplateGeneratorBase):
             model_directory: Path | None = None):
         """Async version of generate_infotemplate_from_subset."""
         collector = await self._load_collector_async(subset_path)
+        self.collector = collector
         relation_dict = self._build_relation_dict(collector)
         
         concrete_classes = self._filter_concrete_classes_from(collector.classes)
         # Feature 12: Sort sheets alphabetically by class name
         concrete_classes.sort(key=lambda cls: cls.name)
+
+        if not concrete_classes:
+            print("Geen concrete klassen gevonden in deze subset")
+            return
         
         wb = Workbook()
         wb.remove(wb.active)
