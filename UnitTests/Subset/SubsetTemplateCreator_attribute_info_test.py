@@ -19,7 +19,7 @@ def generate_template(path_to_template_file: Path) -> None:
 
 
 def get_excel_attribute_info_by_header(path_to_template_file: Path) -> dict:
-    book = openpyxl.load_workbook(path_to_template_file, read_only=True, data_only=True)
+    book = openpyxl.load_workbook(path_to_template_file, read_only=True)
     attribute_info_row, header_row = list(book[sheet_name].iter_rows(min_row=1, max_row=2, values_only=True))
     book.close()
     return dict(zip(header_row, attribute_info_row))

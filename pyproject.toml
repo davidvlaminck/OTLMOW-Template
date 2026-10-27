@@ -37,6 +37,11 @@ dependencies = [
 [tool.setuptools.packages.find]
 include = ["otlmow_template*"]
 
+[dependency-groups]
+dev = [
+    "ruff>=0.17.0",
+]
+
 [project.urls]
 "Homepage" = "https://github.com/davidvlaminck/OTLMOW-Template"
 "Bug Tracker" = "https://github.com/davidvlaminck/OTLMOW-Template/issues"

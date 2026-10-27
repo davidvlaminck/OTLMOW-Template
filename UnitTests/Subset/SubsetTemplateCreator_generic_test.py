@@ -17,7 +17,7 @@ def test_subset_with_AllCasesTestClass_excel_generic():
                                               template_file_path=excel_path, model_directory=model_directory_path)
     assert excel_path.exists()
 
-    book = openpyxl.load_workbook(excel_path, data_only=True, read_only=True)
+    book = openpyxl.load_workbook(excel_path, read_only=True)
     header_row_list = []
     for sheet in book.worksheets:
         sheet_name = sheet.title
@@ -71,7 +71,7 @@ async def test_subset_with_AllCasesTestClass_excel_generic_async():
                                                           model_directory=model_directory_path)
     assert excel_path.exists()
 
-    book = openpyxl.load_workbook(excel_path, data_only=True, read_only=True)
+    book = openpyxl.load_workbook(excel_path, read_only=True)
     header_row_list = []
     for sheet in book.worksheets:
         sheet_name = sheet.title
@@ -236,7 +236,7 @@ def test_subset_with_long_class_name_excel_generic():
                                               template_file_path=excel_path)
     assert excel_path.exists()
 
-    book = openpyxl.load_workbook(excel_path, data_only=True, read_only=True)
+    book = openpyxl.load_workbook(excel_path, read_only=True)
     header_row_list = []
     for sheet in book.worksheets:
         sheet_name = sheet.title
