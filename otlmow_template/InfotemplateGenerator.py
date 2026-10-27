@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 from pathlib import Path
 from typing import ClassVar
+from urllib.parse import urlparse
 
 from openpyxl import Workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
@@ -39,10 +40,26 @@ class InfotemplateGenerator(TemplateGeneratorBase):
     # Lighter green color for generic attributes
     LIGHT_GREEN_COLOR = "C8F7C8"
     
+    @staticmethod
+    def _is_trusted_codelist_uri(uri: str) -> bool:
+        try:
+            parsed = urlparse(uri)
+            if parsed.scheme != 'https':
+                return False
+            host = (parsed.hostname or '').lower()
+            return host.endswith('wegenenverkeer.be') or host.endswith('vlaanderen.be') or host == 'data.vlaanderen.be'
+        except Exception:
+            return False
+
+    @staticmethod
+    def _escape_formula(value):
+        if isinstance(value, str) and value and value[0] in ('=', '+', '-', '@'):
+            return "'" + value
+        return value
+    
     def __init__(self):
         super().__init__()
-        self.relation_dict: dict[str, list[tuple[str, str]]] = {}
-    
+
     @staticmethod
     def _reverse_direction(richting: str) -> str:
         """Reverse the direction when viewing a relation from the doel side.
@@ -54,7 +71,11 @@ class InfotemplateGenerator(TemplateGeneratorBase):
             return 'Destination -> Source'
         return richting
 
-    def _build_relation_dict(self):
+    @staticmethod
+    def _filter_concrete_classes_from(classes):
+        return [c for c in classes if not getattr(c, 'abstract', False)]
+
+    def _build_relation_dict(self, collector=None):
         """Build relation dictionary from OSLORelaties using OSLOCollector.
         
         Only includes relations where both bron and doel are concrete (non-abstract) classes.
@@ -63,15 +84,16 @@ class InfotemplateGenerator(TemplateGeneratorBase):
         Stores direction from database: Unspecified=<===>, Source -> Destination===>.
         Direction is reversed when storing from the doel perspective.
         """
-        self.relation_dict = {}
+        collector = collector if collector is not None else getattr(self, 'collector', None)
+        relation_dict = {}
         
         # Build a set of concrete class names for quick lookup
-        concrete_class_names = {cls.name for cls in self._filter_concrete_classes()}
+        concrete_class_names = {cls.name for cls in self._filter_concrete_classes_from(collector.classes)}
         
         # Use a set to track unique relations for deduplication (except heeftBetrokkene)
         seen_relations = set()
         
-        for relation in self.collector.relations:
+        for relation in collector.relations:
             bron = relation.bron_uri.split("#")[-1].split("/")[-1]
             doel = relation.doel_uri.split("#")[-1].split("/")[-1]
             relatie = relation.objectUri.split("#")[-1]
@@ -82,25 +104,25 @@ class InfotemplateGenerator(TemplateGeneratorBase):
                 # Add relation from bron perspective (original direction)
                 if relatie.lower() == 'heeftbetrokkene':
                     # For heeftBetrokkene, allow duplicates
-                    self.relation_dict.setdefault(bron, []).append((relatie, doel, richting))
+                    relation_dict.setdefault(bron, []).append((relatie, doel, richting))
                 else:
                     rel_key = (bron, relatie, doel)
                     if rel_key not in seen_relations:
                         seen_relations.add(rel_key)
-                        self.relation_dict.setdefault(bron, []).append((relatie, doel, richting))
+                        relation_dict.setdefault(bron, []).append((relatie, doel, richting))
                 
                 # Also add from doel perspective (direction reversed if directed)
                 doel_richting = self._reverse_direction(richting)
                 if relatie.lower() == 'heeftbetrokkene':
-                    self.relation_dict.setdefault(doel, []).append((relatie, bron, doel_richting))
+                    relation_dict.setdefault(doel, []).append((relatie, bron, doel_richting))
                 else:
                     rel_key = (doel, relatie, bron)
                     if rel_key not in seen_relations:
                         seen_relations.add(rel_key)
-                        self.relation_dict.setdefault(doel, []).append((relatie, bron, doel_richting))
+                        relation_dict.setdefault(doel, []).append((relatie, bron, doel_richting))
         
         # Feature 2: Double the 'heeftBetrokkene' relations with specific role types
-        for bron, relations in self.relation_dict.items():
+        for bron, relations in relation_dict.items():
             new_relations = []
             for relatie, doel, richting in relations:
                 if relatie.lower() == 'heeftbetrokkene':
@@ -110,15 +132,17 @@ class InfotemplateGenerator(TemplateGeneratorBase):
                     new_relations.append(("HeeftBetrokkene - rol: installatieverantwoordelijke", doel, richting))
                 else:
                     new_relations.append((relatie, doel, richting))
-            self.relation_dict[bron] = new_relations
+            relation_dict[bron] = new_relations
+        return relation_dict
     
-    def _get_attributes_for_class(self, class_uri: str) -> list[tuple]:
+    def _get_attributes_for_class(self, class_uri: str, collector=None) -> list[tuple]:
         """Get attributes for a class from the database (including inherited).
 
         Returns list of tuples: (label_nl, kardinaliteit_min, kardinaliteit_max, type, attribute_uri, definitie)
         """
+        collector = collector if collector is not None else getattr(self, 'collector', None)
         import sqlite3
-        conn = sqlite3.connect(self.collector.path)
+        conn = sqlite3.connect(collector.path)
         cursor = conn.cursor()
 
         # Try to get definitie column; if it doesn't exist, default to None
@@ -154,17 +178,18 @@ class InfotemplateGenerator(TemplateGeneratorBase):
         conn.close()
         return result
 
-    def _get_codelist_uri_for_type(self, type_uri: str) -> str | None:
+    def _get_codelist_uri_for_type(self, type_uri: str, collector=None) -> str | None:
         """Get the codelist URI for a given enumeration type from OSLOEnumeration table.
 
         :param type_uri: The type URI (e.g. 'https://...#KlAIMToestand')
         :return: The codelist URI if found, None otherwise
         """
+        collector = collector if collector is not None else getattr(self, 'collector', None)
         if not type_uri:
             return None
 
         import sqlite3
-        conn = sqlite3.connect(self.collector.path)
+        conn = sqlite3.connect(collector.path)
         cursor = conn.cursor()
 
         # Extract the type name from URI (e.g. 'KlAIMToestand' from '...#KlAIMToestand')
@@ -286,7 +311,7 @@ class InfotemplateGenerator(TemplateGeneratorBase):
         for row in range(rel_start_row, rel_end_row + 1):
             dv_verplicht.add(ws.cell(row=row, column=2))
     
-    def _create_worksheet_for_class(self, wb: Workbook, cls: OSLOClass) -> Worksheet:
+    def _create_worksheet_for_class(self, wb: Workbook, cls: OSLOClass, relation_dict, collector) -> Worksheet:
         """Create a worksheet for a single class."""
         object_name = cls.name
         description = cls.definition
@@ -297,7 +322,7 @@ class InfotemplateGenerator(TemplateGeneratorBase):
         ws["A1"] = "BESCHRIJVING"
         if description:
             ws.merge_cells("A2:F2")
-            ws["A2"] = description
+            ws["A2"] = self._escape_formula(description)
             ws["A2"].alignment = Alignment(wrap_text=True, vertical="top")
         
         ws["A4"] = "RELATIES"
@@ -313,7 +338,7 @@ class InfotemplateGenerator(TemplateGeneratorBase):
 
         
         # Relations
-        relaties = sorted(self.relation_dict.get(object_name, []),
+        relaties = sorted(relation_dict.get(object_name, []),
                          key=lambda x: (x[1].lower(), x[0].lower(), x[2]))
         rel_start_row = 6
         rel_end_row = rel_start_row + len(relaties) - 1  # if len(relaties)==0, then rel_end_row=5
@@ -366,7 +391,7 @@ class InfotemplateGenerator(TemplateGeneratorBase):
         )
         
         # Attributes - get all attributes first, then sort: generic first (alphabetically), then non-generic (alphabetically)
-        attributes = self._get_attributes_for_class(cls.objectUri)
+        attributes = self._get_attributes_for_class(cls.objectUri, collector=collector)
         
         # Sort: generic attributes first (by name), then non-generic (by name)
         generic_attrs = []
@@ -397,7 +422,7 @@ class InfotemplateGenerator(TemplateGeneratorBase):
                 ws.cell(current_row, 2, "nee")
 
             # Write definition to "Wat?" column (D)
-            ws.cell(current_row, 4, definitie if definitie is not None else "")
+            ws.cell(current_row, 4, self._escape_formula(definitie) if definitie is not None else "")
 
             # Feature 4: Default 'aannemer' in "Wie levert aan?" column (C)
             ws.cell(current_row, 3, 'aannemer')
@@ -414,13 +439,13 @@ class InfotemplateGenerator(TemplateGeneratorBase):
                 datatype_clean = datatype.split("#")[-1]
                 cell_e = ws.cell(current_row, 5, datatype_clean)
 
-                # Feature 8: If type starts with 'Kl' (keuzelijst/codelist), add clickable hyperlink
-                if datatype_clean.startswith('Kl'):
-                    codelist_uri = self._get_codelist_uri_for_type(datatype)
-                    if codelist_uri:
-                        # Create a clickable hyperlink with display text = datatype name
-                        cell_e.value = datatype_clean
-                        cell_e.hyperlink = codelist_uri
+            # Feature 8: If type starts with 'Kl' (keuzelijst/codelist), add clickable hyperlink
+            if datatype_clean.startswith('Kl'):
+                codelist_uri = self._get_codelist_uri_for_type(datatype, collector=collector)
+                if codelist_uri and self._is_trusted_codelist_uri(codelist_uri):
+                    # Create a clickable hyperlink with display text = datatype name
+                    cell_e.value = datatype_clean
+                    cell_e.hyperlink = codelist_uri
 
             # Feature 5: TypeURI in opmerkingen for typeURI attribute only
             if attribuut.lower() == 'type uri':
@@ -459,11 +484,10 @@ class InfotemplateGenerator(TemplateGeneratorBase):
         :param template_file_path: Path to where the template file should be created
         :param model_directory: Path to the model directory (optional)
         """
-        self.collector = self._load_collector_from_subset_path(subset_path)
-        self.classes = self.collector.classes
-        self._build_relation_dict()
+        collector = self._load_collector_from_subset_path(subset_path)
+        relation_dict = self._build_relation_dict(collector)
         
-        concrete_classes = self._filter_concrete_classes()
+        concrete_classes = self._filter_concrete_classes_from(collector.classes)
         # Feature 12: Sort sheets alphabetically by class name
         concrete_classes.sort(key=lambda cls: cls.name)
         
@@ -472,7 +496,7 @@ class InfotemplateGenerator(TemplateGeneratorBase):
         
         for cls in concrete_classes:
             print(f"Verwerken: {cls.name}")
-            self._create_worksheet_for_class(wb, cls)
+            self._create_worksheet_for_class(wb, cls, relation_dict, collector)
         
         wb.save(template_file_path)
         print()
@@ -487,11 +511,10 @@ class InfotemplateGenerator(TemplateGeneratorBase):
             template_file_path: Path,
             model_directory: Path | None = None):
         """Async version of generate_infotemplate_from_subset."""
-        self.collector = await self._load_collector_async(subset_path)
-        self.classes = self.collector.classes
-        self._build_relation_dict()
+        collector = await self._load_collector_async(subset_path)
+        relation_dict = self._build_relation_dict(collector)
         
-        concrete_classes = self._filter_concrete_classes()
+        concrete_classes = self._filter_concrete_classes_from(collector.classes)
         # Feature 12: Sort sheets alphabetically by class name
         concrete_classes.sort(key=lambda cls: cls.name)
         
@@ -500,7 +523,7 @@ class InfotemplateGenerator(TemplateGeneratorBase):
         
         for cls in concrete_classes:
             print(f"Verwerken: {cls.name}")
-            self._create_worksheet_for_class(wb, cls)
+            self._create_worksheet_for_class(wb, cls, relation_dict, collector)
             await asyncio.sleep(0)
         
         wb.save(template_file_path)
