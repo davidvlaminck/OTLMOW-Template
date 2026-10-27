@@ -1,9 +1,0 @@
-otlmow-converter>=1.26
-otlmow-modelbuilder>=0.44
-
-[test]
-pytest
-pytest-cov
-pytest-subtests
-pytest-timeout
-pytest-asyncio
