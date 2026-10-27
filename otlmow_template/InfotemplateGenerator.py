@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 from pathlib import Path
 from typing import ClassVar
 from urllib.parse import urlparse
@@ -97,12 +98,20 @@ class InfotemplateGenerator(TemplateGeneratorBase):
         
         # Use a set to track unique relations for deduplication (except heeftBetrokkene)
         seen_relations = set()
+        # Track identical source relation records to avoid duplicate heeftBetrokkene rows
+        seen_source_relations = set()
         
         for relation in collector.relations:
             bron = relation.bron_uri.split("#")[-1].split("/")[-1]
             doel = relation.doel_uri.split("#")[-1].split("/")[-1]
             relatie = relation.objectUri.split("#")[-1]
             richting = relation.richting  # Get direction from database
+            
+            # Deduplicate identical source relation records
+            source_key = (bron, doel, relatie, richting)
+            if source_key in seen_source_relations:
+                continue
+            seen_source_relations.add(source_key)
             
             # Only include relations where both bron and doel are concrete classes
             if bron in concrete_class_names and doel in concrete_class_names:
@@ -542,22 +551,22 @@ class InfotemplateGenerator(TemplateGeneratorBase):
         concrete_classes.sort(key=lambda cls: cls.name)
 
         if not concrete_classes:
-            print("Geen concrete klassen gevonden in deze subset")
+            logging.info("Geen concrete klassen gevonden in deze subset")
             return
         
         wb = Workbook()
         wb.remove(wb.active)
         
         for cls in concrete_classes:
-            print(f"Verwerken: {cls.name}")
+            logging.info(f"Verwerken: {cls.name}")
             self._create_worksheet_for_class(wb, cls, relation_dict, collector)
         
         wb.save(template_file_path)
-        print()
-        print("=" * 40)
-        print("KLAAR")
-        print(template_file_path)
-        print("=" * 40)
+        logging.info("")
+        logging.info("=" * 40)
+        logging.info("KLAAR")
+        logging.info(template_file_path)
+        logging.info("=" * 40)
     
     async def generate_infotemplate_from_subset_async(
             self,
@@ -567,27 +576,31 @@ class InfotemplateGenerator(TemplateGeneratorBase):
         """Async version of generate_infotemplate_from_subset."""
         collector = await self._load_collector_async(subset_path)
         self.collector = collector
+        await asyncio.sleep(0)
         relation_dict = self._build_relation_dict(collector)
+        await asyncio.sleep(0)
         
         concrete_classes = self._filter_concrete_classes_from(collector.classes)
         # Feature 12: Sort sheets alphabetically by class name
         concrete_classes.sort(key=lambda cls: cls.name)
 
         if not concrete_classes:
-            print("Geen concrete klassen gevonden in deze subset")
+            logging.info("Geen concrete klassen gevonden in deze subset")
             return
         
         wb = Workbook()
         wb.remove(wb.active)
         
         for cls in concrete_classes:
-            print(f"Verwerken: {cls.name}")
+            logging.info(f"Verwerken: {cls.name}")
             self._create_worksheet_for_class(wb, cls, relation_dict, collector)
             await asyncio.sleep(0)
         
+        await asyncio.sleep(0)
         wb.save(template_file_path)
-        print()
-        print("=" * 40)
-        print("KLAAR")
-        print(template_file_path)
-        print("=" * 40)
+        await asyncio.sleep(0)
+        logging.info("")
+        logging.info("=" * 40)
+        logging.info("KLAAR")
+        logging.info(template_file_path)
+        logging.info("=" * 40)
