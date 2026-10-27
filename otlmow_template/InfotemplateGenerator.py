@@ -145,38 +145,82 @@ class InfotemplateGenerator(TemplateGeneratorBase):
         conn = sqlite3.connect(collector.path)
         cursor = conn.cursor()
 
-        # Try to get definitie column; if it doesn't exist, default to None
+        # Collect class URIs in inheritance chain (current first, then ancestors)
+        class_uris = []
+        visited = set()
+        def add_ancestors(uri):
+            if uri in visited:
+                return
+            visited.add(uri)
+            class_uris.append(uri)
+            try:
+                cursor.execute("SELECT bron_uri FROM OSLOGeneralisaties WHERE doel_uri = ?", (uri,))
+                parents = cursor.fetchall()
+                for (parent_uri,) in parents:
+                    if parent_uri and parent_uri not in visited:
+                        add_ancestors(parent_uri)
+            except Exception:
+                pass
+            try:
+                cursor.execute("SELECT parent_uri FROM OSLOGeneralisaties WHERE child_uri = ?", (uri,))
+                parents = cursor.fetchall()
+                for (parent_uri,) in parents:
+                    if parent_uri and parent_uri not in visited:
+                        add_ancestors(parent_uri)
+            except Exception:
+                pass
+
+        add_ancestors(class_uri)
+
         try:
-            cursor.execute("""
+            placeholders = ','.join('?' for _ in class_uris)
+            cursor.execute(f"""
                 SELECT label_nl, kardinaliteit_min, kardinaliteit_max, type, uri, definition_nl
                 FROM OSLOAttributen
-                WHERE class_uri = ?
-                ORDER BY label_nl
-            """, (class_uri,))
+                WHERE class_uri IN ({placeholders})
+            """, class_uris)
+            rows = cursor.fetchall()
+            seen_attrs = {}
+            for row in rows:
+                attr_uri = row[4]
+                if attr_uri not in seen_attrs:
+                    seen_attrs[attr_uri] = row
+            result = [(r[0], r[1], r[2], r[3], r[4], r[5]) for r in seen_attrs.values()]
+            conn.close()
+            return result
         except sqlite3.OperationalError:
             try:
-                cursor.execute("""
+                placeholders = ','.join('?' for _ in class_uris)
+                cursor.execute(f"""
                     SELECT label_nl, kardinaliteit_min, kardinaliteit_max, type, uri, definitie
                     FROM OSLOAttributen
-                    WHERE class_uri = ?
-                    ORDER BY label_nl
-                """, (class_uri,))
-            except sqlite3.OperationalError:
-                # Definitie column does not exist, select without it
-                cursor.execute("""
-                    SELECT label_nl, kardinaliteit_min, kardinaliteit_max, type, uri
-                    FROM OSLOAttributen
-                    WHERE class_uri = ?
-                    ORDER BY label_nl
-                """, (class_uri,))
-                # Add a None for definitie for each row
-                result = [row + (None,) for row in cursor.fetchall()]
+                    WHERE class_uri IN ({placeholders})
+                """, class_uris)
+                rows = cursor.fetchall()
+                seen_attrs = {}
+                for row in rows:
+                    attr_uri = row[4]
+                    if attr_uri not in seen_attrs:
+                        seen_attrs[attr_uri] = row
+                result = [(r[0], r[1], r[2], r[3], r[4], r[5]) for r in seen_attrs.values()]
                 conn.close()
                 return result
-
-        result = cursor.fetchall()
-        conn.close()
-        return result
+            except sqlite3.OperationalError:
+                placeholders = ','.join('?' for _ in class_uris)
+                cursor.execute(f"""
+                    SELECT label_nl, kardinaliteit_min, kardinaliteit_max, type, uri
+                    FROM OSLOAttributen
+                    WHERE class_uri IN ({placeholders})
+                """, class_uris)
+                rows = cursor.fetchall()
+                seen_attrs = {}
+                for row in rows:
+                    attr_uri = row[4]
+                    if attr_uri not in seen_attrs:
+                        seen_attrs[attr_uri] = row + (None,)
+                result = list(seen_attrs.values())
+                conn.close()
+                return result
 
     def _get_codelist_uri_for_type(self, type_uri: str, collector=None) -> str | None:
         """Get the codelist URI for a given enumeration type from OSLOEnumeration table.

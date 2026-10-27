@@ -1,4 +1,5 @@
 import asyncio
+import sqlite3
 from pathlib import Path
 from typing import Optional, List
 
@@ -26,13 +27,46 @@ class TemplateGeneratorBase:
             return classes
         return [x for x in classes if x.objectUri in class_uris_filter]
     
+    def _is_relation_class(self, class_uri: str) -> bool:
+        """Determine if a class is a relation class by walking up the inheritance chain."""
+        if not self.collector or not getattr(self.collector, 'path', None):
+            return False
+        try:
+            conn = sqlite3.connect(self.collector.path)
+            cur = conn.cursor()
+            visited = set()
+            current = class_uri
+            depth = 0
+            while current and current not in visited and depth < 3:
+                visited.add(current)
+                cur.execute("SELECT base_name, base_uri FROM InternalBaseClass WHERE class_uri = ?", (current,))
+                rows = cur.fetchall()
+                if not rows:
+                    break
+                moved = False
+                for base_name, base_uri in rows:
+                    base_name_l = (base_name or '').lower()
+                    if base_name_l and ('relatieobject' in base_name_l or base_name in ('DirectioneleRelatie', 'NietDirectioneleRelatie')):
+                        conn.close()
+                        return True
+                    if base_uri and base_uri not in visited:
+                        current = base_uri
+                        depth += 1
+                        moved = True
+                        break
+                if not moved:
+                    break
+            conn.close()
+            return False
+        except Exception:
+            return False
+    
     def _filter_concrete_classes(self) -> List[OSLOClass]:
-        """Filter classes to only include concrete (non-abstract) classes with definitions."""
+        """Filter classes to only include concrete (non-abstract) classes."""
         concrete_classes = []
         for cls in self.classes:
             if cls.abstract == 0:
-                definition = cls.definition
-                if definition and definition.lower().startswith("deze relatie"):
+                if self._is_relation_class(cls.objectUri):
                     continue
                 concrete_classes.append(cls)
         return concrete_classes
@@ -43,8 +77,7 @@ class TemplateGeneratorBase:
         concrete = []
         for cls in filtered:
             if cls.abstract == 0:
-                definition = cls.definition
-                if definition and definition.lower().startswith("deze relatie"):
+                if self._is_relation_class(cls.objectUri):
                     continue
                 concrete.append(cls)
         return concrete
