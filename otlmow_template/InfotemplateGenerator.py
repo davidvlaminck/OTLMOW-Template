@@ -269,7 +269,7 @@ class InfotemplateGenerator(TemplateGeneratorBase):
             dv.add(ws.cell(row=row, column=3))
         
         # Apply to attribute rows (column C)
-        for row in range(attr_header_row + 2, last_row + 1):
+        for row in range(attr_header_row + 1, last_row + 1):
             dv.add(ws.cell(row=row, column=3))
         
         # Data validation for "Verplicht ja/nee" column (B) - attribute rows only
