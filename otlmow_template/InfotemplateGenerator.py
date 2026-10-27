@@ -561,7 +561,10 @@ class InfotemplateGenerator(TemplateGeneratorBase):
             logging.info(f"Verwerken: {cls.name}")
             self._create_worksheet_for_class(wb, cls, relation_dict, collector)
         
-        wb.save(template_file_path)
+        tmp_path = template_file_path.with_name(template_file_path.stem + ".tmp" + template_file_path.suffix)
+        wb.save(tmp_path)
+        import os
+        os.replace(tmp_path, template_file_path)
         logging.info("")
         logging.info("=" * 40)
         logging.info("KLAAR")
@@ -597,7 +600,10 @@ class InfotemplateGenerator(TemplateGeneratorBase):
             await asyncio.sleep(0)
         
         await asyncio.sleep(0)
-        wb.save(template_file_path)
+        tmp_path = template_file_path.with_name(template_file_path.stem + ".tmp" + template_file_path.suffix)
+        wb.save(tmp_path)
+        import os
+        os.replace(tmp_path, template_file_path)
         await asyncio.sleep(0)
         logging.info("")
         logging.info("=" * 40)
