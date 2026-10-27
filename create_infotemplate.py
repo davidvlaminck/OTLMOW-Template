@@ -1,3 +1,4 @@
+import sys
 import time
 from pathlib import Path
 
@@ -9,12 +10,13 @@ if __name__ == '__main__':
     generator = InfotemplateGenerator()
     
     # Path to your subset database
-    subset_path = Path('RHZ_20261016_V4.db')
-    output_path = Path('infotemplate_RHZ_20261016_V4.xlsx')
+    subset_path = Path('CCTV_Subset 1.db')
+    output_path = Path('infotemplate_CCTV_Subset.xlsx')
     
     if not subset_path.exists():
         print(f"Subset file not found: {subset_path}")
         print("Please update the subset_path variable to point to your subset database.")
+        sys.exit(1)
     else:
         generator.generate_infotemplate_from_subset(
             subset_path=subset_path,
