@@ -1,6 +1,8 @@
 .idea/
 /venv/
+.coverage
 /UnitTests/.coverage
+/coverage.svg
 *.pyc
 __pycache__/
 *.egg-info/
