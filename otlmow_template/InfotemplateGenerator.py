@@ -389,7 +389,9 @@ class InfotemplateGenerator(TemplateGeneratorBase):
         for attribuut, kard_min, kard_max, datatype, attr_uri, definitie in sorted_attributes:
             ws.cell(current_row, 1, attribuut)
 
-            if kard_min == "1":
+            if attr_uri == 'https://wegenenverkeer.data.vlaanderen.be/ns/implementatieelement#AIMObject.notitie':
+                ws.cell(current_row, 2, "nee")
+            elif kard_min == "1":
                 ws.cell(current_row, 2, "ja")
             else:
                 ws.cell(current_row, 2, "nee")
