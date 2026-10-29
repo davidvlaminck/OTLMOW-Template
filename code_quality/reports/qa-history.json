@@ -1,0 +1,25 @@
+[
+  {
+    "date": "2026-10-28",
+    "commit": "9cb193b",
+    "metrics": {
+      "ruff_issues": 0,
+      "ruff_format_files": -1,
+      "mypy_errors": 103,
+      "coverage_percent": 85.4,
+      "coverage_branch_percent": 0.0,
+      "max_crap": 45.8,
+      "max_complexity": 35,
+      "bandit_high": 0,
+      "dead_code": 0,
+      "pip_audit_vulns": 0,
+      "god_classes": 1,
+      "unparsable_files": 0,
+      "manual_conventions": 3,
+      "import_architecture_violations": 0,
+      "import_architecture_status": "not enabled"
+    },
+    "ruff_per_rule": {},
+    "result": "red"
+  }
+]

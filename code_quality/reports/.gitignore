@@ -1,0 +1,5 @@
+# Generated artifacts — rewritten by every run of qa_report.py.
+# Keep qa.json and qa-history.json if you want the ratchet audit trail in git.
+coverage.json
+crap.json
+QA-REPORT.md

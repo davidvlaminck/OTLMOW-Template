@@ -38,3 +38,15 @@ uv pip install -r pyproject.toml --extra test
 
 ## Usage
 #TODO
+
+## Code quality
+This repository uses the code-quality bundle in `code_quality/`. Run the gates:
+
+```bash
+uv pip install ruff==0.17.0 "mypy<2" radon bandit vulture pip-audit
+python code_quality/scripts/qa_report.py --source otlmow_template
+```
+
+The report writes `code_quality/QA-REPORT.md` and `code_quality/reports/qa.json`.
+See `code_quality/README.md` for the full process, thresholds and ratchet.
+The CI workflow is in `.github/workflows/quality.yml`.
