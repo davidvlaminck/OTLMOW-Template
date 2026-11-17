@@ -5,7 +5,7 @@
     <title>Coverage for UnitTests/Subset/SubsetTemplateCreator_generic_test.py: 100%</title>
     <link rel="icon" sizes="32x32" href="favicon_32_cb_c827f16f.png">
     <link rel="stylesheet" href="style_cb_4667309f.css" type="text/css">
-    <script src="coverage_html_cb_15cffcd0.js" defer></script>
+    <script src="coverage_html_cb_54cfdca1.js" defer></script>
 </head>
 <body class="pyfile">
 <header>
@@ -64,8 +64,8 @@
             <a id="indexLink" class="nav" href="index.html">&Hat; index</a> &nbsp; &nbsp;
             <a id="nextFileLink" class="nav" href="z_c3a46e167fbadb0f_SubsetTemplateCreator_relations_test_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
-            <a class="nav" href="https://coverage.readthedocs.io/en/7.16.2">coverage.py v7.16.2</a>,
-            created at 2026-10-05 18:42 +0000
+            <a class="nav" href="https://coverage.readthedocs.io/en/7.17.3">coverage.py v7.17.3</a>,
+            created at 2026-11-17 20:53 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -99,7 +99,7 @@
     <p class="run run2"><span class="n"><a id="t17" href="#t17">17</a></span><span class="t">                                              <span class="nam">template_file_path</span><span class="op">=</span><span class="nam">excel_path</span><span class="op">,</span> <span class="nam">model_directory</span><span class="op">=</span><span class="nam">model_directory_path</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t18" href="#t18">18</a></span><span class="t">    <span class="key">assert</span> <span class="nam">excel_path</span><span class="op">.</span><span class="nam">exists</span><span class="op">(</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t19" href="#t19">19</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t20" href="#t20">20</a></span><span class="t">    <span class="nam">book</span> <span class="op">=</span> <span class="nam">openpyxl</span><span class="op">.</span><span class="nam">load_workbook</span><span class="op">(</span><span class="nam">excel_path</span><span class="op">,</span> <span class="nam">data_only</span><span class="op">=</span><span class="key">True</span><span class="op">,</span> <span class="nam">read_only</span><span class="op">=</span><span class="key">True</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t20" href="#t20">20</a></span><span class="t">    <span class="nam">book</span> <span class="op">=</span> <span class="nam">openpyxl</span><span class="op">.</span><span class="nam">load_workbook</span><span class="op">(</span><span class="nam">excel_path</span><span class="op">,</span> <span class="nam">read_only</span><span class="op">=</span><span class="key">True</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t21" href="#t21">21</a></span><span class="t">    <span class="nam">header_row_list</span> <span class="op">=</span> <span class="op">[</span><span class="op">]</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t22" href="#t22">22</a></span><span class="t">    <span class="key">for</span> <span class="nam">sheet</span> <span class="key">in</span> <span class="nam">book</span><span class="op">.</span><span class="nam">worksheets</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t23" href="#t23">23</a></span><span class="t">        <span class="nam">sheet_name</span> <span class="op">=</span> <span class="nam">sheet</span><span class="op">.</span><span class="nam">title</span>&nbsp;</span><span class="r"></span></p>
@@ -153,7 +153,7 @@
     <p class="run run2"><span class="n"><a id="t71" href="#t71">71</a></span><span class="t">                                                          <span class="nam">model_directory</span><span class="op">=</span><span class="nam">model_directory_path</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t72" href="#t72">72</a></span><span class="t">    <span class="key">assert</span> <span class="nam">excel_path</span><span class="op">.</span><span class="nam">exists</span><span class="op">(</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t73" href="#t73">73</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t74" href="#t74">74</a></span><span class="t">    <span class="nam">book</span> <span class="op">=</span> <span class="nam">openpyxl</span><span class="op">.</span><span class="nam">load_workbook</span><span class="op">(</span><span class="nam">excel_path</span><span class="op">,</span> <span class="nam">data_only</span><span class="op">=</span><span class="key">True</span><span class="op">,</span> <span class="nam">read_only</span><span class="op">=</span><span class="key">True</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t74" href="#t74">74</a></span><span class="t">    <span class="nam">book</span> <span class="op">=</span> <span class="nam">openpyxl</span><span class="op">.</span><span class="nam">load_workbook</span><span class="op">(</span><span class="nam">excel_path</span><span class="op">,</span> <span class="nam">read_only</span><span class="op">=</span><span class="key">True</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t75" href="#t75">75</a></span><span class="t">    <span class="nam">header_row_list</span> <span class="op">=</span> <span class="op">[</span><span class="op">]</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t76" href="#t76">76</a></span><span class="t">    <span class="key">for</span> <span class="nam">sheet</span> <span class="key">in</span> <span class="nam">book</span><span class="op">.</span><span class="nam">worksheets</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t77" href="#t77">77</a></span><span class="t">        <span class="nam">sheet_name</span> <span class="op">=</span> <span class="nam">sheet</span><span class="op">.</span><span class="nam">title</span>&nbsp;</span><span class="r"></span></p>
@@ -318,7 +318,7 @@
     <p class="run run2"><span class="n"><a id="t236" href="#t236">236</a></span><span class="t">                                              <span class="nam">template_file_path</span><span class="op">=</span><span class="nam">excel_path</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t237" href="#t237">237</a></span><span class="t">    <span class="key">assert</span> <span class="nam">excel_path</span><span class="op">.</span><span class="nam">exists</span><span class="op">(</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t238" href="#t238">238</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t239" href="#t239">239</a></span><span class="t">    <span class="nam">book</span> <span class="op">=</span> <span class="nam">openpyxl</span><span class="op">.</span><span class="nam">load_workbook</span><span class="op">(</span><span class="nam">excel_path</span><span class="op">,</span> <span class="nam">data_only</span><span class="op">=</span><span class="key">True</span><span class="op">,</span> <span class="nam">read_only</span><span class="op">=</span><span class="key">True</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t239" href="#t239">239</a></span><span class="t">    <span class="nam">book</span> <span class="op">=</span> <span class="nam">openpyxl</span><span class="op">.</span><span class="nam">load_workbook</span><span class="op">(</span><span class="nam">excel_path</span><span class="op">,</span> <span class="nam">read_only</span><span class="op">=</span><span class="key">True</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t240" href="#t240">240</a></span><span class="t">    <span class="nam">header_row_list</span> <span class="op">=</span> <span class="op">[</span><span class="op">]</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t241" href="#t241">241</a></span><span class="t">    <span class="key">for</span> <span class="nam">sheet</span> <span class="key">in</span> <span class="nam">book</span><span class="op">.</span><span class="nam">worksheets</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t242" href="#t242">242</a></span><span class="t">        <span class="nam">sheet_name</span> <span class="op">=</span> <span class="nam">sheet</span><span class="op">.</span><span class="nam">title</span>&nbsp;</span><span class="r"></span></p>
@@ -344,8 +344,8 @@
             <a class="nav" href="index.html">&Hat; index</a> &nbsp; &nbsp;
             <a class="nav" href="z_c3a46e167fbadb0f_SubsetTemplateCreator_relations_test_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
-            <a class="nav" href="https://coverage.readthedocs.io/en/7.16.2">coverage.py v7.16.2</a>,
-            created at 2026-10-05 18:42 +0000
+            <a class="nav" href="https://coverage.readthedocs.io/en/7.17.3">coverage.py v7.17.3</a>,
+            created at 2026-11-17 20:53 +0000
         </p>
     </div>
 </footer>
