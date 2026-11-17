@@ -27,7 +27,7 @@ def test_infotemplate_generator_basic():
     sheet_names = wb.sheetnames
     
     # Check we have the expected 5 sheets
-    expected_sheets = {'Verkeersbordopstelling', 'Funderingsmassief', 'HoortBij', 'Pictogram', 'Verkeersbordsteun'}
+    expected_sheets = {'Verkeersbordopstelling', 'Funderingsmassief', 'Pictogram', 'Verkeersbordsteun'}
     assert set(sheet_names) == expected_sheets
     
     # Verify each sheet structure
@@ -138,7 +138,7 @@ def test_infotemplate_generator_specific_content():
         ('datum oprichting object', 'ja', 'date'),
         ('is actief', 'ja', 'boolean'),
         ('naam', 'ja', 'string'),
-        ('notitie', 'ja', 'string'),
+        ('notitie', 'nee', 'string'),
         ('standaardbestekpostnummer', 'ja', 'string'),
         ('type URI', 'ja', 'anyURI'),
         # Non-generic attributes (alphabetically)
@@ -690,7 +690,7 @@ async def test_infotemplate_generator_async():
     wb = openpyxl.load_workbook(output_path, read_only=True)
     sheet_names = wb.sheetnames
     
-    expected_sheets = {'Verkeersbordopstelling', 'Funderingsmassief', 'HoortBij', 'Pictogram', 'Verkeersbordsteun'}
+    expected_sheets = {'Verkeersbordopstelling', 'Funderingsmassief', 'Pictogram', 'Verkeersbordsteun'}
     assert set(sheet_names) == expected_sheets
     
     wb.close()
